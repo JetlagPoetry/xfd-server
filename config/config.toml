@@ -1,0 +1,8 @@
+[test]
+name = "abc"
+
+[mysql]
+user = ""
+password = ""
+host = ""
+name = ""
