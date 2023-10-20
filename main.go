@@ -2,19 +2,24 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"xfd-backend/config"
-	"xfd-backend/database/db"
 	"xfd-backend/router"
 )
 
 func main() {
 	Init()
 	r := router.NewRouter()
-	r.Run("127.0.0.1:60010")
+	server := &http.Server{
+		Addr:    "127.0.0.1:60010",
+		Handler: r,
+	}
 	log.Println("============== XFD-Backend Server Start ==============")
+	_ = server.ListenAndServe()
+
 }
 
 func Init() {
 	config.InitConfig()
-	db.NewMySQL()
+	//db.NewMySQL()
 }
