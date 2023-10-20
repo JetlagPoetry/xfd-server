@@ -1,25 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"xfd-backend/config"
-	"xfd-backend/router"
+	"wxcloudrun-golang/db"
+	"wxcloudrun-golang/service"
 )
 
 func main() {
-	Init()
-	r := router.NewRouter()
-	server := &http.Server{
-		Addr:    "127.0.0.1:60010",
-		Handler: r,
+	if err := db.Init(); err != nil {
+		panic(fmt.Sprintf("mysql init failed with %+v", err))
 	}
-	log.Println("============== XFD-Backend Server Start ==============")
-	_ = server.ListenAndServe()
 
-}
+	http.HandleFunc("/", service.IndexHandler)
+	http.HandleFunc("/api/count", service.CounterHandler)
 
-func Init() {
-	config.InitConfig()
-	//db.NewMySQL()
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
