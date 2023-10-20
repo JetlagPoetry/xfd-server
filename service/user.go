@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"xfd-backend/database/db"
-	"xfd-backend/model"
+	"xfd-backend/types"
 )
 
 type UserService struct {
@@ -14,12 +14,12 @@ func NewUserService() *UserService {
 	return &UserService{userDao: db.NewUserDB()}
 }
 
-func (h *UserService) GetUserInfo(ctx context.Context, userID string) (*model.GetUserInfoResp, error) {
+func (h *UserService) GetUserInfo(ctx context.Context, userID string) (*types.GetUserInfoResp, error) {
 	userInfo, err := h.userDao.GetUserInfo(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &model.GetUserInfoResp{
+	return &types.GetUserInfoResp{
 		UserName:       userInfo.UserName,
 		Email:          userInfo.Email,
 		PasswordDigest: userInfo.PasswordDigest,

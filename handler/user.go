@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
-	"xfd-backend/model"
 	"xfd-backend/pkg/response"
 	"xfd-backend/service"
+	"xfd-backend/types"
 )
 
 type UserHandler struct {
@@ -14,13 +14,13 @@ type UserHandler struct {
 }
 
 func NewUserHandler() *UserHandler {
-	return &UserHandler{}
+	return &UserHandler{UserService: service.NewUserService()}
 }
 
 func (h *UserHandler) GetUserInfo(c *gin.Context) {
 	var (
-		//req  *model.GetUserInfoReq
-		resp *model.GetUserInfoResp
+		//req  *types.GetUserInfoReq
+		resp *types.GetUserInfoResp
 		err  error
 	)
 
