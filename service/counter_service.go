@@ -6,9 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"wxcloudrun-golang/db/dao"
-	"wxcloudrun-golang/db/model"
+	"xfd-backend/database/db/dao"
+	"xfd-backend/database/db/model"
 
 	"gorm.io/gorm"
 )

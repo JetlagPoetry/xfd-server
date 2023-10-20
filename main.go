@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"wxcloudrun-golang/db"
-	"wxcloudrun-golang/service"
+	"xfd-backend/database/db"
+	"xfd-backend/service"
 )
 
 func main() {
