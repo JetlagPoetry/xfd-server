@@ -26,6 +26,7 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 
 	userID := c.Query("userID")
 	resp, err = h.UserService.GetUserInfo(c, userID)
+	log.Println("GetUserInfo called")
 	if err != nil {
 		log.Println("[UserHandler] GetUserInfo failed, err=", err)
 		c.JSON(http.StatusOK, response.RespSuccess(c, err))
