@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"xfd-backend/config"
 	"xfd-backend/database/db"
 	"xfd-backend/service"
 )
@@ -22,5 +21,5 @@ func Init() {
 	if err := db.Init(); err != nil {
 		panic(fmt.Sprintf("Mysql init failed with %+v", err))
 	}
-	config.InitConfig()
+	//config.InitConfig()
 }
