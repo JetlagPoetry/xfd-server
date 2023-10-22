@@ -10,15 +10,8 @@ import (
 type UserDao struct {
 }
 
-func NewUserDB() *UserDao {
+func NewUserDao() *UserDao {
 	return &UserDao{}
-}
-
-func (d *UserDao) GetUserInfo(ctx context.Context, userID string) (user *model.User, err error) {
-	if err = db.Get().Model(&model.User{}).Where("id = ?", userID).Find(&user).Error; err != nil {
-		return nil, err
-	}
-	return user, nil
 }
 
 func (d *UserDao) Lists(ctx context.Context, limit, offset int) (UserList []*model.User, count int64, err error) {
@@ -42,17 +35,14 @@ func (d *UserDao) GetByID(ctx context.Context, id int) (User *model.User, err er
 
 func (d *UserDao) GetByUserID(ctx context.Context, userID string) (User *model.User, err error) {
 	err = db.Get().Model(&model.User{}).Where("user_id = ?", userID).First(&User).Error
-	if err == gorm.ErrRecordNotFound {
-		return nil, nil
-	} else if err != nil {
-
+	if err != nil {
 		return nil, err
 	}
 	return User, nil
 }
 
-func (d *UserDao) GetByOpenIDAndRoleInTx(tx *gorm.DB, openID string, role model.UserRole) (User *model.User, err error) {
-	err = tx.Model(&model.User{}).Where("open_id = ? AND user_role = ?", openID, role).First(&User).Error
+func (d *UserDao) GetByPhoneInTx(tx *gorm.DB, phone string) (User *model.User, err error) {
+	err = tx.Model(&model.User{}).Where("phone = ? AND deleted = 0", phone).First(&User).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	} else if err != nil {
@@ -97,6 +87,22 @@ func (d *UserDao) Upsert(ctx context.Context, User *model.User) (err error) {
 
 func (d *UserDao) UpdateByID(ctx context.Context, id int, updateValue *model.User) (err error) {
 	updateResult := db.Get().Model(&model.User{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *UserDao) UpdateByUserID(ctx context.Context, userID string, updateValue *model.User) (err error) {
+	updateResult := db.Get().Model(&model.User{}).Where("user_id =?", userID).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *UserDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateValue *model.User) (err error) {
+	updateResult := tx.Model(&model.User{}).Where("user_id =?", userID).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}

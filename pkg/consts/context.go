@@ -5,8 +5,7 @@ const (
 
 	CONTEXT_HEADER_USER_AUTH_INFO = "ctx_user_auth_info"
 	CONTEXT_HEADER_USER_ID        = "ctx_user_id"
-	CONTEXT_HEADER_USER_OPEN_ID   = "ctx_user_open_id"
-	CONTEXT_HEADER_USERNAME       = "ctx_username"
+	CONTEXT_HEADER_USER_PHONE     = "ctx_user_phone"
 	CONTEXT_HEADER_USER_ROLE      = "ctx_user_role"
 
 	CONTEXT_HEADER_RESP_BODY         = "ctx_response_body"

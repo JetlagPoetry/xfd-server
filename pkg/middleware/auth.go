@@ -39,8 +39,7 @@ func verifyToken(c *gin.Context) error {
 		return err
 	}
 
-	c.Set(consts.CONTEXT_HEADER_USER_OPEN_ID, subjectInfo.OpenID)
-	c.Set(consts.CONTEXT_HEADER_USERNAME, subjectInfo.UserName)
+	c.Set(consts.CONTEXT_HEADER_USER_PHONE, subjectInfo.Phone)
 	c.Set(consts.CONTEXT_HEADER_USER_ROLE, subjectInfo.Role)
 	c.Set(consts.CONTEXT_HEADER_USER_ID, subjectInfo.UserID)
 	c.Set(consts.CONTEXT_HEADER_USER_AUTH_INFO, subjectInfo)
