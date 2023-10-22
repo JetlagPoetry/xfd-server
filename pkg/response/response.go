@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"regexp"
 	"xfd-backend/pkg/consts"
+	"xfd-backend/pkg/xerr"
 )
 
 // Response 基础序列化器
 type Response struct {
-	Status int         `json:"status"`
-	Data   interface{} `json:"data"`
-	Msg    string      `json:"msg"`
-	Error  string      `json:"error"`
 	LogID  string      `json:"log_id"`
+	Status xerr.XCode  `json:"status"`
+	ErrMsg string      `json:"err_msg"`
+	Data   interface{} `json:"data"`
 }
 
 // TrackedErrorResponse 有追踪信息的错误反应
@@ -24,12 +24,9 @@ type TrackedErrorResponse struct {
 }
 
 // RespSuccess 带data成功返回
-func RespSuccess(ctx *gin.Context, data interface{}, code ...int) *Response {
+func RespSuccess(ctx *gin.Context, data interface{}) *Response {
 	logID := GetLogIDFromCtx(ctx)
-	status := SUCCESS
-	if code != nil {
-		status = code[0]
-	}
+	status := xerr.SUCCESS
 
 	if data == nil {
 		data = "操作成功"
@@ -38,11 +35,11 @@ func RespSuccess(ctx *gin.Context, data interface{}, code ...int) *Response {
 	r := &Response{
 		Status: status,
 		Data:   data,
-		Msg:    GetMsg(status),
+		ErrMsg: GetMsg(status),
 		LogID:  logID,
 	}
 	ctx.Set(consts.CONTEXT_HEADER_RESP_BODY, r.Data)
-	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.Msg)
+	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.ErrMsg)
 	ctx.Set(consts.CONTEXT_HEADER_RESP_HTTP_CODE, http.StatusOK)
 	ctx.Set(consts.CONTEXT_HEADER_RESP_SERVICE_CODE, r.Status)
 
@@ -50,23 +47,24 @@ func RespSuccess(ctx *gin.Context, data interface{}, code ...int) *Response {
 }
 
 // RespError 错误返回
-// todo 修改错误返回
-func RespError(ctx *gin.Context, err error, data string, code ...int) *TrackedErrorResponse {
+func RespError(ctx *gin.Context, err xerr.XErr) *TrackedErrorResponse {
 	logID := GetLogIDFromCtx(ctx)
-	status := ERROR
-	if code != nil {
-		status = code[0]
-	}
+	status := err.Code()
 
 	r := &TrackedErrorResponse{
 		Response: Response{
 			Status: status,
-			Msg:    GetMsg(status),
-			Data:   data,
-			Error:  err.Error(),
+			ErrMsg: GetMsg(status),
+			Data:   "",
 		},
 		LogID: logID,
 	}
+
+	ctx.Set(consts.CONTEXT_HEADER_RESP_BODY, r.Data)
+	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.ErrMsg)
+	ctx.Set(consts.CONTEXT_HEADER_RESP_HTTP_CODE, http.StatusOK)
+	ctx.Set(consts.CONTEXT_HEADER_RESP_SERVICE_CODE, r.Status)
+	// todo add error
 
 	return r
 }
