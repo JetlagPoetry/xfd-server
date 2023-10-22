@@ -34,12 +34,12 @@ type UserLoginResp struct {
 type UserSubmitRoleReq struct {
 	Role             model.UserRole `json:"role"`
 	Organization     string         `json:"organization"`
-	OrganizationCode string         `json:"organization_code"`
-	OrganizationURL  string         `json:"organization_url"`
-	CorporationURLA  string         `json:"corporation_url_a"`
-	CorporationURLB  string         `json:"corporation_url_b"`
-	RealName         string         `json:"real_name"`
-	CertificateNo    string         `json:"certificate_no"`
+	OrganizationCode string         `json:"organizationCode"`
+	OrganizationURL  string         `json:"organizationUrl"`
+	CorporationURLA  string         `json:"corporationUrlA"`
+	CorporationURLB  string         `json:"corporationUrlB"`
+	RealName         string         `json:"realName"`
+	CertificateNo    string         `json:"certificateNo"`
 	Position         string         `json:"position"`
 	Phone            string         `json:"phone"`
 }
@@ -71,7 +71,7 @@ const (
 
 type UserModifyInfoReq struct {
 	Username  string `json:"username"`
-	AvatarURL string `json:"avatarURL"`
+	AvatarURL string `json:"avatarUrl"`
 }
 
 type UserModifyInfoResp struct {

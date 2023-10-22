@@ -11,6 +11,7 @@ type User struct {
 	UserRole  UserRole `gorm:"column:user_role;not null" json:"user_role"`
 	Username  string   `gorm:"column:username;not null" json:"username"`
 	AvatarURL string   `gorm:"column:avatar_url;not null" json:"avatar_url"`
+	Point     int      `gorm:"column:point;not null" json:"point"`
 	Deleted   int      `gorm:"column:deleted" json:"deleted"`
 }
 

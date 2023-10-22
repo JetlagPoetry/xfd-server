@@ -1,5 +1,6 @@
 package handler
 
 var (
-	User = NewUserHandler()
+	User    = NewUserHandler()
+	Message = NewMessageHandler()
 )
