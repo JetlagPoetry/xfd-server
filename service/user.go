@@ -228,7 +228,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: types.UserVerifyStatusUnfinished,
-		//Point:        user.po, // todo jingyuan
+		Point:        0, // todo
 	}
 
 	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
@@ -239,6 +239,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		if len(verifyList) > 0 {
 			resp.VerifyStatus = types.UserVerifyStatusDone
 			resp.Organization = verifyList[0].Organization
+			resp.VerifyComment = verifyList[0].Comment
 		}
 	}
 
