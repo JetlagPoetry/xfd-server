@@ -16,6 +16,7 @@ type UserSendCodeReq struct {
 
 type UserSendCodeResp struct {
 }
+
 type UserLoginReq struct {
 	Phone string `json:"phone"`
 	Code  string `json:"code"` // 验证码

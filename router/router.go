@@ -24,11 +24,18 @@ func NewRouter() *gin.Engine {
 		//userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
 		//userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
 	}
-	messageGroup := r.Group("/api/v1/message")
+	//messageGroup := r.Group("/api/v1/message")
+	//{
+	//	messageGroup.GET("/getConversations", handler.Message.GetConversations)
+	//	messageGroup.GET("/getMessages", handler.Message.GetMessages)
+	//	//messageGroup.POST("/send", handler.Message.Send)
+	//}
+	purchaseGroup := r.Group("/api/v1/purchase")
 	{
-		messageGroup.GET("/getConversations", handler.Message.GetConversations)
-		messageGroup.GET("/getMessages", handler.Message.GetMessages)
-		//messageGroup.POST("/send", handler.Message.Send)
+		purchaseGroup.GET("/getOrders", handler.Purchase.GetOrders)
+		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)
+		purchaseGroup.POST("/modifyOrder", handler.Purchase.ModifyOrder)
+		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus)
 	}
 	return r
 }

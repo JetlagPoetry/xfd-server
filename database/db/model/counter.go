@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// todo delete
 // CounterModel 计数器模型
 type CounterModel struct {
 	Id        int32     `gorm:"column:id" json:"id"`

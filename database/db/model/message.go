@@ -2,6 +2,7 @@ package model
 
 import "gorm.io/gorm"
 
+// todo delete
 type Message struct {
 	gorm.Model
 	ConversationID int         `gorm:"column:conversation_id;not null" json:"conversation_id"`

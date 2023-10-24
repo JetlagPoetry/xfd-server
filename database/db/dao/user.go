@@ -69,6 +69,7 @@ func (d *UserDao) Create(ctx context.Context, User *model.User) (err error) {
 	}
 	return nil
 }
+
 func (d *UserDao) CreateInTx(tx *gorm.DB, User *model.User) (err error) {
 	err = tx.Model(&model.User{}).Create(User).Error
 	if err != nil {
