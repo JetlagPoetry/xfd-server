@@ -1,6 +1,7 @@
 package handler
 
 var (
-	User    = NewUserHandler()
-	Message = NewMessageHandler()
+	User     = NewUserHandler()
+	Message  = NewMessageHandler()
+	Purchase = NewPurchaseHandler()
 )

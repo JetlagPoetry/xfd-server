@@ -2,6 +2,7 @@ package model
 
 import "gorm.io/gorm"
 
+// todo delete
 type Conversation struct {
 	gorm.Model
 	UserA   string `gorm:"column:user_a;not null" json:"user_a"`

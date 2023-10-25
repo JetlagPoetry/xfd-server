@@ -13,11 +13,11 @@ import (
 )
 
 type UserHandler struct {
-	UserService *service.UserService
+	userService *service.UserService
 }
 
 func NewUserHandler() *UserHandler {
-	return &UserHandler{UserService: service.NewUserService()}
+	return &UserHandler{userService: service.NewUserService()}
 }
 
 func (h *UserHandler) SendCode(c *gin.Context) {
@@ -38,7 +38,7 @@ func (h *UserHandler) SendCode(c *gin.Context) {
 		return
 	}
 
-	resp, xErr = h.UserService.SendCode(c, req)
+	resp, xErr = h.userService.SendCode(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] SendCode failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
@@ -65,7 +65,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	resp, xErr = h.UserService.Login(c, req)
+	resp, xErr = h.userService.Login(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] Login failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
@@ -95,7 +95,7 @@ func (h *UserHandler) SubmitRole(c *gin.Context) {
 		return
 	}
 
-	resp, xErr = h.UserService.SubmitRole(c, req)
+	resp, xErr = h.userService.SubmitRole(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] SubmitRole failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
@@ -110,7 +110,7 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	resp, xErr = h.UserService.RefreshToken(c)
+	resp, xErr = h.userService.RefreshToken(c)
 	if xErr != nil {
 		log.Println("[UserHandler] RefreshToken failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
@@ -125,7 +125,7 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	resp, xErr = h.UserService.GetUserInfo(c)
+	resp, xErr = h.userService.GetUserInfo(c)
 	if xErr != nil {
 		log.Println("[UserHandler] GetUserInfo failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
@@ -147,7 +147,7 @@ func (h *UserHandler) ModifyInfo(c *gin.Context) {
 		return
 	}
 
-	resp, xErr = h.UserService.ModifyUserInfo(c, req)
+	resp, xErr = h.userService.ModifyUserInfo(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] ModifyUserInfo failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))

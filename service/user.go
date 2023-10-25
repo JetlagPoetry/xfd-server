@@ -157,7 +157,7 @@ func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req *types
 	return nil
 }
 
-//func (s *UserService) getOpenID(ctx context.Context, code string) (*types.Jscode2SessionResponse, error) {
+//func (s *userService) getOpenID(ctx context.Context, code string) (*types.Jscode2SessionResponse, error) {
 //	// 构建请求参数
 //	// https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html
 //	url := "https://api.weixin.qq.com/sns/jscode2session"
@@ -189,7 +189,7 @@ func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req *types
 //	}
 //
 //	if result.ErrorCode != 0 {
-//		log.Println("[UserService] GetOpenID failed, err=", result.ErrorMsg)
+//		log.Println("[userService] GetOpenID failed, err=", result.ErrorMsg)
 //		return nil, err
 //	}
 //	return result, nil
@@ -228,7 +228,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: types.UserVerifyStatusUnfinished,
-		//Point:        user.po, // todo jingyuan
+		Point:        0, // todo
 	}
 
 	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
@@ -239,6 +239,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		if len(verifyList) > 0 {
 			resp.VerifyStatus = types.UserVerifyStatusDone
 			resp.Organization = verifyList[0].Organization
+			resp.VerifyComment = verifyList[0].Comment
 		}
 	}
 

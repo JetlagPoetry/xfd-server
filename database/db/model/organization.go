@@ -4,7 +4,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// todo 所有发放积分并初次审核通过的，会在这里加一条记录，用于追踪其积分总额
+// todo 首个员工认证通过时，会在这里加一条公司记录，用于追踪其积分总额
 type Organization struct {
 	gorm.Model
 	Name    string `gorm:"column:name;not null" json:"name"`
