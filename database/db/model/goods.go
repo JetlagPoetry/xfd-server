@@ -4,82 +4,54 @@ import (
 	"gorm.io/gorm"
 )
 
+// Category 商品分类表
 type Category struct {
-	gorm.Model
-	Name             string      `gorm:"type:varchar(20);not null" json:"name"`
-	ParentCategoryID int32       `json:"parent"`
-	ParentCategory   *Category   `json:"-"`
-	SubCategory      []*Category `gorm:"foreignKey:ParentCategoryID;references:ID" json:"sub_category"`
-	Level            int32       `gorm:"type:int;not null;default:1" json:"level"`
-	IsTab            bool        `gorm:"default:false;not null" json:"is_tab"`
-}
-
-// 商品分类表
-type Category2 struct {
-	gorm.Model
+	BaseModel
 	Name             string      `gorm:"type:varchar(50);not null;comment:分类名称" json:"name"`
 	ParentCategoryID int32       `json:"parent_category"`                                               // 父级分类ID
 	ParentCategory   *Category   `json:"-"`                                                             // 序列化json数据时忽略该字段
 	SubCategory      []*Category `gorm:"foreignKey:ParentCategoryID;references:ID" json:"sub_category"` // foreignKey：关联"另外一张表的键"；references：另外一张表关联"此表的主键"
 	Level            int32       `gorm:"type:int;not null;default:1;comment:分类级别" json:"level"`
-	IsTab            bool        `gorm:"default:false;not null;comment:是否在tab栏展示" json:"is_tab"`
+	Image            string      `gorm:"type:varchar(1000);not null;comment:分类图片概览"`
+	Status           int32       `gorm:"type:tinyint(1);not null;default:1;comment:状态" json:"status"`
 }
 
-// 商品品牌表
-type Brands struct {
-	gorm.Model
-	Name string `gorm:"type:varchar(20);not null;comment:品牌名称"`
-	Logo string `gorm:"type:varchar(200);default:'';not null;comment:品牌商标的url"`
-}
-
-// 商品分类-商品品牌 关系表
-// CategoryID 与 BrandsID 组成了联合主键
-type GoodsCategoryBrand struct {
-	gorm.Model
-	CategoryID int32 `gorm:"type:int;index:idx_category_brand,unique"`
-	Category   *Category
-	BrandsID   int32 `gorm:"type:int;index:idx_category_brand,unique"`
-	Brands     *Brands
-}
-
-// 表名重载
-//func (GoodsCategoryBrand) TableName() string {
-//	return "goodscategorybrand"
-//}
-
-// 轮播图的表结构
-type Banner struct {
-	gorm.Model
-	Image string `gorm:"type:varchar(200);not null;comment:品牌图片的url"`
-	Url   string `gorm:"type:varchar(200);not null;comment:品牌详情页的url"`
-	Index int32  `gorm:"type:int;default:1;not null;comment:轮播序号"`
-}
-
-// 商品表
+// Goods 商品表
 type Goods struct {
 	gorm.Model
-	CategoryID      int32 `gorm:"type:int;not null"`
+	CategoryID      int32 `gorm:"type:int;default:0;not null"`
 	Category        *Category
-	BrandsID        int32 `gorm:"type:int;not null"`
-	Brands          *Brands
+	BrandsID        int32    `gorm:"type:int;not null"`
 	OnSale          bool     `gorm:"default:false;not null;comment:是否已上架"`
 	ShipFree        bool     `gorm:"default:false;not null;comment:是否免运费"`
-	IsNew           bool     `gorm:"default:false;not null;comment:是否为新品"`
-	IsHot           bool     `gorm:"default:false;not null;comment:是否为热卖商品"`
 	Name            string   `gorm:"type:varchar(100);not null;comment:商品名称"`
 	GoodsSn         string   `gorm:"type:varchar(100);not null;comment:商品编号"`
-	ClickNum        int32    `gorm:"type:int;default:0;not null;comment:商品点击数"`
-	SoldNum         int32    `gorm:"type:int;default:0;not null;comment:销量"`
-	FavNum          int32    `gorm:"type:int;default:0;not null;comment:收藏数量"`
-	MarketPrice     float32  `gorm:"not null;comment:市场价(折扣前)"`
-	ShopPrice       float32  `gorm:"not null;comment:本店价格(折扣后)"`
 	GoodsBrief      string   `gorm:"type:varchar(100);not null;comment:商品简介"`
-	Images          GormList `gorm:"type:varchar(1000);not null;comment:商品图概览"`
-	DescImages      GormList `gorm:"type:varchar(2000);not null;comment:商品描述图"`
+	Images          GormList `gorm:"type:varchar(1000);not null;comment:商品轮播图"`
+	DescImages      GormList `gorm:"type:varchar(2000);not null;comment:商品详情图"`
 	GoodsFrontImage string   `gorm:"type:varchar(200);not null;comment:商品封面图"`
+	ClickNum        int32    `gorm:"type:int;default:0;not null;comment:商品点击数"`
+	IsNew           bool     `gorm:"default:false;not null;comment:是否为新品"`
+	IsHot           bool     `gorm:"default:false;not null;comment:是否为热卖商品"`
+	SoldNum         int32    `gorm:"type:int;default:0;not null;comment:零售销量"`
+	FavNum          int32    `gorm:"type:int;default:0;not null;comment:收藏数量"`
+	Origin          string   `gorm:"type:varchar(100);not null;comment:商品产地"`
 }
 
-// gorm的钩子函数
+// Specification 商品规格表
+type Specification struct {
+	BaseModel
+	Type    int     `gorm:"type:int;not null;comment:类型 1-批发 2-零售" json:"type"`
+	Name    string  `gorm:"type:varchar(20);not null;comment:规格名称" json:"name"`
+	Unit    string  `gorm:"type:varchar(2);default:斤;comment:单位" json:"unit"`
+	Price   float64 `gorm:"type:decimal(9,2);not null;comment:价格" json:"price"`
+	Stock   int     `gorm:"type:int;comment:库存" json:"stock"`
+	Enabled bool    `gorm:"type:bool;default:true;comment:是否启用" json:"enabled"`
+}
+
+//自定义定义品类1 颜色
+//
+//定义品类2
 
 //// 创建完商品后，设置商品库存，并将商品信息同步到es
 //func (g *Goods) AfterCreate(tx *gorm.DB) (err error) {
