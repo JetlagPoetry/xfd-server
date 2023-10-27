@@ -93,9 +93,55 @@ func (h *PurchaseHandler) ModifyOrderStatus(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if req.OrderID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
 	resp, xErr = h.purchaseService.ModifyOrderStatus(c, req)
 	if xErr != nil {
 		log.Println("[PurchaseHandler] ModifyOrderStatus failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *PurchaseHandler) GetQuotes(c *gin.Context) {
+	var (
+		req  *types.PurchaseGetQuotesReq
+		resp *types.PurchaseGetQuotesResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.purchaseService.GetQuotes(c, req)
+	if xErr != nil {
+		log.Println("[PurchaseHandler] GetQuotes failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *PurchaseHandler) SubmitQuote(c *gin.Context) {
+	var (
+		req  *types.PurchaseSubmitQuoteReq
+		resp *types.PurchaseSubmitQuoteResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.purchaseService.SubmitQuote(c, req)
+	if xErr != nil {
+		log.Println("[PurchaseHandler] SubmitQuote failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}

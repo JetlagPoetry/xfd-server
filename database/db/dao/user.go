@@ -25,6 +25,13 @@ func (d *UserDao) Lists(ctx context.Context, limit, offset int) (UserList []*mod
 	return UserList, count, nil
 }
 
+func (d *UserDao) ListByUserIDs(ctx context.Context, userIDs []string) (UserList []*model.User, err error) {
+	if err = db.Get().Model(&model.User{}).Where("user_id in (?)", userIDs).Find(&UserList).Error; err != nil {
+		return nil, err
+	}
+	return UserList, nil
+}
+
 func (d *UserDao) GetByID(ctx context.Context, id int) (User *model.User, err error) {
 	err = db.Get().Model(&model.User{}).Where("id = ?", id).First(&User).Error
 	if err != nil {

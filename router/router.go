@@ -19,10 +19,6 @@ func NewRouter() *gin.Engine {
 		userGroup.POST("/refreshToken", handler.User.RefreshToken)
 		userGroup.GET("/info", handler.User.GetUserInfo)
 		userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
-		//userGroup.GET("/getInfo", handler.User.GetUserInfo)
-		//userGroup.GET("/getToken", handler.User.GetOpenID)
-		//userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
-		//userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
 	}
 	//messageGroup := r.Group("/api/v1/message")
 	//{
@@ -36,6 +32,8 @@ func NewRouter() *gin.Engine {
 		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)
 		purchaseGroup.POST("/modifyOrder", handler.Purchase.ModifyOrder)
 		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus)
+		purchaseGroup.GET("/getQuotes", handler.Purchase.GetQuotes)
+		purchaseGroup.POST("/submitQuote", handler.Purchase.SubmitQuote)
 	}
 	return r
 }
