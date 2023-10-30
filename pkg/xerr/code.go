@@ -46,6 +46,7 @@ const (
 	ErrorCallApi                   XCode = 30008
 	ErrorUnmarshalJson             XCode = 30009
 	ErrorAdminFindUser             XCode = 30010
+	ErrorVerifyEmpty               XCode = 30011
 
 	//数据库错误
 	ErrorDatabase XCode = 40001

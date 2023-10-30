@@ -27,14 +27,7 @@ func NewUserService() *UserService {
 	}
 }
 
-func (s *UserService) SendCode(ctx context.Context, req *types.UserSendCodeReq) (*types.UserSendCodeResp, xerr.XErr) {
-	// todo 发验证码
-
-	return nil, nil
-}
-
 func (s *UserService) Login(ctx context.Context, req *types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
-	// todo 校验验证码
 	// 开始事务
 	tx := db.Get().Begin()
 	user, err := s.loginOrRegister(tx, req.Phone)
@@ -65,7 +58,6 @@ func (s *UserService) Login(ctx context.Context, req *types.UserLoginReq) (*type
 		Phone:  user.Phone,
 		Role:   user.UserRole,
 	}
-	// todo token过期错误码
 	token, err := jwt.Auth.GenerateToken(ctx, info)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorTokenExpired, err)
@@ -138,15 +130,17 @@ func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req *types
 	if req.Role == model.UserRoleBuyer || req.Role == model.UserRoleSupplier {
 		verify := &model.UserVerify{
 			UserID:           userID,
+			UserRole:         req.Role,
 			Organization:     req.Organization,
 			OrganizationCode: req.OrganizationCode,
 			OrganizationURL:  req.OrganizationURL,
-			CorporationURLA:  req.CorporationURLA,
-			CorporationURLB:  req.CorporationURLB,
+			IdentityURLA:     req.IdentityURLA,
+			IdentityURLB:     req.IdentityURLB,
 			RealName:         req.RealName,
 			CertificateNo:    req.CertificateNo,
 			Position:         req.Position,
 			Phone:            req.Phone,
+			Status:           model.UserVerifyStatusSubmitted,
 		}
 		err = s.userVerifyDao.CreateInTx(tx, verify)
 		if err != nil {
@@ -228,7 +222,8 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: types.UserVerifyStatusUnfinished,
-		Point:        0, // todo
+		Point:        0,     // todo
+		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
 	}
 
 	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {

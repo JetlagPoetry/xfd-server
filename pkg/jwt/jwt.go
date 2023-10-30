@@ -32,7 +32,7 @@ const defaultKey = "gin-amis-admin"
 
 var defaultOptions = &JWTAuth{
 	tokenType:     "Bearer",
-	expired:       43200,
+	expired:       30 * 24 * 3600,
 	signingMethod: jwt_go.SigningMethodHS512,
 	signingKey:    []byte(defaultKey),
 	keyfunc: func(t *jwt_go.Token) (interface{}, error) {

@@ -12,7 +12,7 @@ type User struct {
 	Username       string   `gorm:"column:username;not null" json:"username"`
 	AvatarURL      string   `gorm:"column:avatar_url;not null" json:"avatar_url"`
 	OrganizationID int      `gorm:"column:organization_id;not null" json:"organization_id"`
-	Organization   string   `gorm:"column:organization;not null" json:"organization"` // todo 用户认证通过时固化
+	Organization   string   `gorm:"column:organization;not null" json:"organization"`
 	Point          int      `gorm:"column:point;not null" json:"point"`
 	Deleted        int      `gorm:"column:deleted" json:"deleted"`
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/response"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/xerr"
@@ -95,7 +96,7 @@ func (h *OrgHandler) GetApplys(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
+	err := c.BindQuery(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
@@ -103,6 +104,48 @@ func (h *OrgHandler) GetApplys(c *gin.Context) {
 	resp, xErr = h.orgService.GetApplys(c, req)
 	if xErr != nil {
 		log.Println("[OrgHandler] GetApplys failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
+	var (
+		req  *types.GetOrgMembersReq
+		resp *types.GetOrgMembersResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetOrgMembers(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetOrgMembers failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetPointRecordsByUser(c *gin.Context) {
+	var (
+		req  *types.GetPointRecordsByUserReq
+		resp *types.GetPointRecordsByUserResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetPointRecordsByUser(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetPointRecordsByUser failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}
@@ -118,6 +161,10 @@ func (h *OrgHandler) VerifyAccount(c *gin.Context) {
 
 	err := c.BindJSON(&req)
 	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if req.Status != model.UserVerifyStatusRejected && req.Status != model.UserVerifyStatusSuccess {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
@@ -137,7 +184,7 @@ func (h *OrgHandler) GetAccountToVerify(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
+	err := c.BindQuery(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
@@ -151,10 +198,10 @@ func (h *OrgHandler) GetAccountToVerify(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
-func (h *OrgHandler) GetAccounts(c *gin.Context) {
+func (h *OrgHandler) GetAccountVerifyList(c *gin.Context) {
 	var (
-		req  *types.GetAccountsReq
-		resp *types.GetAccountsResp
+		req  *types.GetAccountVerifyListReq
+		resp *types.GetAccountVerifyListResp
 		xErr xerr.XErr
 	)
 
@@ -163,9 +210,9 @@ func (h *OrgHandler) GetAccounts(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	resp, xErr = h.orgService.GetAccounts(c, req)
+	resp, xErr = h.orgService.GetAccountVerifyList(c, req)
 	if xErr != nil {
-		log.Println("[OrgHandler] GetAccounts failed, err=", xErr)
+		log.Println("[OrgHandler] GetAccountVerifyList failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}

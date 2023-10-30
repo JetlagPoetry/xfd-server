@@ -1,12 +1,12 @@
 package types
 
-type BasePage struct {
+type PageRequest struct {
 	PageNum  int `form:"pageNum"`
 	PageSize int `form:"pageSize"`
 }
 
-// DataListResp 带有总数的Data结构
-type DataListResp struct {
-	List  interface{} `json:"list"`
-	Total int64       `json:"total"`
+type PageResult struct {
+	//PageNum  int   `json:"pageNum"`
+	//PageSize int   `json:"pageSize"`
+	TotalNum int64 `json:"totalNum"`
 }

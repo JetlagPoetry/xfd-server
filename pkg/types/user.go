@@ -37,8 +37,8 @@ type UserSubmitRoleReq struct {
 	Organization     string         `json:"organization"`
 	OrganizationCode string         `json:"organizationCode"`
 	OrganizationURL  string         `json:"organizationUrl"`
-	CorporationURLA  string         `json:"corporationUrlA"`
-	CorporationURLB  string         `json:"corporationUrlB"`
+	IdentityURLA     string         `json:"identityUrlA"`
+	IdentityURLB     string         `json:"identityUrlB"`
 	RealName         string         `json:"realName"`
 	CertificateNo    string         `json:"certificateNo"`
 	Position         string         `json:"position"`
@@ -62,6 +62,7 @@ type GetUserInfoResp struct {
 	VerifyComment string           `json:"verifyComment"`
 	Organization  string           `json:"organization"`
 	Point         int              `json:"point"`
+	NotifyVerify  bool             `json:"notifyVerify"` // 是否提示认证成功
 }
 
 type UserVerifyStatus int32

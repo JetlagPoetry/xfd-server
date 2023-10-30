@@ -24,7 +24,7 @@ func NewPurchaseService() *PurchaseService {
 }
 
 func (s *PurchaseService) GetOrders(ctx context.Context, req *types.PurchaseGetOrdersReq) (*types.PurchaseGetOrdersResp, xerr.XErr) {
-	purchaseList, _, err := s.purchaseDao.Lists(ctx, req.BasePage)
+	purchaseList, _, err := s.purchaseDao.Lists(ctx, req.PageRequest)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}

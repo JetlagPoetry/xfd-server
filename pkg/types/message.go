@@ -3,7 +3,7 @@ package types
 import "xfd-backend/database/db/model"
 
 type MessageGetConversationsReq struct {
-	BasePage
+	PageRequest
 }
 
 type MessageGetConversationsResp struct {
@@ -22,7 +22,7 @@ type Conversation struct {
 type MessageGetMessagesReq struct {
 	// todo 使用一个会话内的message编号来控制从第几号开始下发
 	ConversationID int `json:"conversationID"`
-	BasePage
+	PageRequest
 }
 
 type MessageGetMessagesResp struct {

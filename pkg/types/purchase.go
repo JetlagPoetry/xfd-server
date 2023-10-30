@@ -3,7 +3,7 @@ package types
 import "xfd-backend/database/db/model"
 
 type PurchaseGetOrdersReq struct {
-	BasePage
+	PageRequest
 	Status     model.OrderPurchaseStatus `json:"status"`
 	CategoryID int                       `json:"categoryID"`
 	SortBy     string                    `json:"sortBy"` // todo
@@ -65,7 +65,7 @@ type PurchaseModifyOrderStatusResp struct {
 }
 
 type PurchaseGetQuotesReq struct {
-	BasePage
+	PageRequest
 	OrderID int `json:"orderID"`
 }
 

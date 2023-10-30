@@ -33,7 +33,7 @@ func (d *ConversationDao) GetByID(ctx context.Context, id int) (conversation *mo
 	return conversation, nil
 }
 
-func (d *ConversationDao) ListByUserID(ctx context.Context, userID string, page types.BasePage) (list []*model.Conversation, err error) {
+func (d *ConversationDao) ListByUserID(ctx context.Context, userID string, page types.PageRequest) (list []*model.Conversation, err error) {
 	err = db.Get().Model(&model.Conversation{}).Where("user_a = ? OR user_b = ?", userID, userID).
 		Order("updated_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error
 	if err != nil {

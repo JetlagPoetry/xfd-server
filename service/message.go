@@ -25,7 +25,7 @@ func NewMessageService() *MessageService {
 func (s *MessageService) GetConversations(ctx context.Context, req *types.MessageGetConversationsReq) (*types.MessageGetConversationsResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
-	conversationList, err := s.conversationDao.ListByUserID(ctx, userID, req.BasePage)
+	conversationList, err := s.conversationDao.ListByUserID(ctx, userID, req.PageRequest)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}

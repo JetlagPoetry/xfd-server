@@ -20,33 +20,6 @@ func NewUserHandler() *UserHandler {
 	return &UserHandler{userService: service.NewUserService()}
 }
 
-func (h *UserHandler) SendCode(c *gin.Context) {
-	var (
-		req  *types.UserSendCodeReq
-		resp *types.UserSendCodeResp
-		xErr xerr.XErr
-	)
-
-	err := c.BindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
-
-	if !utils.Mobile(req.Phone) {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
-
-	resp, xErr = h.userService.SendCode(c, req)
-	if xErr != nil {
-		log.Println("[UserHandler] SendCode failed, err=", xErr)
-		c.JSON(http.StatusOK, response.RespError(c, xErr))
-		return
-	}
-	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
-}
-
 func (h *UserHandler) Login(c *gin.Context) {
 	var (
 		req  *types.UserLoginReq
@@ -89,7 +62,7 @@ func (h *UserHandler) SubmitRole(c *gin.Context) {
 
 	if req.Role == model.UserRoleUnknown ||
 		(req.Role == model.UserRoleSupplier || req.Role == model.UserRoleBuyer) && (len(req.Organization) == 0 || len(req.OrganizationCode) == 0 ||
-			len(req.OrganizationURL) == 0 || len(req.CorporationURLA) == 0 || len(req.CorporationURLB) == 0 ||
+			len(req.OrganizationURL) == 0 || len(req.IdentityURLA) == 0 || len(req.IdentityURLB) == 0 ||
 			len(req.RealName) == 0 || len(req.CertificateNo) == 0 || len(req.Position) == 0 || !utils.Mobile(req.Phone)) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return

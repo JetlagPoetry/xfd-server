@@ -13,7 +13,6 @@ func NewRouter() *gin.Engine {
 	//r.Use(middleware.UserAuthMiddleware("/api/v1/user/login")) // 登录校验, 参数为跳过登录的路由
 	userGroup := r.Group("/api/v1/user")
 	{
-		userGroup.POST("/sendCode", handler.User.SendCode)     // todo delete
 		userGroup.POST("/login", handler.User.Login)           // 登录
 		userGroup.POST("/submitRole", handler.User.SubmitRole) // 选择身份，提交认证信息
 		userGroup.POST("/refreshToken", handler.User.RefreshToken)
@@ -43,12 +42,12 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getApplys", handler.Org.GetApplys)               // 获取积分申请记录
 		orgGroup.GET("/getApplyDetail", handler.Org.GetApplys)          // 查看本批积分明细
 
-		orgGroup.GET("/get", handler.Org.VerifyAccount)           // todo 查看本公司员工列表
-		orgGroup.GET("/verifyAccount", handler.Org.VerifyAccount) // todo 查看本公司员工积分明细
+		orgGroup.GET("/getOrgMembers", handler.Org.GetOrgMembers)
+		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)
 
-		orgGroup.POST("/verifyAccount", handler.Org.VerifyAccount)          // 提交用户审核
-		orgGroup.GET("/getAccountToVerify", handler.Org.GetAccountToVerify) // 获取待审核用户申请
-		orgGroup.GET("/getAccounts", handler.Org.GetAccounts)               // 获取用户申请记录
+		orgGroup.POST("/verifyAccount", handler.Org.VerifyAccount)              // 提交用户审核
+		orgGroup.GET("/getAccountToVerify", handler.Org.GetAccountToVerify)     // 获取待审核用户申请
+		orgGroup.GET("/getAccountVerifyList", handler.Org.GetAccountVerifyList) // 获取用户申请记录
 	}
 	return r
 }

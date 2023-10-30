@@ -14,7 +14,7 @@ func NewOrderPurchaseDao() *OrderPurchaseDao {
 	return &OrderPurchaseDao{}
 }
 
-func (d *OrderPurchaseDao) Lists(ctx context.Context, page types.BasePage) (list []*model.OrderPurchase, count int64, err error) {
+func (d *OrderPurchaseDao) Lists(ctx context.Context, page types.PageRequest) (list []*model.OrderPurchase, count int64, err error) {
 	if err = db.Get().Model(&model.OrderPurchase{}).Find(&list).Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Error; err != nil {
 		return nil, 0, err
 	}
