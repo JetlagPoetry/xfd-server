@@ -1,10 +1,14 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type UserVerify struct {
 	gorm.Model
 	UserID           string           `gorm:"column:user_id;not null" json:"user_id"`
+	UserRole         UserRole         `gorm:"column:user_role;not null" json:"user_role"`
 	Organization     string           `gorm:"column:organization;not null" json:"organization"`
 	OrganizationCode string           `gorm:"column:organization_code;not null" json:"organization_code"`
 	OrganizationURL  string           `gorm:"column:organization_url;not null" json:"organization_url"`
@@ -16,6 +20,7 @@ type UserVerify struct {
 	Phone            string           `gorm:"column:phone;not null" json:"phone"`
 	Status           UserVerifyStatus `gorm:"column:status;not null" json:"status"`
 	Comment          string           `gorm:"column:comment;not null" json:"comment"`
+	VerifyTime       time.Time        `gorm:"column:verify_time;not null" json:"verify_time"`
 	Deleted          *int             `gorm:"column:deleted" json:"deleted"`
 }
 
