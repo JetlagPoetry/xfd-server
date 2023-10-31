@@ -1,11 +1,13 @@
 package router
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"xfd-backend/handler"
 	"xfd-backend/pkg/middleware"
 	"xfd-backend/pkg/response"
+	"xfd-backend/pkg/xerr"
 )
 
 func NewRouter() *gin.Engine {
@@ -17,6 +19,9 @@ func NewRouter() *gin.Engine {
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespSuccess(c, "hello world"))
+		})
+		testGroup.GET("/error", func(c *gin.Context) {
+			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
 		})
 	}
 	userGroup := r.Group("/api/v1/user")
