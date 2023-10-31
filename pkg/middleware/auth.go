@@ -5,9 +5,12 @@ import (
 	"errors"
 	jwt_go "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"strings"
 	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/jwt"
+	"xfd-backend/pkg/response"
+	"xfd-backend/pkg/xerr"
 )
 
 func UserAuthMiddleware(skipPrefix ...string) gin.HandlerFunc {
@@ -16,6 +19,7 @@ func UserAuthMiddleware(skipPrefix ...string) gin.HandlerFunc {
 
 		if !matchPrefix(path, skipPrefix) {
 			if err := verifyToken(c); err != nil {
+				c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.ErrorAuthCheckTokenFail, err)))
 				c.Abort()
 			}
 		}
