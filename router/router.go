@@ -2,15 +2,23 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"xfd-backend/handler"
 	"xfd-backend/pkg/middleware"
+	"xfd-backend/pkg/response"
 )
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	//r.Use(middleware.UserAuthMiddleware("/api/v1/user/login")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/user/login")) // 登录校验, 参数为跳过登录的路由
+	testGroup := r.Group("/api/v1/test")
+	{
+		testGroup.GET("/hello", func(c *gin.Context) {
+			c.JSON(http.StatusOK, response.RespSuccess(c, "hello world"))
+		})
+	}
 	userGroup := r.Group("/api/v1/user")
 	{
 		userGroup.POST("/login", handler.User.Login)           // 登录
