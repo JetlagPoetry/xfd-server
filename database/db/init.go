@@ -2,12 +2,12 @@ package db
 
 import (
 	"fmt"
-	"os"
-	"time"
-
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
+	"os"
+	"time"
+	"xfd-backend/database/db/model"
 )
 
 var dbInstance *gorm.DB
@@ -34,6 +34,8 @@ func Init() error {
 		fmt.Println("DB Open error,err=", err.Error())
 		return err
 	}
+	_ = db.AutoMigrate(&model.Category{})
+	_ = db.AutoMigrate(&model.AreaCode{})
 
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -42,9 +44,9 @@ func Init() error {
 	}
 
 	// 用于设置连接池中空闲连接的最大数量
-	sqlDB.SetMaxIdleConns(100)
+	sqlDB.SetMaxIdleConns(15)
 	// 设置打开数据库连接的最大数量
-	sqlDB.SetMaxOpenConns(200)
+	sqlDB.SetMaxOpenConns(250)
 	// 设置了连接可复用的最大时间
 	sqlDB.SetConnMaxLifetime(time.Hour)
 

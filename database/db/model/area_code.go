@@ -13,6 +13,6 @@ type AreaCode struct {
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime;comment:更新时间"`
 }
 
-func (u AreaCode) TableName() string {
+func (u *AreaCode) TableName() string {
 	return "area_code"
 }

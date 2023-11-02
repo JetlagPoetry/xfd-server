@@ -5,4 +5,5 @@ var (
 	Message  = NewMessageHandler()
 	Purchase = NewPurchaseHandler()
 	Org      = NewOrgHandler()
+	Mall     = NewMallHandler()
 )
