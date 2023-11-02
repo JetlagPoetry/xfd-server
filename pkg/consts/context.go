@@ -13,3 +13,7 @@ const (
 	CONTEXT_HEADER_RESP_SERVICE_CODE = "ctx_response_service_code"
 	CONTEXT_HEADER_RESP_MSG          = "ctx_response_message"
 )
+
+const (
+	XRequestIDHeader = "X-Request-ID"
+)

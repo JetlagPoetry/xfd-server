@@ -3,8 +3,10 @@ package response
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"net/http"
 	"regexp"
+	"strings"
 	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/xerr"
 )
@@ -13,7 +15,7 @@ import (
 type Response struct {
 	LogID  string      `json:"log_id,omitempty"`
 	Status xerr.XCode  `json:"status,omitempty"`
-	ErrMsg string      `json:"err_msg,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
 	Data   interface{} `json:"data,omitempty"`
 }
 
@@ -35,11 +37,11 @@ func RespSuccess(ctx *gin.Context, data interface{}) *Response {
 	r := &Response{
 		Status: status,
 		Data:   data,
-		ErrMsg: GetMsg(status),
+		Msg:    GetMsg(status),
 		LogID:  logID,
 	}
 	ctx.Set(consts.CONTEXT_HEADER_RESP_BODY, r.Data)
-	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.ErrMsg)
+	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.Msg)
 	ctx.Set(consts.CONTEXT_HEADER_RESP_HTTP_CODE, http.StatusOK)
 	ctx.Set(consts.CONTEXT_HEADER_RESP_SERVICE_CODE, r.Status)
 
@@ -54,14 +56,14 @@ func RespError(ctx *gin.Context, err xerr.XErr) *TrackedErrorResponse {
 	r := &TrackedErrorResponse{
 		Response: Response{
 			Status: status,
-			ErrMsg: GetMsg(status),
+			Msg:    GetMsg(status),
 			Data:   err.Error(),
 		},
 		LogID: logID,
 	}
 
 	ctx.Set(consts.CONTEXT_HEADER_RESP_BODY, r.Data)
-	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.ErrMsg)
+	ctx.Set(consts.CONTEXT_HEADER_RESP_MSG, r.Msg)
 	ctx.Set(consts.CONTEXT_HEADER_RESP_HTTP_CODE, http.StatusOK)
 	ctx.Set(consts.CONTEXT_HEADER_RESP_SERVICE_CODE, r.Status)
 	// todo add error
@@ -79,4 +81,16 @@ func GetLogIDFromCtx(ctx *gin.Context) (logID string) {
 		return match[1]
 	}
 	return ""
+}
+
+func SetLogId() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		logID := strings.Replace(uuid.New().String(), "-", "", -1)
+		c.Set(consts.CONTEXT_HEADER_CONTEXT_SPAN, logID)
+		c.Request.Header.Add(consts.XRequestIDHeader, logID)
+		c.Writer.Header().Set(consts.XRequestIDHeader, logID)
+
+		c.Next()
+	}
+
 }

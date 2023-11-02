@@ -28,19 +28,19 @@ func UserAuthMiddleware(skipPrefix ...string) gin.HandlerFunc {
 	}
 }
 
-func verifyToken(c *gin.Context) error {
+func verifyToken(c *gin.Context) xerr.XErr {
 	subjectJsonStr, err := jwt.Auth.ParseUserID(c, GetToken(c))
 	if vErr, ok := err.(*jwt_go.ValidationError); ok {
 		if vErr.Errors&(jwt_go.ValidationErrorExpired|jwt_go.ValidationErrorNotValidYet) != 0 {
-			return errors.New("token expired")
+			return xerr.WithCode(xerr.ErrorTokenExpired, errors.New("token expired"))
 		}
 	} else if err != nil {
-		return err
+		return xerr.WithCode(xerr.ErrorAuthCheckTokenFail, err)
 	}
 	var subjectInfo *jwt.SubjectInfo
 	err = json.Unmarshal([]byte(subjectJsonStr), &subjectInfo)
 	if err != nil {
-		return err
+		return xerr.WithCode(xerr.ErrorAuthCheckTokenFail, err)
 	}
 
 	c.Set(consts.CONTEXT_HEADER_USER_PHONE, subjectInfo.Phone)

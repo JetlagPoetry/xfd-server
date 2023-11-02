@@ -16,14 +16,16 @@ import (
 )
 
 type UserService struct {
-	userDao       *dao.UserDao
-	userVerifyDao *dao.UserVerifyDao
+	userDao         *dao.UserDao
+	userVerifyDao   *dao.UserVerifyDao
+	organizationDao *dao.OrganizationDao
 }
 
 func NewUserService() *UserService {
 	return &UserService{
-		userDao:       dao.NewUserDao(),
-		userVerifyDao: dao.NewUserVerifyDao(),
+		userDao:         dao.NewUserDao(),
+		userVerifyDao:   dao.NewUserVerifyDao(),
+		organizationDao: dao.NewOrganizationDao(),
 	}
 }
 
@@ -60,7 +62,7 @@ func (s *UserService) Login(ctx context.Context, req *types.UserLoginReq) (*type
 	}
 	token, err := jwt.Auth.GenerateToken(ctx, info)
 	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorTokenExpired, err)
+		return nil, xerr.WithCode(xerr.ErrorAuthToken, err)
 	}
 
 	// todo 用verify.id 判断是否首次认证成功
@@ -72,7 +74,7 @@ func (s *UserService) Login(ctx context.Context, req *types.UserLoginReq) (*type
 		UserRole:      user.UserRole,
 		VerifyStatus:  verifyHistory.Status,
 		VerifyComment: verifyHistory.Comment,
-		NotifyVerify:  true,
+		NotifyVerify:  true, // todo
 	}, nil
 }
 
@@ -94,6 +96,7 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 			return nil, err
 		}
 	}
+
 	return user, nil
 }
 
@@ -119,7 +122,7 @@ func (s *UserService) SubmitRole(ctx context.Context, req *types.UserSubmitRoleR
 	if err = tx.Commit().Error; err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	return nil, nil
+	return &types.UserSubmitRoleResp{}, nil
 }
 
 func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req *types.UserSubmitRoleReq) xerr.XErr {
@@ -232,9 +235,16 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		if len(verifyList) > 0 {
+			verify := verifyList[0]
+			organization, err := s.organizationDao.GetByCode(ctx, verify.OrganizationCode)
+			if err != nil {
+				return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+
 			resp.VerifyStatus = types.UserVerifyStatusDone
-			resp.Organization = verifyList[0].Organization
-			resp.VerifyComment = verifyList[0].Comment
+			resp.Organization = organization.Name // todo 如果企业名字不一致怎么办
+			resp.OrganizationID = int(organization.ID)
+			resp.VerifyComment = verify.Comment
 		}
 	}
 
@@ -247,5 +257,54 @@ func (s *UserService) ModifyUserInfo(ctx context.Context, req *types.UserModifyI
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	return nil, nil
+	return &types.UserModifyInfoResp{}, nil
+}
+
+func (s *UserService) AssignAdmin(ctx context.Context, req *types.UserAssignAdminReq) (*types.UserAssignAdminResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleRoot {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+	}
+
+	tx := db.Get().Begin()
+	_, err = s.assignOrRegisterAdmin(tx, req.Phone)
+	if err != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.UserAssignAdminResp{}, nil
+}
+
+func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, phone string) (*model.User, error) {
+	var (
+		user *model.User
+		err  error
+	)
+	user, err = s.userDao.GetByPhoneInTx(tx, phone)
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.UserRole != model.UserRoleUnknown {
+		return nil, errors.New("user exists")
+	}
+	user = &model.User{
+		UserID:   utils.GenUUID(),
+		Phone:    phone,
+		UserRole: model.UserRoleAdmin,
+	}
+	if err = s.userDao.CreateInTx(tx, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }

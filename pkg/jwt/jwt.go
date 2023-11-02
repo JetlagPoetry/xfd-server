@@ -45,7 +45,7 @@ var defaultOptions = &JWTAuth{
 
 type SubjectInfo struct {
 	UserID string         `json:"user_id"` // 用户ID
-	Phone  string         `json:"phone"`   // 微信id
+	Phone  string         `json:"phone"`   // 手机号
 	Role   model.UserRole `json:"role"`
 }
 
