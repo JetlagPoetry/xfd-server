@@ -6,7 +6,7 @@ import "xfd-backend/database/db/enum"
 type Category struct {
 	BaseModel
 	Name             string                  `gorm:"type:varchar(100);default:'';not null;comment:分类名称" json:"name"`
-	ParentCategoryID int32                   `gorm:"type:int;comment:父分类ID;index:parent_status" json:"parentId,omitempty"` // 父级分类ID
+	ParentCategoryID int32                   `gorm:"type:int;comment:父分类ID;index:parent_status" json:"parentID,omitempty"` // 父级分类ID
 	ParentCategory   *Category               `json:"-"`                                                                    // 序列化json数据时忽略该字段
 	SubCategory      []*Category             `gorm:"foreignKey:ParentCategoryID;references:ID" json:"children,omitempty"`  // foreignKey：关联"另外一张表的键"；references：另外一张表关联"此表的主键"
 	Level            enum.GoodsCategoryLevel `gorm:"type:tinyint(1);not null;default:1;comment:分类级别;index:level_status" json:"level"`
