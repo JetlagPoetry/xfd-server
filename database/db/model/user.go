@@ -25,6 +25,7 @@ const (
 	UserRoleBuyer    UserRole = 2
 	UserRoleCustomer UserRole = 3
 	UserRoleAdmin    UserRole = 4
+	UserRoleRoot     UserRole = 5
 )
 
 func (u *User) TableName() string {

@@ -16,6 +16,9 @@ func Logger() gin.HandlerFunc {
 		start := time.Now()
 		req, _ := c.GetRawData()
 		reqID := response.GetLogIDFromCtx(c)
+		if len(reqID) == 0 {
+			response.SetLogId()
+		}
 		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(req))
 
 		reqTemp := req

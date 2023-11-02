@@ -14,12 +14,29 @@ func NewOrderPurchaseDao() *OrderPurchaseDao {
 	return &OrderPurchaseDao{}
 }
 
-func (d *OrderPurchaseDao) Lists(ctx context.Context, page types.PageRequest) (list []*model.OrderPurchase, count int64, err error) {
-	if err = db.Get().Model(&model.OrderPurchase{}).Find(&list).Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Error; err != nil {
+func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int) (list []*model.OrderPurchase, count int64, err error) {
+	// todo category 单多选
+	sql := db.Get().Model(&model.OrderPurchase{}).Where("category_a = ? AND category_b = ? AND category_c = ? AND status = 1", categoryA, categoryB, categoryC)
+	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = db.Get().Model(&model.OrderPurchase{}).Count(&count).Error; err != nil {
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, count, nil
+}
+
+func (d *OrderPurchaseDao) ListByUser(ctx context.Context, page types.PageRequest, userID string, status model.OrderPurchaseStatus) (list []*model.OrderPurchase, count int64, err error) {
+	sql := db.Get().Model(&model.OrderPurchase{}).Where("userID = ?", userID)
+	if status != 0 {
+		sql = sql.Where("status = ?", status)
+	}
+	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
 	return list, count, nil

@@ -222,6 +222,6 @@ func (s *OrgService) GetAccountVerifyList(ctx context.Context, req *types.GetAcc
 	return &types.GetAccountVerifyListResp{
 		ToVerify: toVerify,
 		List:     list,
-		TotalNum: int(count),
+		TotalNum: count,
 	}, nil
 }

@@ -75,7 +75,7 @@ func (h *OrgHandler) GetApplyToVerify(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
+	err := c.BindQuery(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
@@ -205,7 +205,7 @@ func (h *OrgHandler) GetAccountVerifyList(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
+	err := c.BindQuery(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return

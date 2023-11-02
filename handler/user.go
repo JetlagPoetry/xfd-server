@@ -33,7 +33,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	if !utils.Mobile(req.Phone) || len(req.Code) == 0 {
+	if !utils.Mobile(req.Phone) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
@@ -123,6 +123,33 @@ func (h *UserHandler) ModifyInfo(c *gin.Context) {
 	resp, xErr = h.userService.ModifyUserInfo(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] ModifyUserInfo failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *UserHandler) AssignAdmin(c *gin.Context) {
+	var (
+		req  *types.UserAssignAdminReq
+		resp *types.UserAssignAdminResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	if !utils.Mobile(req.Phone) {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	resp, xErr = h.userService.AssignAdmin(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] AssignAdmin failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}

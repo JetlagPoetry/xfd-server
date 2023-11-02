@@ -31,21 +31,22 @@ func NewRouter() *gin.Engine {
 		userGroup.POST("/refreshToken", handler.User.RefreshToken)
 		userGroup.GET("/info", handler.User.GetUserInfo)
 		userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
+		userGroup.POST("/assignAdmin", handler.User.AssignAdmin)
 	}
-	//messageGroup := r.Group("/api/v1/message")
-	//{
-	//	messageGroup.GET("/getConversations", handler.Message.GetConversations)
-	//	messageGroup.GET("/getMessages", handler.Message.GetMessages)
-	//	//messageGroup.POST("/send", handler.Message.Send)
-	//}
 	purchaseGroup := r.Group("/api/v1/purchase")
 	{
 		purchaseGroup.GET("/getOrders", handler.Purchase.GetOrders)
 		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)
-		purchaseGroup.POST("/modifyOrder", handler.Purchase.ModifyOrder)
+		//purchaseGroup.POST("/modifyOrder", handler.Purchase.ModifyOrder)
 		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus)
 		purchaseGroup.GET("/getQuotes", handler.Purchase.GetQuotes)
 		purchaseGroup.POST("/submitQuote", handler.Purchase.SubmitQuote)
+		purchaseGroup.GET("/getStatistics", handler.Purchase.SubmitQuote)
+	}
+	supplyGroup := r.Group("/api/v1/supply")
+	{
+		supplyGroup.GET("/getPurchases", handler.Supply.GetPurchases)
+		supplyGroup.GET("/getQuotes", handler.Supply.GetQuotes)
 	}
 	orgGroup := r.Group("/api/v1/org")
 	{
@@ -55,12 +56,12 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getApplys", handler.Org.GetApplys)               // 获取积分申请记录
 		orgGroup.GET("/getApplyDetail", handler.Org.GetApplys)          // 查看本批积分明细
 
-		orgGroup.GET("/getOrgMembers", handler.Org.GetOrgMembers)
-		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)
-
 		orgGroup.POST("/verifyAccount", handler.Org.VerifyAccount)              // 提交用户审核
 		orgGroup.GET("/getAccountToVerify", handler.Org.GetAccountToVerify)     // 获取待审核用户申请
 		orgGroup.GET("/getAccountVerifyList", handler.Org.GetAccountVerifyList) // 获取用户申请记录
+
+		orgGroup.GET("/getOrgMembers", handler.Org.GetOrgMembers)
+		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)
 	}
 	return r
 }

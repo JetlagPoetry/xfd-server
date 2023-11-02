@@ -19,7 +19,6 @@ type UserSendCodeResp struct {
 
 type UserLoginReq struct {
 	Phone string `json:"phone"`
-	Code  string `json:"code"` // 验证码
 }
 
 type UserLoginResp struct {
@@ -55,14 +54,15 @@ type UserRefreshTokenResp struct {
 }
 
 type GetUserInfoResp struct {
-	Username      string           `json:"username"`
-	AvatarURL     string           `json:"avatarUrl"`
-	UserRole      model.UserRole   `json:"userRole"`
-	VerifyStatus  UserVerifyStatus `json:"verifyStatus"`
-	VerifyComment string           `json:"verifyComment"`
-	Organization  string           `json:"organization"`
-	Point         int              `json:"point"`
-	NotifyVerify  bool             `json:"notifyVerify"` // 是否提示认证成功
+	Username       string           `json:"username"`
+	AvatarURL      string           `json:"avatarUrl"`
+	UserRole       model.UserRole   `json:"userRole"`
+	VerifyStatus   UserVerifyStatus `json:"verifyStatus"`
+	VerifyComment  string           `json:"verifyComment"`
+	Organization   string           `json:"organization"`
+	OrganizationID int              `json:"organizationID"`
+	Point          int              `json:"point"`
+	NotifyVerify   bool             `json:"notifyVerify"` // 是否提示认证成功
 }
 
 type UserVerifyStatus int32
@@ -78,4 +78,11 @@ type UserModifyInfoReq struct {
 }
 
 type UserModifyInfoResp struct {
+}
+
+type UserAssignAdminReq struct {
+	Phone string `json:"phone"`
+}
+
+type UserAssignAdminResp struct {
 }

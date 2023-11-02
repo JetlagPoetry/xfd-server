@@ -49,17 +49,6 @@ type VerifyAccountReq struct {
 type VerifyAccountResp struct {
 }
 
-type GetOrgMembersReq struct {
-}
-
-type GetOrgMembersResp struct {
-}
-type GetPointRecordsByUserReq struct {
-}
-
-type GetPointRecordsByUserResp struct {
-}
-
 type GetAccountToVerifyReq struct {
 }
 
@@ -84,7 +73,7 @@ type GetAccountVerifyListReq struct {
 type GetAccountVerifyListResp struct {
 	ToVerify int64                  `json:"toVerify"`
 	List     []*AccountVerifyRecord `json:"list"`
-	TotalNum int                    `json:"totalNum"`
+	TotalNum int64                  `json:"totalNum"`
 }
 
 type AccountVerifyRecord struct {
@@ -103,4 +92,17 @@ type AccountVerifyRecord struct {
 	Comment          string                 `json:"comment"`
 	VerifyTime       int64                  `json:"verifyTime"`
 	CreateTime       int64                  `json:"createTime"`
+}
+
+type GetOrgMembersReq struct {
+	OrgID int `json:"orgID"`
+}
+
+type GetOrgMembersResp struct {
+}
+type GetPointRecordsByUserReq struct {
+	UserID int `json:"userID"`
+}
+
+type GetPointRecordsByUserResp struct {
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
+	"xfd-backend/pkg/types"
 )
 
 type OrderQuoteDao struct {
@@ -24,12 +25,32 @@ func (d *OrderQuoteDao) Lists(ctx context.Context, limit, offset int) (list []*m
 	return list, count, nil
 }
 
-func (d *OrderQuoteDao) ListByUserID(ctx context.Context, userID string) (list []*model.OrderQuote, err error) {
-	err = db.Get().Model(&model.OrderQuote{}).Where("user_id = ?", userID).Find(&list).Error
+func (d *OrderQuoteDao) ListByUserIDAndOrderID(ctx context.Context, userID string, orderID int) (list []*model.OrderQuote, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ? AND purchase_order_id", userID, orderID).Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
 	return list, nil
+}
+
+func (d *OrderQuoteDao) ListByQuoteUserIDAndOrderIDs(ctx context.Context, userID string, orderIDs []int) (list []*model.OrderQuote, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ? AND purchase_order_id IN (?)", userID, orderIDs).Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (d *OrderQuoteDao) ListByOrderID(ctx context.Context, orderID int, page types.PageRequest) (list []*model.OrderQuote, count int64, err error) {
+	sql := db.Get().Model(&model.OrderQuote{}).Where("purchase_order_id = ?", orderID)
+	err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, 0, nil
 }
 
 func (d *OrderQuoteDao) GetByID(ctx context.Context, id int) (order *model.OrderQuote, err error) {
