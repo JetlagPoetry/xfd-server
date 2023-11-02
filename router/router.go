@@ -14,7 +14,7 @@ func NewRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall/categories", "/api/v1/area")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall/categories", "/api/v1/area", "/api/v1/uploadFile")) // 登录校验, 参数为跳过登录的路由
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
@@ -72,8 +72,10 @@ func NewRouter() *gin.Engine {
 	}
 	commonGroup := r.Group("/api/v1/common")
 	{
-		commonGroup.GET("/area", handler.Mall.GetArea)     //获取区域地址代码
-		commonGroup.POST("/upload", handler.Common.Upload) // 上传到对象存储
+		commonGroup.GET("/area", handler.Mall.GetArea)                   //获取区域地址代码
+		commonGroup.GET("/area", handler.Mall.GetArea)                   //获取区域地址代码
+		commonGroup.POST("/uploadFile", handler.Mall.UploadFile)         //上传图片
+		commonGroup.DELETE("/uploadFile", handler.Mall.DeleteUploadFile) //删除图片
 	}
 
 	return r
