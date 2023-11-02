@@ -9,8 +9,8 @@ type AreaCode struct {
 	Pcode     int       `gorm:"comment:父级区划代码;not null;type:bigint(12);default:0;column:pcode;index:pcode;"`
 	Status    int       `gorm:"comment:地址是否有效1:有效,0:无效;type:tinyint(1);not null;default:1;column:status;index:code_status"`
 	ID        int       `gorm:"primary_key;AUTO_INCREMENT;not null;column:id"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;comment:创建时间"`
-	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime;comment:更新时间"`
+	CreatedAt time.Time `gorm:"column:created_at;default:CURRENT_TIMESTAMP(3);comment:创建时间"`
+	UpdatedAt time.Time `gorm:"column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);comment:更新时间"`
 }
 
 func (u *AreaCode) TableName() string {
