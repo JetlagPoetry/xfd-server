@@ -13,10 +13,10 @@ import (
 
 // Response 基础序列化器
 type Response struct {
-	LogID  string      `json:"log_id"`
-	Status xerr.XCode  `json:"status"`
-	Msg    string      `json:"msg"`
-	Data   interface{} `json:"data"`
+	LogID  string      `json:"log_id,omitempty"`
+	Status xerr.XCode  `json:"status,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
 }
 
 // TrackedErrorResponse 有追踪信息的错误反应
@@ -57,7 +57,7 @@ func RespError(ctx *gin.Context, err xerr.XErr) *TrackedErrorResponse {
 		Response: Response{
 			Status: status,
 			Msg:    GetMsg(status),
-			Data:   "",
+			Data:   err.Error(),
 		},
 		LogID: logID,
 	}

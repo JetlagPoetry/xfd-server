@@ -6,4 +6,5 @@ var (
 	Purchase = NewPurchaseHandler()
 	Supply   = NewSupplyHandler()
 	Org      = NewOrgHandler()
+	Mall     = NewMallHandler()
 )
