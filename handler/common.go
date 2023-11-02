@@ -22,6 +22,8 @@ func NewCommonHandler() *CommonHandler {
 	return &CommonHandler{commonService: service.NewCommonService(), areaService: service.NewAreaService()}
 }
 
+const BucketNameT = "xfd-t"
+
 func (h *CommonHandler) GetArea(c *gin.Context) {
 	var (
 		req  types.AreaReq
@@ -45,7 +47,7 @@ func (h *CommonHandler) GetArea(c *gin.Context) {
 func (h *CommonHandler) UploadFile(c *gin.Context) {
 	var resp *types.CommonUploadResp
 	file, header, err := c.Request.FormFile("file")
-	if err != nil {
+	if err != nil || file == nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
@@ -58,7 +60,7 @@ func (h *CommonHandler) UploadFile(c *gin.Context) {
 	if folderName == "" {
 		folderName = "temp"
 	}
-	link, err := utils.Upload(c, "xfd-t-132095929", folderName+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), &file)
+	link, err := utils.Upload(c, BucketNameT, folderName+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), &file)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.ErrorUploadFile, err)))
 		return
@@ -68,10 +70,15 @@ func (h *CommonHandler) UploadFile(c *gin.Context) {
 }
 
 func (h *CommonHandler) DeleteUploadFile(c *gin.Context) {
-	link := c.Query("link")
-	err := utils.Delete(link)
+	var req types.CommonDeleteUploadReq
+	err := c.BindQuery(&req)
 	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.ErrorDeleteFile, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	rr := utils.Delete(req.Link)
+	if rr != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.ErrorDeleteFile, rr)))
 		return
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
