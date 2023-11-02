@@ -7,4 +7,5 @@ var (
 	Supply   = NewSupplyHandler()
 	Org      = NewOrgHandler()
 	Mall     = NewMallHandler()
+	Common   = NewCommonHandler()
 )

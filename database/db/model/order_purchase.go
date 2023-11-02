@@ -4,17 +4,17 @@ import "gorm.io/gorm"
 
 type OrderPurchase struct {
 	gorm.Model
-	UserID      string              `gorm:"column:user_id;not null" json:"user_id"`
-	CategoryA   int                 `gorm:"column:category_a;not null" json:"category_a"`
-	CategoryB   int                 `gorm:"column:category_b;not null" json:"category_b"`
-	CategoryC   int                 `gorm:"column:category_c;not null" json:"category_c"`
-	Period      PurchasePeriod      `gorm:"column:period;not null" json:"period"`
-	Quantity    int                 `gorm:"column:quantity;not null" json:"quantity"`
-	Unit        string              `gorm:"column:unit;not null" json:"unit"`
-	Requirement string              `gorm:"column:requirement" json:"requirement"`
-	AreaCodeID  int                 `gorm:"column:area_code_id" json:"area_code_id"` // todo
-	Status      OrderPurchaseStatus `gorm:"column:status" json:"status"`
-	Deleted     int                 `gorm:"column:deleted" json:"deleted"`
+	UserID       string              `gorm:"column:user_id;not null" json:"user_id"`
+	CategoryA    int                 `gorm:"column:category_a;not null" json:"category_a"`
+	CategoryB    int                 `gorm:"column:category_b;not null" json:"category_b"`
+	CategoryC    int                 `gorm:"column:category_c;not null" json:"category_c"`
+	CategoryName string              `gorm:"column:category_name;not null" json:"category_name"`
+	Period       PurchasePeriod      `gorm:"column:period;not null" json:"period"`
+	Quantity     int                 `gorm:"column:quantity;not null" json:"quantity"`
+	Unit         string              `gorm:"column:unit;not null" json:"unit"`
+	Requirement  string              `gorm:"column:requirement" json:"requirement"`
+	Status       OrderPurchaseStatus `gorm:"column:status" json:"status"`
+	Deleted      int                 `gorm:"column:deleted" json:"deleted"`
 }
 
 type PurchasePeriod int

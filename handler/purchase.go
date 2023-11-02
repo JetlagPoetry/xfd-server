@@ -18,10 +18,10 @@ func NewPurchaseHandler() *PurchaseHandler {
 	return &PurchaseHandler{purchaseService: service.NewPurchaseService()}
 }
 
-func (h *PurchaseHandler) GetOrders(c *gin.Context) {
+func (h *PurchaseHandler) GetPurchases(c *gin.Context) {
 	var (
-		req  *types.PurchaseGetOrdersReq
-		resp *types.PurchaseGetOrdersResp
+		req  *types.PurchaseGetPurchasesReq
+		resp *types.PurchaseGetPurchasesResp
 		xErr xerr.XErr
 	)
 
@@ -30,9 +30,9 @@ func (h *PurchaseHandler) GetOrders(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	resp, xErr = h.purchaseService.GetOrders(c, req)
+	resp, xErr = h.purchaseService.GetPurchases(c, req)
 	if xErr != nil {
-		log.Println("[PurchaseHandler] GetOrders failed, err=", xErr)
+		log.Println("[PurchaseHandler] GetPurchases failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}
@@ -52,7 +52,7 @@ func (h *PurchaseHandler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
-	if req.Period == 0 || req.Quantity == 0 || req.Unit == "" || req.AreaCodeID == 0 {
+	if req.Period == 0 || req.Quantity == 0 || req.Unit == "" || len(req.CategoryName) == 0 {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
@@ -149,31 +149,6 @@ func (h *PurchaseHandler) GetQuotes(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
-func (h *PurchaseHandler) SubmitQuote(c *gin.Context) {
-	var (
-		req  *types.PurchaseSubmitQuoteReq
-		resp *types.PurchaseSubmitQuoteResp
-		xErr xerr.XErr
-	)
-
-	err := c.BindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
-	if req.OrderID == 0 || req.ItemID == 0 || req.Price == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
-	resp, xErr = h.purchaseService.SubmitQuote(c, req)
-	if xErr != nil {
-		log.Println("[PurchaseHandler] SubmitQuote failed, err=", xErr)
-		c.JSON(http.StatusOK, response.RespError(c, xErr))
-		return
-	}
-	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
-}
-
 func (h *PurchaseHandler) GetStatistics(c *gin.Context) {
 	var (
 		req  *types.PurchaseGetStatisticsReq
@@ -189,6 +164,27 @@ func (h *PurchaseHandler) GetStatistics(c *gin.Context) {
 	resp, xErr = h.purchaseService.GetStatistics(c, req)
 	if xErr != nil {
 		log.Println("[PurchaseHandler] GetStatistics failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *PurchaseHandler) AnswerQuote(c *gin.Context) {
+	var (
+		req  *types.PurchaseAnswerQuoteReq
+		resp *types.PurchaseAnswerQuoteResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.purchaseService.AnswerQuote(c, req)
+	if xErr != nil {
+		log.Println("[PurchaseHandler] AnswerQuote failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}

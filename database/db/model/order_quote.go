@@ -9,6 +9,8 @@ type OrderQuote struct {
 	QuoteUserID     string  `gorm:"column:quote_user_id;not null" json:"quote_user_id"`
 	ItemID          int     `gorm:"column:item_id;not null" json:"item_id"`
 	Price           float64 `gorm:"column:price;not null" json:"price"`
+	NotifySupply    bool    `gorm:"column:notify_supply;not null" json:"notify_supply"`
+	NotifyPurchase  bool    `gorm:"column:notify_purchase;not null" json:"notify_purchase"`
 	Deleted         int     `gorm:"column:deleted" json:"deleted"`
 }
 

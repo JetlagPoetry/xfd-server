@@ -53,6 +53,14 @@ func (d *OrderQuoteDao) ListByOrderID(ctx context.Context, orderID int, page typ
 	return list, 0, nil
 }
 
+func (d *OrderQuoteDao) ListByQuoteUserID(ctx context.Context, userID string) (list []*model.OrderQuote, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ?", userID).Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func (d *OrderQuoteDao) GetByID(ctx context.Context, id int) (order *model.OrderQuote, err error) {
 	err = db.Get().Model(&model.OrderQuote{}).Where("id = ?", id).First(&order).Error
 	if err != nil {
@@ -61,12 +69,28 @@ func (d *OrderQuoteDao) GetByID(ctx context.Context, id int) (order *model.Order
 	return order, nil
 }
 
-func (d *OrderQuoteDao) GetByUserID(ctx context.Context, userID string) (order *model.OrderQuote, err error) {
-	err = db.Get().Model(&model.OrderQuote{}).Where("user_id = ?", userID).First(&order).Error
+func (d *OrderQuoteDao) CountByOrderID(ctx context.Context, orderID int) (count int64, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("purchase_order_id = ?", orderID).Count(&count).Error
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return order, nil
+	return count, nil
+}
+
+func (d *OrderQuoteDao) CountByPurchaseUserIDAndNotifyPurchase(ctx context.Context, userID string, notifyPurchase bool) (count int64, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("purchase_user_id = ? AND notify_purchase = ?", userID, notifyPurchase).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (d *OrderQuoteDao) CountByOrderIDAndNotifyPurchase(ctx context.Context, orderID int, notifyPurchase bool) (count int64, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("purchase_order_id = ? AND notify_purchase = ?", orderID, notifyPurchase).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (d *OrderQuoteDao) Create(ctx context.Context, order *model.OrderQuote) (err error) {
@@ -79,6 +103,22 @@ func (d *OrderQuoteDao) Create(ctx context.Context, order *model.OrderQuote) (er
 
 func (d *OrderQuoteDao) UpdateByID(ctx context.Context, id int, updateValue *model.OrderQuote) (err error) {
 	updateResult := db.Get().Model(&model.OrderQuote{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *OrderQuoteDao) UpdateByOrderID(ctx context.Context, orderID int, updateValue *model.OrderQuote) (err error) {
+	updateResult := db.Get().Model(&model.OrderQuote{}).Where("purchase_order_id =?", orderID).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *OrderQuoteDao) UpdateByPurchaseUserAndQuoteUser(ctx context.Context, purchaseUser string, quoteUser string, updateValue *model.OrderQuote) (err error) {
+	updateResult := db.Get().Model(&model.OrderQuote{}).Where("purchase_user_id = ? AND quote_user_id = ?", purchaseUser, quoteUser).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}

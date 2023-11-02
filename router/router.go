@@ -35,18 +35,21 @@ func NewRouter() *gin.Engine {
 	}
 	purchaseGroup := r.Group("/api/v1/purchase")
 	{
-		purchaseGroup.GET("/getOrders", handler.Purchase.GetOrders)
-		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)
+		purchaseGroup.GET("/getPurchases", handler.Purchase.GetPurchases) // 查看本人采购单
+		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)  // 提交采购单
 		//purchaseGroup.POST("/modifyOrder", handler.Purchase.ModifyOrder)
-		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus)
-		purchaseGroup.GET("/getQuotes", handler.Purchase.GetQuotes)
-		purchaseGroup.POST("/submitQuote", handler.Purchase.SubmitQuote)
-		purchaseGroup.GET("/getStatistics", handler.Purchase.SubmitQuote)
+		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus) // 删除或结束采购单
+		purchaseGroup.GET("/getQuotes", handler.Purchase.GetQuotes)                  // 查看采购单的报价列表
+		purchaseGroup.GET("/getStatistics", handler.Purchase.GetStatistics)          // 查看采购商统计数据
+		purchaseGroup.POST("/answerQuote", handler.Purchase.AnswerQuote)             // 采购商回复报价
 	}
 	supplyGroup := r.Group("/api/v1/supply")
 	{
-		supplyGroup.GET("/getPurchases", handler.Supply.GetPurchases)
-		supplyGroup.GET("/getQuotes", handler.Supply.GetQuotes)
+		supplyGroup.GET("/getPurchases", handler.Supply.GetPurchases)             // 查看所有采购单
+		supplyGroup.GET("/getQuotes", handler.Supply.GetQuotes)                   // 查看采购单对应报价
+		supplyGroup.POST("/submitQuote", handler.Supply.SubmitQuote)              // 提交报价
+		supplyGroup.GET("/getQuotedPurchases", handler.Supply.GetQuotedPurchases) // 查看报价过的所有采购单
+		supplyGroup.GET("/getStatistics", handler.Supply.GetStatistics)           // 查看采购商统计数据
 	}
 	orgGroup := r.Group("/api/v1/org")
 	{
@@ -67,9 +70,10 @@ func NewRouter() *gin.Engine {
 	{
 		mallGroup.GET("/categories", handler.Mall.GetCategories) //获取商城分类信息
 	}
-	v1Group := r.Group("/api/v1")
+	commonGroup := r.Group("/api/v1/common")
 	{
-		v1Group.GET("/area", handler.Mall.GetArea) //获取区域地址代码
+		commonGroup.GET("/area", handler.Mall.GetArea)     //获取区域地址代码
+		commonGroup.POST("/upload", handler.Common.Upload) // 上传到对象存储
 	}
 
 	return r

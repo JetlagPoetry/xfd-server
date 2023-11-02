@@ -14,9 +14,32 @@ func NewOrderPurchaseDao() *OrderPurchaseDao {
 	return &OrderPurchaseDao{}
 }
 
-func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int) (list []*model.OrderPurchase, count int64, err error) {
-	// todo category 单多选
-	sql := db.Get().Model(&model.OrderPurchase{}).Where("category_a = ? AND category_b = ? AND category_c = ? AND status = 1", categoryA, categoryB, categoryC)
+func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int, like string) (list []*model.OrderPurchase, count int64, err error) {
+	sql := db.Get().Model(&model.OrderPurchase{})
+	if len(like) > 0 {
+		sql = sql.Where("category_name LIKE '%?%' AND status = 1", like) // todo debug
+	} else {
+		sql = sql.Where("category_a = ? AND category_b = ? AND status = 1", categoryA, categoryB)
+
+		if categoryC > 0 {
+			sql = sql.Where("category_c = ?", categoryC)
+		}
+	}
+	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, count, nil
+}
+
+func (d *OrderPurchaseDao) ListByOrderIDs(ctx context.Context, page types.PageRequest, orderIDs []int, status model.OrderPurchaseStatus) (list []*model.OrderPurchase, count int64, err error) {
+	sql := db.Get().Model(&model.OrderPurchase{}).Where("id IN (?)", orderIDs)
+	if status != 0 {
+		sql = sql.Where("status = ?", status)
+	}
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}

@@ -2,47 +2,44 @@ package types
 
 import "xfd-backend/database/db/model"
 
-type PurchaseGetOrdersReq struct {
+type PurchaseGetPurchasesReq struct {
 	PageRequest
-	CategoryA int `json:"categoryA"`
-	CategoryB int `json:"categoryB"`
-	CategoryC int `json:"categoryC"`
+	Status model.OrderPurchaseStatus `json:"status"`
 }
 
-type PurchaseGetOrdersResp struct {
+type PurchaseGetPurchasesResp struct {
 	List     []*PurchaseOrder `json:"list"`
 	TotalNum int64            `json:"totalNum"`
 }
 
 type PurchaseOrder struct {
-	OrderID          int                  `json:"orderId"`
-	CategoryNameA    string               `json:"categoryNameA"`
-	CategoryNameB    string               `json:"categoryNameB"`
-	CategoryNameC    string               `json:"categoryNameC"`
-	Period           model.PurchasePeriod `json:"period"`
-	Quantity         int                  `json:"quantity"`
-	Unit             string               `json:"unit"`
-	Requirement      string               `json:"requirement"`
-	AreaCodeID       int                  `json:"areaCodeID"`
-	AreaName         string               `json:"areaName"`
-	UserID           string               `json:"userID"`
-	UserName         string               `json:"userName"`
-	UserAvatar       string               `json:"userAvatar"`
-	UserOrganization string               `json:"userOrganization"`
-	SubmitTime       int64                `json:"submitTime"`
-	HasQuote         bool                 `json:"hasQuote"`
-	NewQuote         int                  `json:"newQuote"`
+	OrderID       int                  `json:"orderId"`
+	CategoryNameA string               `json:"categoryNameA"`
+	CategoryNameB string               `json:"categoryNameB"`
+	CategoryNameC string               `json:"categoryNameC"`
+	CategoryName  string               `json:"categoryName"`
+	Period        model.PurchasePeriod `json:"period"`
+	Quantity      int                  `json:"quantity"`
+	Unit          string               `json:"unit"`
+	Requirement   string               `json:"requirement"`
+	UserID        string               `json:"userID"`
+	UserName      string               `json:"userName"`
+	UserAvatar    string               `json:"userAvatar"`
+	SubmitTime    int64                `json:"submitTime"`
+	HasQuote      bool                 `json:"hasQuote"`
+	TotalQuote    int                  `json:"totalQuote"`
+	NewQuote      int                  `json:"newQuote"`
 }
 
 type PurchaseSubmitOrderReq struct {
-	CategoryA   int                  `json:"categoryA"`
-	CategoryB   int                  `json:"categoryB"`
-	CategoryC   int                  `json:"categoryC"`
-	Period      model.PurchasePeriod `json:"period"`
-	Quantity    int                  `json:"quantity"`
-	Unit        string               `json:"unit"`
-	Requirement string               `json:"requirement"`
-	AreaCodeID  int                  `json:"areaCodeID"`
+	CategoryA    int                  `json:"categoryA"`
+	CategoryB    int                  `json:"categoryB"`
+	CategoryC    int                  `json:"categoryC"`
+	CategoryName string               `json:"categoryName"`
+	Period       model.PurchasePeriod `json:"period"`
+	Quantity     int                  `json:"quantity"`
+	Unit         string               `json:"unit"`
+	Requirement  string               `json:"requirement"`
 }
 
 type PurchaseSubmitOrderResp struct {
@@ -72,41 +69,40 @@ type PurchaseModifyOrderStatusResp struct {
 }
 
 type PurchaseGetQuotesReq struct {
+	PageRequest
 	OrderID int `json:"orderID"`
 }
 
 type PurchaseGetQuotesResp struct {
-	List []*PurchaseQuote `json:"list"`
+	List     []*PurchaseQuote `json:"list"`
+	TotalNum int64            `json:"totalNum"`
 }
 
 type PurchaseQuote struct {
-	QuoteID int `json:"quoteID"`
-	OrderID int `json:"orderID"`
-	ItemID  int `json:"itemID"` // 商品id
-	// todo 商品标题、图片
-	Price            float64 `json:"price"`
-	Unit             string  `json:"unit"`
-	Time             int64   `json:"time"`
-	UserID           string  `json:"userID"`
-	UserName         string  `json:"userName"`
-	UserAvatar       string  `json:"userAvatar"`
-	UserOrganization string  `json:"userOrganization"`
-	IsNew            bool    `json:"isNew"` // todo 新增报价
-}
-
-type PurchaseSubmitQuoteReq struct {
-	OrderID int     `json:"orderID"`
-	ItemID  int     `json:"itemID"`
-	Price   float64 `json:"price"`
-}
-
-type PurchaseSubmitQuoteResp struct {
+	QuoteID    int     `json:"quoteID"`
+	OrderID    int     `json:"orderID"`
+	ItemID     int     `json:"itemID"`
+	ItemURL    string  `json:"itemURL"`
+	ItemName   string  `json:"itemName"`
+	Price      float64 `json:"price"`
+	Unit       string  `json:"unit"`
+	Time       int64   `json:"time"`
+	UserID     string  `json:"userID"`
+	UserName   string  `json:"userName"`
+	UserAvatar string  `json:"userAvatar"`
+	IsNew      bool    `json:"isNew"`
 }
 
 type PurchaseGetStatisticsReq struct {
 }
 
 type PurchaseGetStatisticsResp struct {
-	RetailNumber int `json:"retailNumber"`
-	QuoteNumber  int `json:"quoteNumber"`
+	NewQuote int `json:"newQuote"`
+}
+
+type PurchaseAnswerQuoteReq struct {
+	SupplyUserID string `json:"SupplyUserID"`
+}
+
+type PurchaseAnswerQuoteResp struct {
 }
