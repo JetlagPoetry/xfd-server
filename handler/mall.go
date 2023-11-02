@@ -68,7 +68,7 @@ func (h *MallHandler) GetArea(c *gin.Context) {
 func (h *MallHandler) UploadFile(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusOK, fmt.Sprintf("上传文件失败: %s", err.Error()))
+		c.JSON(http.StatusOK, fmt.Sprintf("上传文件失: %s", err.Error()))
 		return
 	}
 	folderName := c.Request.FormValue("folderName")
