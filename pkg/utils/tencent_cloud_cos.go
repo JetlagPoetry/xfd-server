@@ -52,20 +52,24 @@ func CheckErr(err error) bool {
 	}
 }
 
-func Upload(ctx context.Context, bucketName, fileName string, file *multipart.File) string {
+func Upload(ctx context.Context, bucketName, fileName string, file *multipart.File) (string, error) {
 	client := getCos(bucketName)
 	_, err := client.Object.Put(ctx, fileName, *file, nil)
-	if CheckErr(err) {
-		return fmt.Sprintf("https://", bucketName, "-", os.Getenv("APP_ID"), "."+os.Getenv("COS_REGION_B")+"/"+fileName)
+	if err != nil {
+		return "", err
 	}
-	return ""
+	return fmt.Sprintf("https://", bucketName, "-", os.Getenv("APP_ID"), "."+os.Getenv("COS_REGION_B")+"/"+fileName), nil
+
 }
 
-func Delete(cosUrl string) bool {
+func Delete(cosUrl string) error {
 	parts := strings.Split(cosUrl, "/")
 	bucket := parts[2]
 	fileName := strings.Join(parts[3:], "/")
 	c := getCos(bucket)
 	_, err := c.Object.Delete(context.Background(), fileName, nil)
-	return CheckErr(err)
+	if err != nil {
+		return err
+	}
+	return nil
 }
