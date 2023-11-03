@@ -12,6 +12,7 @@ import (
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
 	"xfd-backend/database/repo"
+	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
@@ -109,7 +110,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 		Type:    enum.ProductWholesale,
 	}
 
-	//创建商品规格
+	//创建批发商品规格
 	specificationWAID, err := s.goods.CreateSpecification(ctx, specificationWA)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -119,7 +120,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	//创建商品规格属性
+	//创建批发商品规格属性
 	specificationAValueMap := make(map[string]int32)
 	specificationBValueMap := make(map[string]int32)
 	for _, v := range req.WholesaleProducts {
@@ -167,7 +168,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 	}
-
+	//创建零售产品
 	if len(req.RetailProducts) != 0 {
 		specificationRA := &model.Specification{
 			Name:    req.RetailProducts[0].SpecAName,
@@ -179,7 +180,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			GoodsID: goodsID,
 			Type:    enum.ProductRetail,
 		}
-		//创建商品规格
+		//创建零售规格
 		specificationRAID, err := s.goods.CreateSpecification(ctx, specificationRA)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -188,7 +189,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		//创建商品规格属性
+		//创建零售规格属性
 		specificationAValueRMap := make(map[string]int32)
 		specificationBValueRMap := make(map[string]int32)
 		for _, v := range req.RetailProducts {
@@ -234,6 +235,41 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				return xerr.WithCode(xerr.ErrorDatabase, err)
 			}
 		}
+	}
+	return nil
+}
+
+func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) xerr.XErr {
+	//获取用户ID
+	//userID := common.GetUserID(ctx)
+	//获取用户角色
+	userRole := common.GetUserRole(ctx)
+	if req.RequestSource == enum.MiniProgramSource {
+		//小程序后台
+		if userRole == model.UserRoleSupplier {
+			//        1. 弹窗内按发布时间由新到旧展示满足报价条件的所有商品，可上下划动
+			//供货商只能看自己的产品,(发布时间由新到旧展示满足报价条件的所有批发商品)
+		}
+		if userRole == model.UserRoleCustomer {
+			//消费者只能看到上架的的零售商品,默认按照发布时间由新到旧展示,筛选满足条件的商品
+			//    2. 综合排序：按货品发布时间由新到旧排列
+			//    3. 销量优先：按货品近30天累计支付成功的订单总量降序排列
+			//    4. 低价优先：按货品最低价格升序排列（一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序）
+		}
+		if userRole == model.UserRoleBuyer {
+			//采购商只能看到上架的批发商品,默认按照发布时间由新到旧展示,筛选满足条件的商品,由新到旧排列
+		}
+		// 2. 综合排序、最新发布：都按需求单提交时间由新到旧排列（本期不做区分）
+		// 3. 低价优先：按货品最低价格升序排列（一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序）
+	}
+	if req.RequestSource == enum.BackendSource {
+		if userRole == model.UserRoleCustomer || userRole == model.UserRoleBuyer {
+			//消费者采购商都没有后台
+		}
+		if userRole == model.UserRoleSupplier {
+			//供货商只能看自己的产品
+		}
+
 	}
 	return nil
 }
