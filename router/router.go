@@ -14,7 +14,7 @@ func NewRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall/categories", "/api/v1/area", "/api/v1/uploadFile")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall/categories", "/api/v1/common/area", "/api/v1/common/uploadFile", "/api/v1/goods")) // 登录校验, 参数为跳过登录的路由
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
@@ -68,15 +68,20 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)
 
 	}
+	//todo:/api/v1/area  500 而不是404
 	mallGroup := r.Group("/api/v1/mall")
 	{
 		mallGroup.GET("/categories", handler.Mall.GetCategories) //获取商城分类信息
 	}
+	goodsGroup := r.Group("/api/v1/goods")
+	{
+		goodsGroup.POST("/addGoods", handler.Goods.AddGoods) //添加商品
+	}
 	commonGroup := r.Group("/api/v1/common")
 	{
-		commonGroup.GET("/area", handler.Mall.GetArea)                   //获取区域地址代码
-		commonGroup.POST("/uploadFile", handler.Mall.UploadFile)         //上传图片
-		commonGroup.DELETE("/uploadFile", handler.Mall.DeleteUploadFile) //删除图片
+		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
+		commonGroup.POST("/uploadFile", handler.Common.UploadFile)         //上传图片
+		commonGroup.DELETE("/uploadFile", handler.Common.DeleteUploadFile) //删除图片
 	}
 
 	return r

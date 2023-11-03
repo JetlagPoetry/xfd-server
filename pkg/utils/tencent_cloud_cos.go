@@ -15,12 +15,18 @@ import (
 
 // getCos 获取腾讯云cos client
 func getCos(bucketName string) *cos.Client {
-	u, _ := url.Parse(fmt.Sprintf("https://", bucketName, "-", os.Getenv("APP_ID"), "."+os.Getenv("COS_REGION_B")))
+	appID := os.Getenv("APP_ID")
+	region := os.Getenv("COS_REGION_B")
+	secretID := os.Getenv("SECRET_ID")
+	secretKey := os.Getenv("SECRET_KEY")
+	l := fmt.Sprintf("https://%v-%v.%v", bucketName, appID, region)
+	u, _ := url.Parse(l)
+
 	b := &cos.BaseURL{BucketURL: u}
 	client := cos.NewClient(b, &http.Client{
 		Transport: &cos.AuthorizationTransport{
-			SecretID:  os.Getenv("SECRET_ID"),
-			SecretKey: os.Getenv("SECRET_KEY"),
+			SecretID:  secretID,
+			SecretKey: secretKey,
 			Transport: &debug.DebugRequestTransport{
 				RequestHeader:  true,
 				RequestBody:    false,
@@ -52,20 +58,28 @@ func CheckErr(err error) bool {
 	}
 }
 
-func Upload(ctx context.Context, bucketName, fileName string, file *multipart.File) string {
+func Upload(ctx context.Context, bucketName, fileName string, file *multipart.File) (string, error) {
 	client := getCos(bucketName)
 	_, err := client.Object.Put(ctx, fileName, *file, nil)
-	if CheckErr(err) {
-		return fmt.Sprintf("https://", bucketName, "-", os.Getenv("APP_ID"), "."+os.Getenv("COS_REGION_B")+"/"+fileName)
+	if err != nil {
+		return "", err
 	}
-	return ""
+	appID := os.Getenv("APP_ID")
+	region := os.Getenv("COS_REGION_B")
+	return fmt.Sprintf("https://%v-%v.%v/%v", bucketName, appID, region, fileName), nil
+
 }
 
-func Delete(cosUrl string) bool {
+func Delete(cosUrl string) error {
 	parts := strings.Split(cosUrl, "/")
-	bucket := parts[2]
+	appID := os.Getenv("APP_ID")
+	bucketParts := strings.Split(parts[2], "-"+appID)
+	bucket := bucketParts[0]
 	fileName := strings.Join(parts[3:], "/")
 	c := getCos(bucket)
 	_, err := c.Object.Delete(context.Background(), fileName, nil)
-	return CheckErr(err)
+	if err != nil {
+		return err
+	}
+	return nil
 }

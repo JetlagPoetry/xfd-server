@@ -1,6 +1,9 @@
 package model
 
-import "xfd-backend/database/db/enum"
+import (
+	"time"
+	"xfd-backend/database/db/enum"
+)
 
 // Category 商品分类表
 type Category struct {
@@ -20,59 +23,75 @@ func (u *Category) TableName() string {
 
 // Goods 商品表
 type Goods struct {
-	BaseModel
-	CategoryID         int32 `gorm:"type:int;default:0;not null"`
-	Category           *Category
-	BrandsID           int32    `gorm:"type:int;not null"`
-	OnSale             bool     `gorm:"default:false;not null;comment:是否已上架"`
-	ShipFree           bool     `gorm:"default:false;not null;comment:是否免运费"`
-	Name               string   `gorm:"type:varchar(100);not null;comment:商品名称"`
-	GoodsSn            string   `gorm:"type:varchar(100);not null;comment:商品编号"`
-	GoodsBrief         string   `gorm:"type:varchar(100);not null;comment:商品简介"`
-	Images             GormList `gorm:"type:varchar(1000);not null;comment:商品轮播图"`
-	DescImages         GormList `gorm:"type:varchar(2000);not null;comment:商品详情图"`
-	GoodsFrontImage    string   `gorm:"type:varchar(200);not null;comment:商品封面图"`
-	ClickNum           int32    `gorm:"type:int;default:0;not null;comment:商品点击数"`
-	IsNew              bool     `gorm:"default:false;not null;comment:是否为新品"`
-	IsHot              bool     `gorm:"default:false;not null;comment:是否为热卖商品"`
-	SoldNum            int32    `gorm:"type:int;default:0;not null;comment:零售销量"`
-	FavNum             int32    `gorm:"type:int;default:0;not null;comment:收藏数量"`
-	Origin             string   `gorm:"type:varchar(100);not null;comment:商品产地"`
-	WholesaleLogistics string   `gorm:"type:varchar(100);not null;comment:批发物流"`
-	WholesaleShipping  string   `gorm:"type:varchar(100);not null;comment:批发发货地"`
-	RetailShipping     string   `gorm:"type:varchar(100);not null;comment:零售发货地"`
-	RetailSupport      bool     `gorm:"default:false;not null;comment:是否支持零售"`
-	//todo:是否根据距离排序，增加发货地的经纬度
-	RetailShippingTime enum.RetailDeliveryTime `gorm:"type:int;not null;comment:零售发货时间"`
-	//todo:待拓展更复杂信息，自动计算运费
-	RetailShippingFee string `gorm:"type:varchar(100);not null;comment:零售运费信息"`
+	ID                 int32                   `gorm:"primary_key;AUTO_INCREMENT;column:id;type:int"`
+	UserID             string                  `gorm:"type:varchar(100);default:'';not null;column:user_id;not null;comment:供货商ID;index:user_id" `
+	CategoryAID        int32                   `gorm:"type:int;not null;default:0;column:category_a_id;comment:一级分类ID;index:level_status_deleted" `
+	CategoryBID        int32                   `gorm:"type:int;not null;default:0;column:category_b_id;comment:二级分类ID;index:level_status_deleted" `
+	CategoryCID        int32                   `gorm:"type:int;not null;default:0;column:category_c_id;comment:三级分类ID;index:level_status_deleted" `
+	CategoryName       string                  `gorm:"type:varchar(100);not null;default:'';column:category_name;comment:分类名称"`
+	SPUCode            string                  `gorm:"type:varchar(300);not null;default:'';column:spu_code;comment:商品SPU编号"`
+	Name               string                  `gorm:"type:varchar(300);not null;default:'';column:name;comment:商品名称"`
+	Status             enum.GoodsStatus        `gorm:"type:tinyint(1);not null;default:0;column:status;comment:状态:1-在售2-下架;index:level_status_deleted"`
+	ShipFree           int                     `gorm:"type:tinyint(1);not null;default:0;column:ship_free;comment:是否包邮"`
+	Description        string                  `gorm:"default:'';type:varchar(1000);column:description;not null;comment:商品详情"`
+	Images             string                  `gorm:"default:'';type:varchar(5000);column:images;not null;comment:商品轮播图"`
+	DescImages         string                  `gorm:"type:varchar(5000);not null;column:desc_images;comment:商品详情图"`
+	GoodsFrontImage    string                  `gorm:"type:varchar(1000);not null;column:goods_front_image;comment:商品封面图"`
+	IsRetail           int                     `gorm:"type:tinyint(1);not null;default:0;column:is_retail;comment:是否支持零售;index:level_status_deleted"`
+	RetailStatus       enum.GoodsRetailStatus  `gorm:"type:tinyint(1);not null;default:0;column:retail_status;comment:零售状态:1-正常2-售磬;index:level_status_deleted"`
+	IsNew              int                     `gorm:"type:tinyint(1);not null;default:0;column:is_new;comment:是否为新品"`
+	IsHot              int                     `gorm:"default:0;not null;column:is_hot;comment:是否为热卖商品"`
+	SoldNum            int                     `gorm:"type:bigint;default:0;not null;column:sold_num;comment:零售销量"`
+	WholesaleLogistics enum.WholesaleLogistics `gorm:"type:int;default:0;not null;column:wholesale_logistics;comment:批发物流"`
+	WholesaleShipping  string                  `gorm:"type:varchar(500);default:'';not null;comment:批发发货地"`
+	WholesaleAreaCodeA int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_a;comment:筛选code省"`
+	WholesaleAreaCodeB int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_b;comment:筛选code区"`
+	WholesaleAreaCodeC int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_c;comment:筛选code县/市"`
+	RetailShippingTime enum.RetailDeliveryTime `gorm:"type:int;not null;default:0;column:retail_shipping_time;comment:零售发货时间"`
+	RetailShippingFee  float64                 `gorm:"type:decimal(9,2);not null;default:0.0;column:retail_shipping_fee;comment:零售运费"`
+	CreatedAt          time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);index:created_at;index:level_status_deleted"`
+	UpdatedAt          time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);index:updated_at;index:level_status_deleted"`
+	Deleted            int                     `gorm:"type:tinyint(1);not null;default:0;column:deleted;index:deleted;index:level_status_deleted"`
 }
 
 // Specification 商品规格表
 type Specification struct {
-	BaseModel
-	Name    string `gorm:"type:varchar(50);not null;comment:规格名称" json:"name"`
-	GoodsID int32  `gorm:"type:int;not null;comment:商品ID" json:"goods_id"`
-	Goods   *Goods `gorm:"foreignKey:GoodsID;references:ID" json:"goods"`
-	Type    int    `gorm:"type:int;not null;comment:类型 1-批发 2-零售" json:"type"`
+	ID        int32                   `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
+	CreatedAt time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	Deleted   int                     `gorm:"type:tinyint(1);not null;default:0;column:deleted;index:deleted;index:type_deleted" json:"-"`
+	Name      string                  `gorm:"type:varchar(100);not null;column:name;comment:规格名称" json:"name"`
+	GoodsID   int32                   `gorm:"type:int;not null;default:0;column:goods_id;comment:商品ID" json:"goods_id"`
+	Type      enum.ProductVariantType `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:type_deleted" json:"type"`
 }
 
-// ProductVariant 商品编号表
+type SpecificationValue struct {
+	ID              int32                   `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
+	CreatedAt       time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt       time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	Deleted         int                     `gorm:"type:tinyint(1);not null;default:0;column:deleted;index:deleted" json:"-"`
+	Value           string                  `gorm:"type:varchar(100);not null;comment:规格属性值;index:specification_type_value_deleted" json:"value"`
+	SpecificationID int32                   `gorm:"type:int;not null;default:0;column:specification_id;comment:规格ID;index:specification_type_value_deleted"`
+	GoodsID         int32                   `gorm:"type:int;not null;default:0;column:goods_id;comment:商品ID"`
+	Type            enum.ProductVariantType `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:specification_type_value_deleted" json:"type"`
+}
+
+// ProductVariant 产品SKU表
 type ProductVariant struct {
 	BaseModel
-	GoodsID          int32          `gorm:"type:int;not null;comment:商品ID" json:"goods_id"`
-	Goods            *Goods         `gorm:"foreignKey:GoodsID;references:ID" json:"goods"`
-	Specification1ID int32          `gorm:"type:int;not null;comment:规格1ID" json:"specification1_id"`
-	Specification1   *Specification `gorm:"foreignKey:Specification1ID;references:ID" json:"specification1"`
-	Specification2ID int32          `gorm:"type:int;not null;comment:规格2ID" json:"specification2_id"`
-	Specification2   *Specification `gorm:"foreignKey:Specification2ID;references:ID" json:"specification2"`
-	Quantity         int            `gorm:"type:int;not null;comment:数量" json:"quantity"`
-	Unit             string         `gorm:"type:varchar(10);not null;comment:单位" json:"unit"`
-	Price            float64        `gorm:"type:decimal(9,2);not null;comment:价格" json:"price"`
-	Stock            int            `gorm:"type:int;comment:库存" json:"stock"`
-	MinOrderQuantity int            `gorm:"type:int;comment:起批量" json:"min_order_quantity"`
-	Type             int            `gorm:"type:int;not null;comment:类型 1-批发 2-零售" json:"type"`
-	Enabled          bool           `gorm:"type:bool;default:true;comment:是否启用" json:"enabled"`
+	SKUCode          string                    `gorm:"type:varchar(300);not null;default:'';column:sku_code;comment:产品SKU编号;index:sku_code_deleted" json:"sku_code"`
+	GoodsID          int32                     `gorm:"type:int;not null;default:0;comment:商品ID;index:goods_id_deleted_type_status" json:"goods_id"`
+	Goods            *Goods                    `gorm:"foreignKey:GoodsID;references:ID" json:"goods"`
+	SpecValueAID     int32                     `gorm:"type:int;comment:规格属性值A的ID" json:"specValueAID;index:spec_value_a_id_deleted"`
+	SpecValueA       *SpecificationValue       `gorm:"foreignKey:SpecValueAID;references:ID" json:"specValueA"`
+	SpecValueBID     int32                     `gorm:"type:int;comment:规格属性值B的ID" json:"specValueBID;index:spec_value_b_id_deleted"`
+	SpecValueB       *SpecificationValue       `gorm:"foreignKey:SpecValueBID;references:ID" json:"specValueB"`
+	Unit             string                    `gorm:"type:varchar(100);default:'';not null;column:unit;comment:单位" json:"unit"`
+	Price            float64                   `gorm:"type:decimal(9,2);default:0.0;not null;column:price;comment:价格" json:"price"`
+	Stock            int                       `gorm:"type:int;default:0;column:stock;not null;comment:库存" json:"stock"`
+	MinOrderQuantity int                       `gorm:"type:int;default:0;column:min_order_quantity;comment:起批量" json:"min_order_quantity"`
+	Type             enum.ProductVariantType   `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:goods_id_deleted_type_status" json:"type"`
+	Status           enum.ProductVariantStatus `gorm:"type:tinyint(1);not null;default:1;column:status;comment:状态 1-未启用 2-启用" json:"status"`
 }
 
 // Inventory 商品库存表
@@ -93,4 +112,13 @@ type StockSellDetail struct {
 	// 详细记录这个订单下各个商品扣减之前的库存，至于为什么不把这个字段拆解成Goods和Nums，
 	// 是因为拆解后每当对一个订单执行库存扣减时，就需要更新多条记录。
 	Detail GoodsDetailList `gorm:"type:varchar(200);comment:该订单下各个商品执行扣减之前的库存"`
+}
+
+// GoodsApplication 商品申请表
+type GoodsApplication struct {
+	BaseModel
+	VerifierID string `gorm:"type:varchar(100);not null;default:'';comment:审核人ID"`
+	GoodsID    int32  `gorm:"type:bigint;not null;default:0;comment:商品ID"`
+	Status     int    `gorm:"type:tinyint(1);not null;default:0;column:status;comment:状态" json:"status"`
+	Comment    string `gorm:"column:comment;not null" json:"comment"`
 }

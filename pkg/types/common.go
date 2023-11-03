@@ -1,6 +1,7 @@
 package types
 
-type CommonUploadReq struct {
+type CommonDeleteUploadReq struct {
+	Link string `form:"link" binding:"required,url"`
 }
 
 type CommonUploadResp struct {

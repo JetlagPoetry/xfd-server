@@ -19,6 +19,7 @@ func NewAreaService() *AreaService {
 }
 
 func (s *AreaService) GetAreaInfo(ctx *gin.Context, req types.AreaReq) ([]*types.AreaList, xerr.XErr) {
+	//todo:增加缓存
 	info, err := s.area.GetAreaInfo(ctx, req.Code)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)

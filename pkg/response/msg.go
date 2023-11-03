@@ -43,11 +43,12 @@ var MsgFlags = map[xerr.XCode]string{
 	xerr.ErrorUnmarshalJson:             "解码JSON失败",
 
 	xerr.ErrorUploadFile:    "上传失败",
+	xerr.ErrorDeleteFile:    "删除失败",
 	xerr.ErrorAdminFindUser: "管理员查询用户失败",
 
 	xerr.ErrorDatabase: "数据库操作出错,请重试",
 
-	xerr.ErrorOss: "OSS配置错误",
+	xerr.ErrorOss: "COS配置错误",
 }
 
 // GetMsg 获取状态码对应信息
