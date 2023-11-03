@@ -43,6 +43,13 @@ func (d *UserVerifyDao) GetByID(ctx context.Context, id int) (verify *model.User
 	}
 	return verify, nil
 }
+func (d *UserVerifyDao) GetByUserID(ctx context.Context, userID string) (verify *model.UserVerify, err error) {
+	err = db.Get().Model(&model.UserVerify{}).Where("user_id = ?", userID).First(&verify).Error
+	if err != nil {
+		return nil, err
+	}
+	return verify, nil
+}
 
 func (d *UserVerifyDao) GetByStatus(ctx context.Context, status model.UserVerifyStatus) (verify *model.UserVerify, err error) {
 	err = db.Get().Model(&model.UserVerify{}).Where("status = ?", status).

@@ -13,16 +13,18 @@ import (
 )
 
 type OrgService struct {
-	userDao       *dao.UserDao
-	userVerifyDao *dao.UserVerifyDao
-	orgDao        *dao.OrganizationDao
+	userDao             *dao.UserDao
+	userVerifyDao       *dao.UserVerifyDao
+	orgDao              *dao.OrganizationDao
+	orgPointApplication *dao.OrgPointApplicationDao
 }
 
 func NewOrgService() *OrgService {
 	return &OrgService{
-		userDao:       dao.NewUserDao(),
-		userVerifyDao: dao.NewUserVerifyDao(),
-		orgDao:        dao.NewOrganizationDao(),
+		userDao:             dao.NewUserDao(),
+		userVerifyDao:       dao.NewUserVerifyDao(),
+		orgDao:              dao.NewOrganizationDao(),
+		orgPointApplication: dao.NewOrgPointApplicationDao(),
 	}
 }
 
@@ -68,17 +70,108 @@ func (s *OrgService) ProcessPointExpired(ctx context.Context) xerr.XErr {
 
 func (s *OrgService) GetApplyToVerify(ctx context.Context, req *types.OrgGetApplyToVerifyReq) (*types.OrgGetApplyToVerifyResp, xerr.XErr) {
 	// 查找下一个未修改状态的审核单并返回
+	apply, err := s.orgPointApplication.GetByStatus(ctx, model.OrgPointApplicationStatusUnknown)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
-	return nil, nil
+	organization, err := s.orgDao.GetByID(ctx, apply.OrganizationID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	user, err := s.userDao.GetByUserID(ctx, apply.VerifyUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	verify, err := s.userVerifyDao.GetByUserID(ctx, apply.VerifyUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.OrgGetApplyToVerifyResp{
+		OrganizationName:  organization.Name,
+		OrganizationCode:  organization.Code,
+		Comment:           apply.Comment,
+		UserID:            user.UserID,
+		Username:          user.Username,
+		UserCertificateNo: verify.CertificateNo,
+		UserPosition:      verify.Position,
+		UserPhone:         user.Phone,
+		SubmitTime:        apply.CreatedAt.Unix(),
+		ApplyURL:          apply.FileURL,
+	}, nil
 }
 
 func (s *OrgService) GetApplys(ctx context.Context, req *types.OrgGetApplysReq) (*types.OrgGetApplysResp, xerr.XErr) {
-	// 获取积分申请列表
+	// 获取待审核数量
+	needVerify, err := s.orgPointApplication.CountByStatus(ctx, model.OrgPointApplicationStatusUnknown)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
-	return nil, nil
+	// 获取积分申请列表
+	applyList, count, err := s.orgPointApplication.Lists(ctx, req.PageRequest, req.OrgID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	list := make([]*types.PointOrder, 0)
+	for _, apply := range applyList {
+		org, err := s.orgDao.GetByID(ctx, apply.OrganizationID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		list = append(list, &types.PointOrder{
+			OrganizationName: org.Name,
+			OrganizationCode: org.Code,
+			Comment:          apply.Comment,
+			SubmitTime:       apply.CreatedAt.Unix(),
+			VerifyTime:       apply.VerifyTime.Unix(),
+			VerifyComment:    apply.VerifyComment,
+			VerifyUserID:     apply.VerifyUserID,
+			VerifyUsername:   apply.VerifyUsername,
+			PointOrderStatus: apply.Status,
+			ApplyURL:         apply.FileURL,
+		})
+	}
+
+	return &types.OrgGetApplysResp{
+		List:       list,
+		NeedVerify: int(needVerify),
+		TotalNum:   int(count),
+	}, nil
+}
+func (s *OrgService) GetOrganizations(ctx context.Context, req *types.GetOrganizationsReq) (*types.GetOrganizationsResp, xerr.XErr) {
+	orgList, count, err := s.orgDao.Lists(ctx, req.PageRequest, req.Name)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	list := make([]*types.Organization, 0)
+	for _, org := range orgList {
+		count, err := s.userDao.CountByOrganization(ctx, int(org.ID))
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		list = append(list, &types.Organization{
+			Name:        org.Name,
+			Code:        org.Code,
+			TotalMember: int(count),
+			PointMember: 0, // todo  what's the point?
+			TotalPoint:  0, // todo use redis
+		})
+	}
+
+	return &types.GetOrganizationsResp{
+		List:     list,
+		TotalNum: int(count),
+	}, nil
 }
 func (s *OrgService) GetOrgMembers(ctx context.Context, req *types.GetOrgMembersReq) (*types.GetOrgMembersResp, xerr.XErr) {
-
+	
 	return nil, nil
 }
 func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req *types.GetPointRecordsByUserReq) (*types.GetPointRecordsByUserResp, xerr.XErr) {
@@ -152,7 +245,7 @@ func (s *OrgService) verifyAccount(tx *gorm.DB, req *types.VerifyAccountReq, use
 	}
 
 	// 绑定公司
-	err = s.userDao.UpdateByUserIDInTx(tx, userVerify.UserID, &model.User{OrganizationID: int(org.ID), Organization: org.Name})
+	err = s.userDao.UpdateByUserIDInTx(tx, userVerify.UserID, &model.User{OrganizationID: int(org.ID), OrganizationName: org.Name})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}

@@ -116,3 +116,11 @@ func (d *UserDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateValue *mo
 	}
 	return nil
 }
+
+func (d *UserDao) CountByOrganization(ctx context.Context, orgID int) (count int64, err error) {
+	sql := db.Get().Model(&model.User{}).Where("organization_id = ?", orgID)
+	if err = sql.Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
