@@ -110,6 +110,27 @@ func (h *OrgHandler) GetApplys(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
+func (h *OrgHandler) GetOrganizations(c *gin.Context) {
+	var (
+		req  *types.GetOrganizationsReq
+		resp *types.GetOrganizationsResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetOrganizations(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetOrganizations failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
 func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
 	var (
 		req  *types.GetOrgMembersReq

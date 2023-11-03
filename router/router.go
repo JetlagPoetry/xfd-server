@@ -63,8 +63,10 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getAccountToVerify", handler.Org.GetAccountToVerify)     // 获取待审核用户申请
 		orgGroup.GET("/getAccountVerifyList", handler.Org.GetAccountVerifyList) // 获取用户申请记录
 
+		orgGroup.GET("/getOrganizations", handler.Org.GetOrganizations)
 		orgGroup.GET("/getOrgMembers", handler.Org.GetOrgMembers)
 		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)
+
 	}
 	mallGroup := r.Group("/api/v1/mall")
 	{

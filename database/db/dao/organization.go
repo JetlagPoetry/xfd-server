@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
+	"xfd-backend/pkg/types"
 )
 
 type OrganizationDao struct {
@@ -14,15 +15,20 @@ func NewOrganizationDao() *OrganizationDao {
 	return &OrganizationDao{}
 }
 
-func (d *OrganizationDao) Lists(ctx context.Context, limit, offset int) (List []*model.Organization, count int64, err error) {
-	if err = db.Get().Model(&model.Organization{}).Find(&List).Limit(limit).Offset(offset).Error; err != nil {
+func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, name string) (list []*model.Organization, count int64, err error) {
+	sql := db.Get().Model(&model.Organization{})
+
+	if len(name) > 0 {
+		sql = sql.Where("name LIKE '%?%' ", name)
+	}
+	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = db.Get().Model(&model.Organization{}).Count(&count).Error; err != nil {
+	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
-	return List, count, nil
+	return list, count, nil
 }
 
 func (d *OrganizationDao) GetByID(ctx context.Context, id int) (org *model.Organization, err error) {
