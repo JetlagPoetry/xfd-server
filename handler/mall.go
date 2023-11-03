@@ -19,6 +19,7 @@ func NewMallHandler() *MallHandler {
 	return &MallHandler{mallService: service.NewMallService()}
 }
 
+// GetCategories 获取商城分类
 func (h *MallHandler) GetCategories(c *gin.Context) {
 	var (
 		req  types.CategoryListReq

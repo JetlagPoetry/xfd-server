@@ -22,7 +22,10 @@ func NewCommonHandler() *CommonHandler {
 	return &CommonHandler{commonService: service.NewCommonService(), areaService: service.NewAreaService()}
 }
 
-const BucketNameT = "xfd-t"
+const (
+	BucketNameT       = "xfd-t"
+	DefaultFolderName = "temp"
+)
 
 func (h *CommonHandler) GetArea(c *gin.Context) {
 	var (
@@ -58,7 +61,7 @@ func (h *CommonHandler) UploadFile(c *gin.Context) {
 	}
 	folderName := c.Request.FormValue("folderName")
 	if folderName == "" {
-		folderName = "temp"
+		folderName = DefaultFolderName
 	}
 	link, err := utils.Upload(c, BucketNameT, folderName+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), &file)
 	if err != nil {

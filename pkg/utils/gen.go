@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"math/rand"
+	"os"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -47,4 +50,51 @@ func GenerateRandCode(prefix string, length int) string {
 		}
 	}
 	return prefix + string(b) + sb.String()
+}
+
+func TimeFormatUs() string {
+	// 当前时间对象
+	curTime := time.Now()
+	// curTime的时间戳（秒）
+	unixS := curTime.Unix()
+	// curTime的时间戳（毫秒）
+	unixMs := curTime.UnixNano() / 1e6
+	// curTime的时间戳（微秒）
+	unixUs := curTime.UnixNano() / 1e3
+	// 毫秒时间
+	timeMs := unixMs - unixS*1e3
+	// 如果毫秒数不够三位的话，则在前面补0
+	msStr := sup(timeMs, 3)
+	// 微妙时间
+	timeUs := unixUs - unixMs*1e3
+	// 如果微秒数不够三位的话，则在前面补0
+	usStr := sup(timeUs, 3)
+	// curTime的日期格式
+	dateStr := curTime.Format("20060102150405")
+
+	return dateStr + msStr + usStr
+}
+
+func sup(i int64, n int) string {
+	msStr := strconv.FormatInt(i, 10)
+	for len(msStr) < n {
+		msStr = "0" + msStr
+	}
+	return msStr
+}
+
+var num int64
+
+func GenerateOrder() string {
+	t := TimeFormatUs()
+	p := os.Getpid() % 1000
+	ps := sup(int64(p), 3)
+	i := atomic.AddInt64(&num, 1)
+	r := i % 10000
+	rs := sup(r, 4)
+	n := fmt.Sprintf("%s%s%s", t, ps, rs)
+	if num > 9999999999 {
+		num = 0
+	}
+	return n
 }
