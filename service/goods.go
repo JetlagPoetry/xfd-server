@@ -39,7 +39,7 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 	//if userRole != model.UserRoleSupplier {
 	//	return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
 	//}
-	userID := "1"
+	userID := "w2wwww"
 	spuCode := fmt.Sprintf("SP%s%s%s", utils.TimeFormatUs(), utils.GenSixDigitCode(), utils.GenerateRandCode("", 5))
 	var images, descImages string
 	if len(req.GoodsDetail.Images) != 0 {
