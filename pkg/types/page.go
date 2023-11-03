@@ -1,8 +1,8 @@
 package types
 
 type PageRequest struct {
-	PageNum  int `form:"pageNum"`
-	PageSize int `form:"pageSize"`
+	PageNum  int `form:"pageNum" binding:"required,gte=1"`
+	PageSize int `form:"pageSize" binding:"required,gte=1"`
 }
 
 type PageResult struct {

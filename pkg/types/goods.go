@@ -96,7 +96,7 @@ func (r ProductRetail) CheckParams() error {
 type GoodsDetail struct {
 	CategoryAID        int32                   `json:"categoryAID" binding:"required"`
 	CategoryBID        int32                   `json:"categoryBID" binding:"required"`
-	CategoryCID        int32                   `json:"categoryCID" binding:"required"`
+	CategoryCID        int32                   `json:"categoryCID"`
 	CategoryName       string                  `json:"categoryName" binding:"required"`
 	Name               string                  `json:"name" binding:"required,gte=1,lte=100"`             // 商品名称
 	Description        string                  `json:"description"`                                       // 商品详情
@@ -116,4 +116,12 @@ func (r GoodsDetail) CheckParams() error {
 		return errors.New("商品轮播图不能为空")
 	}
 	return nil
+}
+
+type GoodsListReq struct {
+	PageRequest
+	CategoryAID   int32                  `form:"categoryAID" binding:"numeric"`
+	CategoryBID   int32                  `form:"categoryBID" binding:"numeric"`
+	CategoryCID   int32                  `form:"categoryCID" binding:"numeric"`
+	RequestSource enum.RequestSourceType `form:"requestSource" binding:"required,gte=1,lte=2"`
 }

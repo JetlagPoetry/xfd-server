@@ -76,7 +76,8 @@ func NewRouter() *gin.Engine {
 	}
 	goodsGroup := r.Group("/api/v1/goods")
 	{
-		goodsGroup.POST("/addGoods", handler.Goods.AddGoods) //添加商品
+		goodsGroup.POST("/addGoods", handler.Goods.AddGoods)        //添加商品
+		goodsGroup.GET("/getGoodsList", handler.Goods.GetGoodsList) //获取商品列表
 	}
 	commonGroup := r.Group("/api/v1/common")
 	{
