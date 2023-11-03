@@ -110,63 +110,27 @@ func (h *OrgHandler) GetApplys(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
-func (h *OrgHandler) GetOrganizations(c *gin.Context) {
+func (h *OrgHandler) ClearPoint(c *gin.Context) {
 	var (
-		req  *types.GetOrganizationsReq
-		resp *types.GetOrganizationsResp
+		req  *types.OrgClearPointReq
+		resp *types.OrgClearPointResp
 		xErr xerr.XErr
 	)
 
-	err := c.BindQuery(&req)
+	err := c.BindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	resp, xErr = h.orgService.GetOrganizations(c, req)
-	if xErr != nil {
-		log.Println("[OrgHandler] GetOrganizations failed, err=", xErr)
-		c.JSON(http.StatusOK, response.RespError(c, xErr))
-		return
-	}
-	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
-}
 
-func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
-	var (
-		req  *types.GetOrgMembersReq
-		resp *types.GetOrgMembersResp
-		xErr xerr.XErr
-	)
-
-	err := c.BindQuery(&req)
-	if err != nil {
+	if req.OrgID <= 0 {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	resp, xErr = h.orgService.GetOrgMembers(c, req)
-	if xErr != nil {
-		log.Println("[OrgHandler] GetOrgMembers failed, err=", xErr)
-		c.JSON(http.StatusOK, response.RespError(c, xErr))
-		return
-	}
-	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
-}
 
-func (h *OrgHandler) GetPointRecordsByUser(c *gin.Context) {
-	var (
-		req  *types.GetPointRecordsByUserReq
-		resp *types.GetPointRecordsByUserResp
-		xErr xerr.XErr
-	)
-
-	err := c.BindQuery(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
-	resp, xErr = h.orgService.GetPointRecordsByUser(c, req)
+	resp, xErr = h.orgService.ClearPoint(c, req)
 	if xErr != nil {
-		log.Println("[OrgHandler] GetPointRecordsByUser failed, err=", xErr)
+		log.Println("[OrgHandler] ClearPoint failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}
@@ -234,6 +198,115 @@ func (h *OrgHandler) GetAccountVerifyList(c *gin.Context) {
 	resp, xErr = h.orgService.GetAccountVerifyList(c, req)
 	if xErr != nil {
 		log.Println("[OrgHandler] GetAccountVerifyList failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetOrganizations(c *gin.Context) {
+	var (
+		req  *types.GetOrganizationsReq
+		resp *types.GetOrganizationsResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetOrganizations(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetOrganizations failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
+	var (
+		req  *types.GetOrgMembersReq
+		resp *types.GetOrgMembersResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if req.PageNum <= 0 || req.PageSize <= 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetOrgMembers(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetOrgMembers failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetPointRecordsByApply(c *gin.Context) {
+	var (
+		req  *types.GetPointRecordsByApplyReq
+		resp *types.GetPointRecordsByApplyResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetPointRecordsByApply(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetPointRecordsByApply failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetPointRecordsByUser(c *gin.Context) {
+	var (
+		req  *types.GetPointRecordsByUserReq
+		resp *types.GetPointRecordsByUserResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetPointRecordsByUser(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetPointRecordsByUser failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) GetPointRecords(c *gin.Context) {
+	var (
+		req  *types.GetPointRecordsReq
+		resp *types.GetPointRecordsResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.orgService.GetPointRecords(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetPointRecords failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}

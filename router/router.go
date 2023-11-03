@@ -57,16 +57,17 @@ func NewRouter() *gin.Engine {
 		orgGroup.POST("/verifyPoint", handler.Org.VerifyPoint)          // 提交积分审核
 		orgGroup.GET("/getApplyToVerify", handler.Org.GetApplyToVerify) // 获取待审核积分申请
 		orgGroup.GET("/getApplys", handler.Org.GetApplys)               // 获取积分申请记录
-		orgGroup.GET("/getApplyDetail", handler.Org.GetApplys)          // 查看本批积分明细
+		orgGroup.POST("/clearPoint", handler.Org.ClearPoint)            // 积分清零
 
 		orgGroup.POST("/verifyAccount", handler.Org.VerifyAccount)              // 提交用户审核
 		orgGroup.GET("/getAccountToVerify", handler.Org.GetAccountToVerify)     // 获取待审核用户申请
 		orgGroup.GET("/getAccountVerifyList", handler.Org.GetAccountVerifyList) // 获取用户申请记录
 
-		orgGroup.GET("/getOrganizations", handler.Org.GetOrganizations)
-		orgGroup.GET("/getOrgMembers", handler.Org.GetOrgMembers)
-		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)
-
+		orgGroup.GET("/getOrganizations", handler.Org.GetOrganizations)             // 获取公司列表，模糊搜索
+		orgGroup.GET("/getOrgMembers", handler.Org.GetOrgMembers)                   // 获取本公司员工列表
+		orgGroup.GET("/getPointRecordsByApply", handler.Org.GetPointRecordsByApply) // 查看本批积分明细
+		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)   // 查看员工积分明细
+		orgGroup.GET("/getPointRecords", handler.Org.GetPointRecords)               // 查看公司/本公司积分明细
 	}
 	//todo:/api/v1/area  500 而不是404
 	mallGroup := r.Group("/api/v1/mall")

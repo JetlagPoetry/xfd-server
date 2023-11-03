@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
+	"xfd-backend/pkg/types"
 )
 
 type UserDao struct {
@@ -14,15 +15,26 @@ func NewUserDao() *UserDao {
 	return &UserDao{}
 }
 
-func (d *UserDao) Lists(ctx context.Context, limit, offset int) (UserList []*model.User, count int64, err error) {
-	if err = db.Get().Model(&model.User{}).Find(&UserList).Limit(limit).Offset(offset).Error; err != nil {
+func (d *UserDao) ListByOrgID(ctx context.Context, page types.PageRequest, orgID int, username, phone string) (list []*model.User, count int64, err error) {
+	sql := db.Get().Model(&model.User{})
+
+	if orgID > 0 {
+		sql = sql.Where("organization_id = ? ", orgID)
+	}
+	if len(username) > 0 {
+		sql = sql.Where("username = ? ", username)
+	}
+	if len(phone) > 0 {
+		sql = sql.Where("phone = ? ", phone)
+	}
+	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = db.Get().Model(&model.User{}).Count(&count).Error; err != nil {
+	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
-	return UserList, count, nil
+	return list, count, nil
 }
 
 func (d *UserDao) ListByUserIDs(ctx context.Context, userIDs []string) (UserList []*model.User, err error) {
@@ -47,7 +59,13 @@ func (d *UserDao) GetByUserID(ctx context.Context, userID string) (User *model.U
 	}
 	return User, nil
 }
-
+func (d *UserDao) GetByUserIDInTx(tx *gorm.DB, userID string) (User *model.User, err error) {
+	err = tx.Model(&model.User{}).Where("user_id = ?", userID).First(&User).Error
+	if err != nil {
+		return nil, err
+	}
+	return User, nil
+}
 func (d *UserDao) GetByPhoneInTx(tx *gorm.DB, phone string) (User *model.User, err error) {
 	err = tx.Model(&model.User{}).Where("phone = ? AND deleted = 0", phone).First(&User).Error
 	if err == gorm.ErrRecordNotFound {
@@ -119,6 +137,14 @@ func (d *UserDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateValue *mo
 
 func (d *UserDao) CountByOrganization(ctx context.Context, orgID int) (count int64, err error) {
 	sql := db.Get().Model(&model.User{}).Where("organization_id = ?", orgID)
+	if err = sql.Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (d *UserDao) CountByOrganizationAndStatus(ctx context.Context, orgID int, status model.UserPointStatus) (count int64, err error) {
+	sql := db.Get().Model(&model.User{}).Where("organization_id = ? AND point_status = ?", orgID, status)
 	if err = sql.Count(&count).Error; err != nil {
 		return 0, err
 	}
