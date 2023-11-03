@@ -38,7 +38,7 @@ type Goods struct {
 	DescImages         string                  `gorm:"type:varchar(5000);not null;column:desc_images;comment:商品详情图"`
 	GoodsFrontImage    string                  `gorm:"type:varchar(1000);not null;column:goods_front_image;comment:商品封面图"`
 	IsRetail           int                     `gorm:"type:tinyint(1);not null;default:0;column:is_retail;comment:是否支持零售;index:level_status_deleted"`
-	RetailStatus       enum.GoodsRetailStatus  `gorm:"type:tinyint(1);not null;default:0;column:status;comment:零售状态:1-正常2-售磬;index:level_status_deleted"`
+	RetailStatus       enum.GoodsRetailStatus  `gorm:"type:tinyint(1);not null;default:0;column:retail_status;comment:零售状态:1-正常2-售磬;index:level_status_deleted"`
 	IsNew              int                     `gorm:"type:tinyint(1);not null;default:0;column:is_new;comment:是否为新品"`
 	IsHot              int                     `gorm:"default:0;not null;column:is_hot;comment:是否为热卖商品"`
 	SoldNum            int                     `gorm:"type:bigint;default:0;not null;column:sold_num;comment:零售销量"`
