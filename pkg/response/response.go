@@ -51,6 +51,9 @@ func RespSuccess(ctx *gin.Context, data interface{}) *Response {
 // RespError 错误返回
 func RespError(ctx *gin.Context, err xerr.XErr) *Response {
 	logID := GetLogIDFromCtx(ctx)
+	if err == nil {
+		err = xerr.DefaultXErr
+	}
 	status := err.Code()
 
 	r := &Response{

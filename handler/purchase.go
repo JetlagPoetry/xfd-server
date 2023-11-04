@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -53,11 +54,11 @@ func (h *PurchaseHandler) SubmitOrder(c *gin.Context) {
 	}
 
 	if req.Period == 0 || req.Quantity == 0 || req.Unit == "" || len(req.CategoryName) == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	if req.CategoryA == 0 || req.CategoryB == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 
@@ -112,7 +113,7 @@ func (h *PurchaseHandler) ModifyOrderStatus(c *gin.Context) {
 		return
 	}
 	if req.OrderID == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.purchaseService.ModifyOrderStatus(c, req)
@@ -137,7 +138,7 @@ func (h *PurchaseHandler) GetQuotes(c *gin.Context) {
 		return
 	}
 	if req.OrderID == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.purchaseService.GetQuotes(c, req)

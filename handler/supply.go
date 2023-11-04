@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -73,7 +74,7 @@ func (h *SupplyHandler) SubmitQuote(c *gin.Context) {
 		return
 	}
 	if req.OrderID == 0 || req.ItemID == 0 || req.Price == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.supplyService.SubmitQuote(c, req)

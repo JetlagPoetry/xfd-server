@@ -1,10 +1,15 @@
 package xerr
 
 import (
+	"errors"
 	"fmt"
 )
 
 var _ XErr = (*xErr)(nil)
+var DefaultXErr = xErr{
+	code: 20000,
+	err:  errors.New("error occurred"),
+}
 
 type XErr interface {
 	Error() string

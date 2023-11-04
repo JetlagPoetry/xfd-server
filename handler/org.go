@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -124,7 +125,7 @@ func (h *OrgHandler) ClearPoint(c *gin.Context) {
 	}
 
 	if req.OrgID <= 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 
@@ -150,7 +151,7 @@ func (h *OrgHandler) VerifyAccount(c *gin.Context) {
 		return
 	}
 	if req.Status != model.UserVerifyStatusRejected && req.Status != model.UserVerifyStatusSuccess {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.orgService.VerifyAccount(c, req)
@@ -238,7 +239,7 @@ func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
 		return
 	}
 	if req.PageNum <= 0 || req.PageSize <= 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.orgService.GetOrgMembers(c, req)
