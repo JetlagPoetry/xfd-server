@@ -23,7 +23,7 @@ func NewSupplyService() *SupplyService {
 	}
 }
 
-func (s *SupplyService) GetPurchases(ctx context.Context, req *types.SupplyGetPurchasesReq) (*types.SupplyGetPurchasesResp, xerr.XErr) {
+func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPurchasesReq) (*types.SupplyGetPurchasesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	purchaseList, count, err := s.purchaseDao.List(ctx, req.PageRequest, req.CategoryA, req.CategoryB, req.CategoryC, req.Like)
 	if err != nil {
@@ -82,7 +82,7 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req *types.SupplyGetPu
 	return &types.SupplyGetPurchasesResp{List: list, TotalNum: count}, nil
 }
 
-func (s *SupplyService) GetQuotes(ctx context.Context, req *types.SupplyGetQuotesReq) (*types.SupplyGetQuotesResp, xerr.XErr) {
+func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotesReq) (*types.SupplyGetQuotesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
@@ -117,7 +117,7 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req *types.SupplyGetQuote
 	return &types.SupplyGetQuotesResp{List: list}, nil
 }
 
-func (s *SupplyService) SubmitQuote(ctx context.Context, req *types.SupplySubmitQuoteReq) (*types.SupplySubmitQuoteResp, xerr.XErr) {
+func (s *SupplyService) SubmitQuote(ctx context.Context, req types.SupplySubmitQuoteReq) (*types.SupplySubmitQuoteResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
 	purchaseOrder, err := s.purchaseDao.GetByID(ctx, req.OrderID)
@@ -141,7 +141,7 @@ func (s *SupplyService) SubmitQuote(ctx context.Context, req *types.SupplySubmit
 	return &types.SupplySubmitQuoteResp{}, nil
 }
 
-func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req *types.SupplyGetQuotedPurchasesReq) (*types.SupplyGetQuotedPurchasesResp, xerr.XErr) {
+func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.SupplyGetQuotedPurchasesReq) (*types.SupplyGetQuotedPurchasesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	quoteList, err := s.quoteDao.ListByQuoteUserID(ctx, userID)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req *types.Suppl
 	return &types.SupplyGetQuotedPurchasesResp{List: list, TotalNum: count}, nil
 }
 
-func (s *SupplyService) GetStatistics(ctx context.Context, req *types.SupplyGetStatisticsReq) (*types.SupplyGetStatisticsResp, xerr.XErr) {
+func (s *SupplyService) GetStatistics(ctx context.Context, req types.SupplyGetStatisticsReq) (*types.SupplyGetStatisticsResp, xerr.XErr) {
 	//userID := common.GetUserID(ctx)
 	// todo implement
 	return &types.SupplyGetStatisticsResp{NewPurchase: 0}, nil

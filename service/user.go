@@ -29,7 +29,7 @@ func NewUserService() *UserService {
 	}
 }
 
-func (s *UserService) Login(ctx context.Context, req *types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
+func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
 	// 开始事务
 	tx := db.Get().Begin()
 	user, err := s.loginOrRegister(tx, req.Phone)
@@ -100,7 +100,7 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	return user, nil
 }
 
-func (s *UserService) SubmitRole(ctx context.Context, req *types.UserSubmitRoleReq) (*types.UserSubmitRoleResp, xerr.XErr) {
+func (s *UserService) SubmitRole(ctx context.Context, req types.UserSubmitRoleReq) (*types.UserSubmitRoleResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *UserService) SubmitRole(ctx context.Context, req *types.UserSubmitRoleR
 	return &types.UserSubmitRoleResp{}, nil
 }
 
-func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req *types.UserSubmitRoleReq) xerr.XErr {
+func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req types.UserSubmitRoleReq) xerr.XErr {
 	err := s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{UserRole: req.Role})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -251,7 +251,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 	return resp, nil
 }
 
-func (s *UserService) ModifyUserInfo(ctx context.Context, req *types.UserModifyInfoReq) (*types.UserModifyInfoResp, xerr.XErr) {
+func (s *UserService) ModifyUserInfo(ctx context.Context, req types.UserModifyInfoReq) (*types.UserModifyInfoResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	err := s.userDao.UpdateByUserID(ctx, userID, &model.User{AvatarURL: req.AvatarURL, Username: req.Username})
 	if err != nil {
@@ -260,7 +260,7 @@ func (s *UserService) ModifyUserInfo(ctx context.Context, req *types.UserModifyI
 	return &types.UserModifyInfoResp{}, nil
 }
 
-func (s *UserService) AssignAdmin(ctx context.Context, req *types.UserAssignAdminReq) (*types.UserAssignAdminResp, xerr.XErr) {
+func (s *UserService) AssignAdmin(ctx context.Context, req types.UserAssignAdminReq) (*types.UserAssignAdminResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {

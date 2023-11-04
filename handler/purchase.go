@@ -20,7 +20,7 @@ func NewPurchaseHandler() *PurchaseHandler {
 
 func (h *PurchaseHandler) GetPurchases(c *gin.Context) {
 	var (
-		req  *types.PurchaseGetPurchasesReq
+		req  types.PurchaseGetPurchasesReq
 		resp *types.PurchaseGetPurchasesResp
 		xErr xerr.XErr
 	)
@@ -41,7 +41,7 @@ func (h *PurchaseHandler) GetPurchases(c *gin.Context) {
 
 func (h *PurchaseHandler) SubmitOrder(c *gin.Context) {
 	var (
-		req  *types.PurchaseSubmitOrderReq
+		req  types.PurchaseSubmitOrderReq
 		resp *types.PurchaseSubmitOrderResp
 		xErr xerr.XErr
 	)
@@ -72,7 +72,7 @@ func (h *PurchaseHandler) SubmitOrder(c *gin.Context) {
 
 //func (h *PurchaseHandler) ModifyOrder(c *gin.Context) {
 //	var (
-//		req  *types.PurchaseModifyOrderReq
+//		req types.PurchaseModifyOrderReq
 //		resp *types.PurchaseModifyOrderResp
 //		xErr xerr.XErr
 //	)
@@ -101,7 +101,7 @@ func (h *PurchaseHandler) SubmitOrder(c *gin.Context) {
 
 func (h *PurchaseHandler) ModifyOrderStatus(c *gin.Context) {
 	var (
-		req  *types.PurchaseModifyOrderStatusReq
+		req  types.PurchaseModifyOrderStatusReq
 		resp *types.PurchaseModifyOrderStatusResp
 		xErr xerr.XErr
 	)
@@ -126,7 +126,7 @@ func (h *PurchaseHandler) ModifyOrderStatus(c *gin.Context) {
 
 func (h *PurchaseHandler) GetQuotes(c *gin.Context) {
 	var (
-		req  *types.PurchaseGetQuotesReq
+		req  types.PurchaseGetQuotesReq
 		resp *types.PurchaseGetQuotesResp
 		xErr xerr.XErr
 	)
@@ -151,7 +151,7 @@ func (h *PurchaseHandler) GetQuotes(c *gin.Context) {
 
 func (h *PurchaseHandler) GetStatistics(c *gin.Context) {
 	var (
-		req  *types.PurchaseGetStatisticsReq
+		req  types.PurchaseGetStatisticsReq
 		resp *types.PurchaseGetStatisticsResp
 		xErr xerr.XErr
 	)
@@ -172,7 +172,7 @@ func (h *PurchaseHandler) GetStatistics(c *gin.Context) {
 
 func (h *PurchaseHandler) AnswerQuote(c *gin.Context) {
 	var (
-		req  *types.PurchaseAnswerQuoteReq
+		req  types.PurchaseAnswerQuoteReq
 		resp *types.PurchaseAnswerQuoteResp
 		xErr xerr.XErr
 	)

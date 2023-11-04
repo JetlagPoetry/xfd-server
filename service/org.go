@@ -30,7 +30,7 @@ func NewOrgService() *OrgService {
 	}
 }
 
-func (s *OrgService) ApplyPoint(ctx context.Context, req *types.OrgApplyPointReq) (*types.OrgApplyPointResp, xerr.XErr) {
+func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq) (*types.OrgApplyPointResp, xerr.XErr) {
 	// 解析csv文件，校验格式
 
 	// 上传csv文件
@@ -40,7 +40,7 @@ func (s *OrgService) ApplyPoint(ctx context.Context, req *types.OrgApplyPointReq
 	return nil, nil
 }
 
-func (s *OrgService) VerifyPoint(ctx context.Context, req *types.OrgVerifyPointReq) (*types.OrgVerifyPointResp, xerr.XErr) {
+func (s *OrgService) VerifyPoint(ctx context.Context, req types.OrgVerifyPointReq) (*types.OrgVerifyPointResp, xerr.XErr) {
 	// 修改审核记录表
 
 	return nil, nil
@@ -70,7 +70,7 @@ func (s *OrgService) ProcessPointExpired(ctx context.Context) xerr.XErr {
 	return nil
 }
 
-func (s *OrgService) GetApplyToVerify(ctx context.Context, req *types.OrgGetApplyToVerifyReq) (*types.OrgGetApplyToVerifyResp, xerr.XErr) {
+func (s *OrgService) GetApplyToVerify(ctx context.Context, req types.OrgGetApplyToVerifyReq) (*types.OrgGetApplyToVerifyResp, xerr.XErr) {
 	// 查找下一个未修改状态的审核单并返回
 	apply, err := s.PointApplication.GetByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *OrgService) GetApplyToVerify(ctx context.Context, req *types.OrgGetAppl
 	}, nil
 }
 
-func (s *OrgService) GetApplys(ctx context.Context, req *types.OrgGetApplysReq) (*types.OrgGetApplysResp, xerr.XErr) {
+func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (*types.OrgGetApplysResp, xerr.XErr) {
 	// 获取待审核数量
 	needVerify, err := s.PointApplication.CountByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
@@ -147,7 +147,7 @@ func (s *OrgService) GetApplys(ctx context.Context, req *types.OrgGetApplysReq) 
 	}, nil
 }
 
-func (s *OrgService) ClearPoint(ctx context.Context, req *types.OrgClearPointReq) (*types.OrgClearPointResp, xerr.XErr) {
+func (s *OrgService) ClearPoint(ctx context.Context, req types.OrgClearPointReq) (*types.OrgClearPointResp, xerr.XErr) {
 	// todo 异步清除
 	// 修改该公司所有apply状态
 
@@ -162,7 +162,7 @@ func (s *OrgService) ProcessClearPoint() {
 	// 本公司积分总额清零
 }
 
-func (s *OrgService) VerifyAccount(ctx context.Context, req *types.VerifyAccountReq) (*types.VerifyAccountResp, xerr.XErr) {
+func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountReq) (*types.VerifyAccountResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *OrgService) VerifyAccount(ctx context.Context, req *types.VerifyAccount
 	return nil, nil
 }
 
-func (s *OrgService) verifyAccount(tx *gorm.DB, req *types.VerifyAccountReq, userVerify, updateValue *model.UserVerify) error {
+func (s *OrgService) verifyAccount(tx *gorm.DB, req types.VerifyAccountReq, userVerify, updateValue *model.UserVerify) error {
 	user, err := s.userDao.GetByUserIDInTx(tx, userVerify.UserID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -246,7 +246,7 @@ func (s *OrgService) verifyAccount(tx *gorm.DB, req *types.VerifyAccountReq, use
 	return nil
 }
 
-func (s *OrgService) GetAccountToVerify(ctx context.Context, req *types.GetAccountToVerifyReq) (*types.GetAccountToVerifyResp, xerr.XErr) {
+func (s *OrgService) GetAccountToVerify(ctx context.Context, req types.GetAccountToVerifyReq) (*types.GetAccountToVerifyResp, xerr.XErr) {
 	// 获取下一个未审核的用户认证申请
 	userVerify, err := s.userVerifyDao.GetByStatus(ctx, model.UserVerifyStatusSubmitted)
 	if err != nil {
@@ -271,7 +271,7 @@ func (s *OrgService) GetAccountToVerify(ctx context.Context, req *types.GetAccou
 	}, nil
 }
 
-func (s *OrgService) GetAccountVerifyList(ctx context.Context, req *types.GetAccountVerifyListReq) (*types.GetAccountVerifyListResp, xerr.XErr) {
+func (s *OrgService) GetAccountVerifyList(ctx context.Context, req types.GetAccountVerifyListReq) (*types.GetAccountVerifyListResp, xerr.XErr) {
 	// 获取待审核总数
 	toVerify, err := s.userVerifyDao.CountByStatus(ctx, model.UserVerifyStatusSubmitted)
 	if err != nil {
@@ -312,7 +312,7 @@ func (s *OrgService) GetAccountVerifyList(ctx context.Context, req *types.GetAcc
 	}, nil
 }
 
-func (s *OrgService) GetOrganizations(ctx context.Context, req *types.GetOrganizationsReq) (*types.GetOrganizationsResp, xerr.XErr) {
+func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganizationsReq) (*types.GetOrganizationsResp, xerr.XErr) {
 	orgList, count, err := s.orgDao.Lists(ctx, req.PageRequest, req.Name)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -344,7 +344,7 @@ func (s *OrgService) GetOrganizations(ctx context.Context, req *types.GetOrganiz
 		TotalNum: int(count),
 	}, nil
 }
-func (s *OrgService) GetOrgMembers(ctx context.Context, req *types.GetOrgMembersReq) (*types.GetOrgMembersResp, xerr.XErr) {
+func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersReq) (*types.GetOrgMembersResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
 	user, err := s.userDao.GetByUserID(ctx, userID)
@@ -378,7 +378,7 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req *types.GetOrgMembers
 	}, nil
 }
 
-func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req *types.GetPointRecordsByApplyReq) (*types.GetPointRecordsByApplyResp, xerr.XErr) {
+func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPointRecordsByApplyReq) (*types.GetPointRecordsByApplyResp, xerr.XErr) {
 	recordList, count, err := s.PointRecord.ListByApplyID(ctx, req.PageRequest, req.ApplyID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -413,7 +413,7 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req *types.GetP
 	}, nil
 }
 
-func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req *types.GetPointRecordsByUserReq) (*types.GetPointRecordsByUserResp, xerr.XErr) {
+func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPointRecordsByUserReq) (*types.GetPointRecordsByUserResp, xerr.XErr) {
 	user, err := s.userDao.GetByUserID(ctx, req.UserID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -444,7 +444,7 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req *types.GetPo
 	}, nil
 }
 
-func (s *OrgService) GetPointRecords(ctx context.Context, req *types.GetPointRecordsReq) (*types.GetPointRecordsResp, xerr.XErr) {
+func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointRecordsReq) (*types.GetPointRecordsResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	// 如果orgID为空，则查看本公司积分明细
 	if req.OrgID == 0 {

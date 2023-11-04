@@ -22,7 +22,7 @@ func NewUserHandler() *UserHandler {
 
 func (h *UserHandler) Login(c *gin.Context) {
 	var (
-		req  *types.UserLoginReq
+		req  types.UserLoginReq
 		resp *types.UserLoginResp
 		xErr xerr.XErr
 	)
@@ -49,7 +49,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 
 func (h *UserHandler) SubmitRole(c *gin.Context) {
 	var (
-		req  *types.UserSubmitRoleReq
+		req  types.UserSubmitRoleReq
 		resp *types.UserSubmitRoleResp
 		xErr xerr.XErr
 	)
@@ -109,7 +109,7 @@ func (h *UserHandler) GetUserInfo(c *gin.Context) {
 
 func (h *UserHandler) ModifyInfo(c *gin.Context) {
 	var (
-		req  *types.UserModifyInfoReq
+		req  types.UserModifyInfoReq
 		resp *types.UserModifyInfoResp
 		xErr xerr.XErr
 	)
@@ -131,7 +131,7 @@ func (h *UserHandler) ModifyInfo(c *gin.Context) {
 
 func (h *UserHandler) AssignAdmin(c *gin.Context) {
 	var (
-		req  *types.UserAssignAdminReq
+		req  types.UserAssignAdminReq
 		resp *types.UserAssignAdminResp
 		xErr xerr.XErr
 	)

@@ -21,7 +21,7 @@ func NewOrgHandler() *OrgHandler {
 
 func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 	var (
-		req  *types.OrgApplyPointReq
+		req  types.OrgApplyPointReq
 		resp *types.OrgApplyPointResp
 		xErr xerr.XErr
 	)
@@ -33,7 +33,7 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 	}
 	comment := c.PostForm("comment")
 	file, header, err := c.Request.FormFile("file")
-	req = &types.OrgApplyPointReq{
+	req = types.OrgApplyPointReq{
 		File:       file,
 		FileHeader: header,
 		Comment:    comment,
@@ -49,7 +49,7 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 
 func (h *OrgHandler) VerifyPoint(c *gin.Context) {
 	var (
-		req  *types.OrgVerifyPointReq
+		req  types.OrgVerifyPointReq
 		resp *types.OrgVerifyPointResp
 		xErr xerr.XErr
 	)
@@ -70,7 +70,7 @@ func (h *OrgHandler) VerifyPoint(c *gin.Context) {
 
 func (h *OrgHandler) GetApplyToVerify(c *gin.Context) {
 	var (
-		req  *types.OrgGetApplyToVerifyReq
+		req  types.OrgGetApplyToVerifyReq
 		resp *types.OrgGetApplyToVerifyResp
 		xErr xerr.XErr
 	)
@@ -91,7 +91,7 @@ func (h *OrgHandler) GetApplyToVerify(c *gin.Context) {
 
 func (h *OrgHandler) GetApplys(c *gin.Context) {
 	var (
-		req  *types.OrgGetApplysReq
+		req  types.OrgGetApplysReq
 		resp *types.OrgGetApplysResp
 		xErr xerr.XErr
 	)
@@ -112,7 +112,7 @@ func (h *OrgHandler) GetApplys(c *gin.Context) {
 
 func (h *OrgHandler) ClearPoint(c *gin.Context) {
 	var (
-		req  *types.OrgClearPointReq
+		req  types.OrgClearPointReq
 		resp *types.OrgClearPointResp
 		xErr xerr.XErr
 	)
@@ -139,7 +139,7 @@ func (h *OrgHandler) ClearPoint(c *gin.Context) {
 
 func (h *OrgHandler) VerifyAccount(c *gin.Context) {
 	var (
-		req  *types.VerifyAccountReq
+		req  types.VerifyAccountReq
 		resp *types.VerifyAccountResp
 		xErr xerr.XErr
 	)
@@ -164,7 +164,7 @@ func (h *OrgHandler) VerifyAccount(c *gin.Context) {
 
 func (h *OrgHandler) GetAccountToVerify(c *gin.Context) {
 	var (
-		req  *types.GetAccountToVerifyReq
+		req  types.GetAccountToVerifyReq
 		resp *types.GetAccountToVerifyResp
 		xErr xerr.XErr
 	)
@@ -185,7 +185,7 @@ func (h *OrgHandler) GetAccountToVerify(c *gin.Context) {
 
 func (h *OrgHandler) GetAccountVerifyList(c *gin.Context) {
 	var (
-		req  *types.GetAccountVerifyListReq
+		req  types.GetAccountVerifyListReq
 		resp *types.GetAccountVerifyListResp
 		xErr xerr.XErr
 	)
@@ -206,7 +206,7 @@ func (h *OrgHandler) GetAccountVerifyList(c *gin.Context) {
 
 func (h *OrgHandler) GetOrganizations(c *gin.Context) {
 	var (
-		req  *types.GetOrganizationsReq
+		req  types.GetOrganizationsReq
 		resp *types.GetOrganizationsResp
 		xErr xerr.XErr
 	)
@@ -227,7 +227,7 @@ func (h *OrgHandler) GetOrganizations(c *gin.Context) {
 
 func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
 	var (
-		req  *types.GetOrgMembersReq
+		req  types.GetOrgMembersReq
 		resp *types.GetOrgMembersResp
 		xErr xerr.XErr
 	)
@@ -252,7 +252,7 @@ func (h *OrgHandler) GetOrgMembers(c *gin.Context) {
 
 func (h *OrgHandler) GetPointRecordsByApply(c *gin.Context) {
 	var (
-		req  *types.GetPointRecordsByApplyReq
+		req  types.GetPointRecordsByApplyReq
 		resp *types.GetPointRecordsByApplyResp
 		xErr xerr.XErr
 	)
@@ -273,7 +273,7 @@ func (h *OrgHandler) GetPointRecordsByApply(c *gin.Context) {
 
 func (h *OrgHandler) GetPointRecordsByUser(c *gin.Context) {
 	var (
-		req  *types.GetPointRecordsByUserReq
+		req  types.GetPointRecordsByUserReq
 		resp *types.GetPointRecordsByUserResp
 		xErr xerr.XErr
 	)
@@ -294,7 +294,7 @@ func (h *OrgHandler) GetPointRecordsByUser(c *gin.Context) {
 
 func (h *OrgHandler) GetPointRecords(c *gin.Context) {
 	var (
-		req  *types.GetPointRecordsReq
+		req  types.GetPointRecordsReq
 		resp *types.GetPointRecordsResp
 		xErr xerr.XErr
 	)
