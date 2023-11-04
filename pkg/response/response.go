@@ -49,17 +49,15 @@ func RespSuccess(ctx *gin.Context, data interface{}) *Response {
 }
 
 // RespError 错误返回
-func RespError(ctx *gin.Context, err xerr.XErr) *TrackedErrorResponse {
+func RespError(ctx *gin.Context, err xerr.XErr) *Response {
 	logID := GetLogIDFromCtx(ctx)
 	status := err.Code()
 
-	r := &TrackedErrorResponse{
-		Response: Response{
-			Status: status,
-			Msg:    GetMsg(status),
-			Data:   err.Error(),
-		},
-		LogID: logID,
+	r := &Response{
+		Status: status,
+		Msg:    GetMsg(status),
+		Data:   err.Error(),
+		LogID:  logID,
 	}
 
 	ctx.Set(consts.CONTEXT_HEADER_RESP_BODY, r.Data)

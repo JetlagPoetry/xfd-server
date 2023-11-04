@@ -89,8 +89,10 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	}
 	if user == nil {
 		user = &model.User{
-			UserID: utils.GenUUID(),
-			Phone:  phone,
+			UserRole: model.UserRoleCustomer,
+			UserID:   utils.GenUUID(),
+			Phone:    phone,
+			Username: utils.GenUsername(phone),
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return nil, err
@@ -107,7 +109,7 @@ func (s *UserService) SubmitRole(ctx context.Context, req types.UserSubmitRoleRe
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	// 允许初次提交&重复提交认证
-	if user.UserRole != model.UserRoleUnknown && user.UserRole != req.Role {
+	if user.UserRole != model.UserRoleCustomer && user.UserRole != req.Role {
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}
 
@@ -225,7 +227,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: types.UserVerifyStatusUnfinished,
-		Point:        0,     // todo
+		Point:        user.Point,
 		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
 	}
 
@@ -242,7 +244,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 			}
 
 			resp.VerifyStatus = types.UserVerifyStatusDone
-			resp.Organization = organization.Name // todo 如果企业名字不一致怎么办
+			resp.Organization = organization.Name
 			resp.OrganizationID = int(organization.ID)
 			resp.VerifyComment = verify.Comment
 		}
@@ -294,13 +296,14 @@ func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, phone string) (*model.U
 	if err != nil {
 		return nil, err
 	}
-	if user != nil && user.UserRole != model.UserRoleUnknown {
+	if user != nil && user.UserRole != model.UserRoleCustomer {
 		return nil, errors.New("user exists")
 	}
 	user = &model.User{
 		UserID:   utils.GenUUID(),
 		Phone:    phone,
 		UserRole: model.UserRoleAdmin,
+		Username: utils.GenUsername(phone),
 	}
 	if err = s.userDao.CreateInTx(tx, user); err != nil {
 		return nil, err

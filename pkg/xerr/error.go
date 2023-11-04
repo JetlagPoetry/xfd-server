@@ -27,14 +27,8 @@ func WithCode(code XCode, err error) XErr {
 	if err == nil {
 		return nil
 	}
-	t, ok := err.(*xErr)
-	if !ok {
-		return &xErr{
-			code: code,
-			err:  err,
-		}
+	return &xErr{
+		code: code,
+		err:  err,
 	}
-	t.code = code
-	t.err = err
-	return t
 }

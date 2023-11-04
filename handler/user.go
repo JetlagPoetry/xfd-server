@@ -60,10 +60,9 @@ func (h *UserHandler) SubmitRole(c *gin.Context) {
 		return
 	}
 
-	if req.Role == model.UserRoleUnknown ||
-		(req.Role == model.UserRoleSupplier || req.Role == model.UserRoleBuyer) && (len(req.Organization) == 0 || len(req.OrganizationCode) == 0 ||
-			len(req.OrganizationURL) == 0 || len(req.IdentityURLA) == 0 || len(req.IdentityURLB) == 0 ||
-			len(req.RealName) == 0 || len(req.CertificateNo) == 0 || len(req.Position) == 0 || !utils.Mobile(req.Phone)) {
+	if (req.Role == model.UserRoleSupplier || req.Role == model.UserRoleBuyer) && (len(req.Organization) == 0 || len(req.OrganizationCode) == 0 ||
+		len(req.OrganizationURL) == 0 || len(req.IdentityURLA) == 0 || len(req.IdentityURLB) == 0 ||
+		len(req.RealName) == 0 || len(req.CertificateNo) == 0 || len(req.Position) == 0 || !utils.Mobile(req.Phone)) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}

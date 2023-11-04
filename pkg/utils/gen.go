@@ -16,9 +16,11 @@ func GenSixDigitCode() string {
 }
 
 func GenUUID() string {
-	return uuid.New().String()
+	return strings.Replace(uuid.New().String(), "-", "", -1)
 }
-
+func GenUsername(phone string) string {
+	return "用户" + phone
+}
 func GenerateFileName() string {
 	currentTime := time.Now()
 	yearMonthDay := currentTime.Format("20060102")
