@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"xfd-backend/database/db"
 	"xfd-backend/pkg/cron"
+	"xfd-backend/pkg/jwt"
 	"xfd-backend/router"
 )
 
@@ -24,5 +25,6 @@ func Init() {
 	if err := db.Init(); err != nil {
 		panic(fmt.Sprintf("Mysql init failed with %+v", err))
 	}
+	jwt.Init()
 	//config.InitConfig()
 }
