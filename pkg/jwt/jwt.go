@@ -28,18 +28,16 @@ type JWTAuth struct {
 	tokenType     string
 }
 
-const defaultKey = "gin-amis-admin"
-
 var defaultOptions = &JWTAuth{
 	tokenType:     "Bearer",
 	expired:       30 * 24 * 3600,
 	signingMethod: jwt_go.SigningMethodHS512,
-	signingKey:    []byte(defaultKey),
+	signingKey:    []byte(consts.AUTH_SIGNING_KEY),
 	keyfunc: func(t *jwt_go.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt_go.SigningMethodHMAC); !ok {
 			return nil, nil
 		}
-		return []byte(defaultKey), nil
+		return []byte(consts.AUTH_SIGNING_KEY), nil
 	},
 }
 

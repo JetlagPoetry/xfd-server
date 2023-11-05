@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -20,7 +21,7 @@ func NewSupplyHandler() *SupplyHandler {
 
 func (h *SupplyHandler) GetPurchases(c *gin.Context) {
 	var (
-		req  *types.SupplyGetPurchasesReq
+		req  types.SupplyGetPurchasesReq
 		resp *types.SupplyGetPurchasesResp
 		xErr xerr.XErr
 	)
@@ -41,7 +42,7 @@ func (h *SupplyHandler) GetPurchases(c *gin.Context) {
 
 func (h *SupplyHandler) GetQuotes(c *gin.Context) {
 	var (
-		req  *types.SupplyGetQuotesReq
+		req  types.SupplyGetQuotesReq
 		resp *types.SupplyGetQuotesResp
 		xErr xerr.XErr
 	)
@@ -62,7 +63,7 @@ func (h *SupplyHandler) GetQuotes(c *gin.Context) {
 
 func (h *SupplyHandler) SubmitQuote(c *gin.Context) {
 	var (
-		req  *types.SupplySubmitQuoteReq
+		req  types.SupplySubmitQuoteReq
 		resp *types.SupplySubmitQuoteResp
 		xErr xerr.XErr
 	)
@@ -73,7 +74,7 @@ func (h *SupplyHandler) SubmitQuote(c *gin.Context) {
 		return
 	}
 	if req.OrderID == 0 || req.ItemID == 0 || req.Price == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.supplyService.SubmitQuote(c, req)
@@ -87,7 +88,7 @@ func (h *SupplyHandler) SubmitQuote(c *gin.Context) {
 
 func (h *SupplyHandler) GetQuotedPurchases(c *gin.Context) {
 	var (
-		req  *types.SupplyGetQuotedPurchasesReq
+		req  types.SupplyGetQuotedPurchasesReq
 		resp *types.SupplyGetQuotedPurchasesResp
 		xErr xerr.XErr
 	)
@@ -108,7 +109,7 @@ func (h *SupplyHandler) GetQuotedPurchases(c *gin.Context) {
 
 func (h *SupplyHandler) GetStatistics(c *gin.Context) {
 	var (
-		req  *types.SupplyGetStatisticsReq
+		req  types.SupplyGetStatisticsReq
 		resp *types.SupplyGetStatisticsResp
 		xErr xerr.XErr
 	)

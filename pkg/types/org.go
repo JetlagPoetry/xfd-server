@@ -8,6 +8,8 @@ import (
 type OrgApplyPointReq struct {
 	File       multipart.File        `json:"file"`
 	FileHeader *multipart.FileHeader `json:"fileHeader"`
+	StartTime  int64                 `json:"startTime"`
+	EndTime    int64                 `json:"endTime"`
 	Comment    string                `json:"comment"`
 }
 
@@ -15,9 +17,9 @@ type OrgApplyPointResp struct {
 }
 
 type OrgVerifyPointReq struct {
-	ID      string                    `json:"id"`
-	Status  model.OrgPointApplication `json:"status"`
-	Comment string                    `json:"comment"`
+	ID      int                          `json:"id"`
+	Status  model.PointApplicationStatus `json:"status"`
+	Comment string                       `json:"comment"`
 }
 
 type OrgVerifyPointResp struct {
@@ -27,6 +29,7 @@ type OrgGetApplyToVerifyReq struct {
 }
 
 type OrgGetApplyToVerifyResp struct {
+	ID                int    `json:"id"`
 	OrganizationName  string `json:"organizationName"`
 	OrganizationCode  string `json:"organizationCode"`
 	Comment           string `json:"comment"`
@@ -50,17 +53,24 @@ type OrgGetApplysResp struct {
 	TotalNum   int           `json:"totalNum"`
 }
 
+type OrgClearPointReq struct {
+	OrgID int `json:"orgID"`
+}
+
+type OrgClearPointResp struct {
+}
+
 type PointOrder struct {
-	OrganizationName string                          `json:"organizationName"`
-	OrganizationCode string                          `json:"organizationCode"`
-	Comment          string                          `json:"comment"`
-	SubmitTime       int64                           `json:"submitTime"`
-	VerifyTime       int64                           `json:"verifyTime"`
-	VerifyComment    string                          `json:"verifyComment"`
-	VerifyUserID     string                          `json:"verifyUserID"`
-	VerifyUsername   string                          `json:"verifyUsername"`
-	PointOrderStatus model.OrgPointApplicationStatus `json:"pointOrderStatus"`
-	ApplyURL         string                          `json:"applyURL"`
+	OrganizationName string                       `json:"organizationName"`
+	OrganizationCode string                       `json:"organizationCode"`
+	Comment          string                       `json:"comment"`
+	SubmitTime       int64                        `json:"submitTime"`
+	VerifyTime       int64                        `json:"verifyTime"`
+	VerifyComment    string                       `json:"verifyComment"`
+	VerifyUserID     string                       `json:"verifyUserID"`
+	VerifyUsername   string                       `json:"verifyUsername"`
+	PointOrderStatus model.PointApplicationStatus `json:"pointOrderStatus"`
+	ApplyURL         string                       `json:"applyURL"`
 }
 
 type VerifyAccountReq struct {
@@ -137,6 +147,8 @@ type Organization struct {
 }
 
 type GetOrgMembersReq struct {
+	PageRequest
+	OrgID    int    `json:"orgID"`
 	Username string `json:"username"`
 	Phone    string `json:"phone"`
 }
@@ -151,14 +163,52 @@ type OrgMember struct {
 	Name             string `json:"name"`
 	Phone            string `json:"phone"`
 	OrganizationName string `json:"organization_name"`
-	Point            string `json:"point"`
+	Point            int    `json:"point"`
 	CreateTime       int64  `json:"createTime"`
-	// todo 积分失效时间？？
+}
+
+type GetPointRecordsByApplyReq struct {
+	PageRequest
+	ApplyID int `json:"applyID"`
+}
+
+type GetPointRecordsByApplyResp struct {
+	List           []*PointRecord `json:"list"`
+	TotalNum       int            `json:"totalNum"`
+	PointTotal     int            `json:"pointTotal"`
+	PointExpired   int            `json:"pointExpired"`
+	PointSpend     int            `json:"pointSpend"`
+	PointAvailable int            `json:"pointAvailable"`
 }
 
 type GetPointRecordsByUserReq struct {
-	UserID int `json:"userID"`
+	PageRequest
+	UserID string `json:"userID"`
 }
 
 type GetPointRecordsByUserResp struct {
+	List     []*PointRecord `json:"list"`
+	TotalNum int            `json:"totalNum"`
+}
+
+type GetPointRecordsReq struct {
+	PageRequest
+	OrgID int `json:"orgID"`
+}
+
+type GetPointRecordsResp struct {
+	List     []*PointRecord `json:"list"`
+	TotalNum int            `json:"totalNum"`
+}
+
+type PointRecord struct {
+	UserID          string                `json:"userID"`
+	Username        string                `json:"username"`
+	PointTotal      int                   `json:"pointTotal"`
+	PointChange     int                   `json:"pointChange"`
+	Type            model.PointRecordType `json:"type"`
+	Comment         string                `json:"comment"`
+	UpdateTime      int64                 `json:"updateTime"`
+	OperateUserID   string                `json:"operateUserID"`
+	OperateUsername string                `json:"operateUsername"`
 }

@@ -24,7 +24,7 @@ func NewPurchaseService() *PurchaseService {
 	}
 }
 
-func (s *PurchaseService) GetPurchases(ctx context.Context, req *types.PurchaseGetPurchasesReq) (*types.PurchaseGetPurchasesResp, xerr.XErr) {
+func (s *PurchaseService) GetPurchases(ctx context.Context, req types.PurchaseGetPurchasesReq) (*types.PurchaseGetPurchasesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	purchaseList, count, err := s.purchaseDao.ListByUser(ctx, req.PageRequest, userID, req.Status)
 	if err != nil {
@@ -67,7 +67,7 @@ func (s *PurchaseService) GetPurchases(ctx context.Context, req *types.PurchaseG
 	return &types.PurchaseGetPurchasesResp{List: list, TotalNum: count}, nil
 }
 
-func (s *PurchaseService) SubmitOrder(ctx context.Context, req *types.PurchaseSubmitOrderReq) (*types.PurchaseSubmitOrderResp, xerr.XErr) {
+func (s *PurchaseService) SubmitOrder(ctx context.Context, req types.PurchaseSubmitOrderReq) (*types.PurchaseSubmitOrderResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
 	newPurchase := &model.OrderPurchase{
@@ -90,7 +90,7 @@ func (s *PurchaseService) SubmitOrder(ctx context.Context, req *types.PurchaseSu
 	return nil, nil
 }
 
-//func (s *PurchaseService) ModifyOrder(ctx context.Context, req *types.PurchaseModifyOrderReq) (*types.PurchaseModifyOrderResp, xerr.XErr) {
+//func (s *PurchaseService) ModifyOrder(ctx context.Context, req types.PurchaseModifyOrderReq) (*types.PurchaseModifyOrderResp, xerr.XErr) {
 //	_, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 //	if err != nil {
 //		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -113,7 +113,7 @@ func (s *PurchaseService) SubmitOrder(ctx context.Context, req *types.PurchaseSu
 //	return &types.PurchaseModifyOrderResp{}, nil
 //}
 
-func (s *PurchaseService) ModifyOrderStatus(ctx context.Context, req *types.PurchaseModifyOrderStatusReq) (*types.PurchaseModifyOrderStatusResp, xerr.XErr) {
+func (s *PurchaseService) ModifyOrderStatus(ctx context.Context, req types.PurchaseModifyOrderStatusReq) (*types.PurchaseModifyOrderStatusResp, xerr.XErr) {
 	order, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -158,7 +158,7 @@ func (s *PurchaseService) ModifyOrderStatus(ctx context.Context, req *types.Purc
 	return nil, nil
 }
 
-func (s *PurchaseService) GetQuotes(ctx context.Context, req *types.PurchaseGetQuotesReq) (*types.PurchaseGetQuotesResp, xerr.XErr) {
+func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQuotesReq) (*types.PurchaseGetQuotesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	purchaseOrder, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 	if err != nil {
@@ -210,7 +210,7 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req *types.PurchaseGetQ
 	return &types.PurchaseGetQuotesResp{List: list, TotalNum: count}, nil
 }
 
-func (s *PurchaseService) GetStatistics(ctx context.Context, req *types.PurchaseGetStatisticsReq) (*types.PurchaseGetStatisticsResp, xerr.XErr) {
+func (s *PurchaseService) GetStatistics(ctx context.Context, req types.PurchaseGetStatisticsReq) (*types.PurchaseGetStatisticsResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
 	count, err := s.quoteDao.CountByPurchaseUserIDAndNotifyPurchase(ctx, userID, true)
@@ -223,7 +223,7 @@ func (s *PurchaseService) GetStatistics(ctx context.Context, req *types.Purchase
 	}, nil
 }
 
-func (s *PurchaseService) AnswerQuote(ctx context.Context, req *types.PurchaseAnswerQuoteReq) (*types.PurchaseAnswerQuoteResp, xerr.XErr) {
+func (s *PurchaseService) AnswerQuote(ctx context.Context, req types.PurchaseAnswerQuoteReq) (*types.PurchaseAnswerQuoteResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
 	err := s.quoteDao.UpdateByPurchaseUserAndQuoteUser(ctx, userID, req.SupplyUserID, &model.OrderQuote{NotifySupply: false})

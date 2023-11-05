@@ -12,8 +12,8 @@ type UserVerify struct {
 	Organization     string           `gorm:"column:organization;not null" json:"organization"`
 	OrganizationCode string           `gorm:"column:organization_code;not null" json:"organization_code"`
 	OrganizationURL  string           `gorm:"column:organization_url;not null" json:"organization_url"`
-	IdentityURLA     string           `gorm:"column:identityUrlA;not null" json:"identityUrlA"`
-	IdentityURLB     string           `gorm:"column:identityUrlB;not null" json:"identityUrlB"`
+	IdentityURLA     string           `gorm:"column:identity_url_a;not null" json:"identity_url_a"`
+	IdentityURLB     string           `gorm:"column:identity_url_b;not null" json:"identity_url_b"`
 	RealName         string           `gorm:"column:real_name;not null" json:"real_name"`
 	CertificateNo    string           `gorm:"column:certificate_no;not null" json:"certificate_no"`
 	Position         string           `gorm:"column:position;not null" json:"position"`

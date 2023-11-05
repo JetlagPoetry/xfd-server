@@ -29,7 +29,7 @@ func NewUserService() *UserService {
 	}
 }
 
-func (s *UserService) Login(ctx context.Context, req *types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
+func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
 	// 开始事务
 	tx := db.Get().Begin()
 	user, err := s.loginOrRegister(tx, req.Phone)
@@ -89,8 +89,10 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	}
 	if user == nil {
 		user = &model.User{
-			UserID: utils.GenUUID(),
-			Phone:  phone,
+			UserRole: model.UserRoleCustomer,
+			UserID:   utils.GenUUID(),
+			Phone:    phone,
+			Username: utils.GenUsername(phone),
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return nil, err
@@ -100,14 +102,14 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	return user, nil
 }
 
-func (s *UserService) SubmitRole(ctx context.Context, req *types.UserSubmitRoleReq) (*types.UserSubmitRoleResp, xerr.XErr) {
+func (s *UserService) SubmitRole(ctx context.Context, req types.UserSubmitRoleReq) (*types.UserSubmitRoleResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	// 允许初次提交&重复提交认证
-	if user.UserRole != model.UserRoleUnknown && user.UserRole != req.Role {
+	if user.UserRole != model.UserRoleCustomer && user.UserRole != req.Role {
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}
 
@@ -125,7 +127,7 @@ func (s *UserService) SubmitRole(ctx context.Context, req *types.UserSubmitRoleR
 	return &types.UserSubmitRoleResp{}, nil
 }
 
-func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req *types.UserSubmitRoleReq) xerr.XErr {
+func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req types.UserSubmitRoleReq) xerr.XErr {
 	err := s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{UserRole: req.Role})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -225,7 +227,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: types.UserVerifyStatusUnfinished,
-		Point:        0,     // todo
+		Point:        user.Point,
 		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
 	}
 
@@ -242,7 +244,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 			}
 
 			resp.VerifyStatus = types.UserVerifyStatusDone
-			resp.Organization = organization.Name // todo 如果企业名字不一致怎么办
+			resp.Organization = organization.Name
 			resp.OrganizationID = int(organization.ID)
 			resp.VerifyComment = verify.Comment
 		}
@@ -251,7 +253,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 	return resp, nil
 }
 
-func (s *UserService) ModifyUserInfo(ctx context.Context, req *types.UserModifyInfoReq) (*types.UserModifyInfoResp, xerr.XErr) {
+func (s *UserService) ModifyUserInfo(ctx context.Context, req types.UserModifyInfoReq) (*types.UserModifyInfoResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	err := s.userDao.UpdateByUserID(ctx, userID, &model.User{AvatarURL: req.AvatarURL, Username: req.Username})
 	if err != nil {
@@ -260,7 +262,7 @@ func (s *UserService) ModifyUserInfo(ctx context.Context, req *types.UserModifyI
 	return &types.UserModifyInfoResp{}, nil
 }
 
-func (s *UserService) AssignAdmin(ctx context.Context, req *types.UserAssignAdminReq) (*types.UserAssignAdminResp, xerr.XErr) {
+func (s *UserService) AssignAdmin(ctx context.Context, req types.UserAssignAdminReq) (*types.UserAssignAdminResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
@@ -294,13 +296,14 @@ func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, phone string) (*model.U
 	if err != nil {
 		return nil, err
 	}
-	if user != nil && user.UserRole != model.UserRoleUnknown {
+	if user != nil && user.UserRole != model.UserRoleCustomer {
 		return nil, errors.New("user exists")
 	}
 	user = &model.User{
 		UserID:   utils.GenUUID(),
 		Phone:    phone,
 		UserRole: model.UserRoleAdmin,
+		Username: utils.GenUsername(phone),
 	}
 	if err = s.userDao.CreateInTx(tx, user); err != nil {
 		return nil, err

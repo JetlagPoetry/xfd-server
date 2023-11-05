@@ -5,17 +5,19 @@ import (
 	"log"
 	"net/http"
 	"xfd-backend/database/db"
+	"xfd-backend/pkg/cron"
+	"xfd-backend/pkg/jwt"
 	"xfd-backend/router"
 )
 
 func main() {
 	Init()
 
-	//cron.StartCron()
+	cron.StartCron()
 
 	r := router.NewRouter()
 	log.Println("==================Server Start===================")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":80", r))
 
 }
 
@@ -23,5 +25,6 @@ func Init() {
 	if err := db.Init(); err != nil {
 		panic(fmt.Sprintf("Mysql init failed with %+v", err))
 	}
+	jwt.Init()
 	//config.InitConfig()
 }

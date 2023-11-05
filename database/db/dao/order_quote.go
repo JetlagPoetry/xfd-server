@@ -26,7 +26,7 @@ func (d *OrderQuoteDao) Lists(ctx context.Context, limit, offset int) (list []*m
 }
 
 func (d *OrderQuoteDao) ListByUserIDAndOrderID(ctx context.Context, userID string, orderID int) (list []*model.OrderQuote, err error) {
-	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ? AND purchase_order_id", userID, orderID).Find(&list).Error
+	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ? AND purchase_order_id = ?", userID, orderID).Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
