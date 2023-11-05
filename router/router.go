@@ -14,7 +14,7 @@ func NewRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall/categories", "/api/v1/common/area", "/api/v1/common/uploadFile", "/api/v1/goods")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall", "/api/v1/common", "/api/v1/goods", "/api/v1/backstage")) // 登录校验, 参数为跳过登录的路由
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
@@ -77,6 +77,10 @@ func NewRouter() *gin.Engine {
 	{
 		goodsGroup.POST("/addGoods", handler.Goods.AddGoods)        //添加商品
 		goodsGroup.GET("/getGoodsList", handler.Goods.GetGoodsList) //获取商品列表
+	}
+	backstageGroup := r.Group("/api/v1/backstage")
+	{
+		backstageGroup.GET("/getGoodsList", handler.Goods.BackstageGetGoodsList) //后台管理获取商品列表
 	}
 	commonGroup := r.Group("/api/v1/common")
 	{

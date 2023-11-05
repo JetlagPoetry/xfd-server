@@ -91,7 +91,7 @@ type ProductVariant struct {
 	Stock            int                       `gorm:"type:int;default:0;column:stock;not null;comment:库存" json:"stock"`
 	MinOrderQuantity int                       `gorm:"type:int;default:0;column:min_order_quantity;comment:起批量" json:"min_order_quantity"`
 	Type             enum.ProductVariantType   `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:goods_id_deleted_type_status" json:"type"`
-	Status           enum.ProductVariantStatus `gorm:"type:tinyint(1);not null;default:1;column:status;comment:状态 1-未启用 2-启用" json:"status"`
+	Status           enum.ProductVariantStatus `gorm:"type:tinyint(1);not null;default:1;column:status;comment:状态 1-启用 2-未启用" json:"status"`
 }
 
 // Inventory 商品库存表

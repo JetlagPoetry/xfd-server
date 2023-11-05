@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm/schema"
 	"os"
 	"time"
-	"xfd-backend/database/db/model"
 )
 
 var dbInstance *gorm.DB
@@ -36,10 +35,10 @@ func Init() error {
 	}
 	//_ = db.AutoMigrate(&model.Category{})
 	//_ = db.AutoMigrate(&model.AreaCode{})
-	_ = db.AutoMigrate(&model.Goods{})
-	_ = db.AutoMigrate(&model.Specification{})
-	_ = db.AutoMigrate(&model.SpecificationValue{})
-	_ = db.AutoMigrate(&model.ProductVariant{})
+	//_ = db.AutoMigrate(&model.Goods{})
+	//_ = db.AutoMigrate(&model.Specification{})
+	//_ = db.AutoMigrate(&model.SpecificationValue{})
+	//_ = db.AutoMigrate(&model.ProductVariant{})
 
 	sqlDB, err := db.DB()
 	if err != nil {

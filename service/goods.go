@@ -12,19 +12,20 @@ import (
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
 	"xfd-backend/database/repo"
-	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 )
 
 type GoodsService struct {
-	goods *dao.GoodsDao
+	goods   *dao.GoodsDao
+	userDao *dao.UserDao
 }
 
 func NewGoodsService() *GoodsService {
 	return &GoodsService{
-		goods: dao.NewGoodsDao(),
+		goods:   dao.NewGoodsDao(),
+		userDao: dao.NewUserDao(),
 	}
 }
 
@@ -47,10 +48,13 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		imagesBytes, _ := json.Marshal(req.GoodsDetail.Images)
 		images = string(imagesBytes)
 	}
-	if len(req.GoodsDetail.DescImages) != 0 {
+	if len(req.GoodsDetail.DescImages) == 0 {
+		descImages = images
+	} else {
 		descImagesBytes, _ := json.Marshal(req.GoodsDetail.DescImages)
 		descImages = string(descImagesBytes)
 	}
+
 	modelGoods := &model.Goods{
 		UserID:             userID,
 		CategoryAID:        req.GoodsDetail.CategoryAID,
@@ -64,7 +68,7 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		Images:             images,
 		DescImages:         descImages,
 		GoodsFrontImage:    req.GoodsDetail.Images[0],
-		RetailStatus:       enum.GoodsRetailSoldOut,
+		RetailStatus:       enum.GoodsRetailNormal,
 		IsRetail:           0,
 		WholesaleLogistics: req.GoodsDetail.WholesaleLogistics,
 		WholesaleShipping:  req.GoodsDetail.WholesaleShipping,
@@ -78,8 +82,15 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 	if req.GoodsDetail.RetailShippingFee == 0 {
 		modelGoods.ShipFree = 1
 	}
-	if len(req.RetailProducts) != 0 {
-		modelGoods.IsRetail = 1
+	totalStock := 0
+	for _, v := range req.RetailProducts {
+		if v.Status == enum.ProductVariantEnabled {
+			modelGoods.IsRetail = 1
+			totalStock += v.Stock
+		}
+	}
+	if totalStock == 0 {
+		modelGoods.RetailStatus = enum.GoodsRetailSoldOut
 	}
 	transactionHandler := repo.NewTransactionHandler(db.Get())
 	if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
@@ -229,6 +240,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				Price:        v.Price,
 				Type:         enum.ProductRetail,
 				Status:       v.Status,
+				Stock:        v.Stock,
 			}
 			_, err = s.goods.CreateProductVariant(ctx, productVariant)
 			if err != nil {
@@ -239,37 +251,144 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 	return nil
 }
 
-func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) xerr.XErr {
-	//获取用户ID
-	//userID := common.GetUserID(ctx)
-	//获取用户角色
-	userRole := common.GetUserRole(ctx)
-	if req.RequestSource == enum.MiniProgramSource {
-		//小程序后台
-		if userRole == model.UserRoleSupplier {
-			//        1. 弹窗内按发布时间由新到旧展示满足报价条件的所有商品，可上下划动
-			//供货商只能看自己的产品,(发布时间由新到旧展示满足报价条件的所有批发商品)
-		}
-		if userRole == model.UserRoleCustomer {
-			//消费者只能看到上架的的零售商品,默认按照发布时间由新到旧展示,筛选满足条件的商品
-			//    2. 综合排序：按货品发布时间由新到旧排列
-			//    3. 销量优先：按货品近30天累计支付成功的订单总量降序排列
-			//    4. 低价优先：按货品最低价格升序排列（一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序）
-		}
-		if userRole == model.UserRoleBuyer {
-			//采购商只能看到上架的批发商品,默认按照发布时间由新到旧展示,筛选满足条件的商品,由新到旧排列
-		}
-		// 2. 综合排序、最新发布：都按需求单提交时间由新到旧排列（本期不做区分）
-		// 3. 低价优先：按货品最低价格升序排列（一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序）
+func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) (*types.GoodsListResp, xerr.XErr) {
+	if req.CheckParams() != nil {
+		return nil, xerr.WithCode(xerr.InvalidParams, req.CheckParams())
 	}
-	if req.RequestSource == enum.BackendSource {
-		if userRole == model.UserRoleCustomer || userRole == model.UserRoleBuyer {
-			//消费者采购商都没有后台
+	userID := "w2wwww"
+
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	//供货商,查看供货信息(批发)
+	if user.UserRole == model.UserRoleSupplier {
+		req.ProductVariantType = enum.ProductWholesale
+		req.UserID = userID
+		switch req.ListType {
+		case enum.GoodsListTypeNormal:
+			return s.normalGetGoodsList(ctx, req)
+		case enum.GoodsListTypeCategory:
+			return s.normalGetGoodsList(ctx, req)
+		default:
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d ", req.ListType, user.UserRole))
 		}
-		if userRole == model.UserRoleSupplier {
-			//供货商只能看自己的产品
+	}
+	if user.UserRole == model.UserRoleCustomer {
+		req.IsRetail = 1
+		req.ProductVariantType = enum.ProductRetail
+		//消费者只能看到上架的的零售商品,默认按照发布时间由新到旧展示,筛选满足条件的商品
+		// 2. 综合排序：按货品发布时间由新到旧排列
+		// 3. 销量优先：按货品近30天累计支付成功的订单总量降序排列
+		// 4. 低价优先：按货品最低价格升序排列（一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序）
+		switch req.ListType {
+		case enum.GoodsListTypeNormal:
+			return s.normalGetGoodsList(ctx, req)
+		case enum.GoodsListTypeCategory:
+			return s.normalGetGoodsList(ctx, req)
+		case enum.GoodsListTypeSale:
+			return s.normalGetGoodsList(ctx, req)
+		case enum.GoodsListTypePrice:
+			return s.getGoodsListByPrice(ctx, req)
+		default:
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d ", req.ListType, user.UserRole))
+		}
+	}
+
+	//采购商查看批发信息
+	// 2. 综合排序、最新发布：都按需求单提交时间由新到旧排列（本期不做区分）
+	// 3. 低价优先：按货品最低价格升序排列（一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序）
+	if user.UserRole == model.UserRoleBuyer {
+		req.ProductVariantType = enum.ProductWholesale
+		switch req.ListType {
+		case enum.GoodsListTypeNormal:
+			return s.normalGetGoodsList(ctx, req)
+		case enum.GoodsListTypePrice:
+			return s.getGoodsListByPrice(ctx, req)
+		default:
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d ", req.ListType, user.UserRole))
 		}
 
 	}
-	return nil
+	return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d", req.ListType, user.UserRole))
+}
+
+func (s *GoodsService) normalGetGoodsList(ctx *gin.Context, req types.GoodsListReq) (*types.GoodsListResp, xerr.XErr) {
+	goods, total, err := s.goods.GetGoodsList(ctx, req)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	result := types.GoodsListResp{PageResult: types.PageResult{PageNum: req.PageNum, PageSize: req.PageSize, TotalNum: total}}
+	for i, v := range goods {
+		productVariants, rr := s.goods.GetProductVariantListByGoodsID(ctx, v.ID, req.ProductVariantType)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
+		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
+	}
+	result.GoodsList = goods
+	return &result, nil
+}
+
+func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) (float64, float64, float64, float64, string, string) {
+	var wholesalePriceMax, wholesalePriceMin, retailPriceMax, retailPriceMin float64
+	var wholesaleUnit, retailUnit string
+	initW := false
+	initR := false
+	for k := range productVariants {
+		if productVariants[k].Type == enum.ProductWholesale {
+			wholesaleUnit = productVariants[k].Unit
+			if !initW || productVariants[k].Price > wholesalePriceMax {
+				wholesalePriceMax = productVariants[k].Price
+			}
+			if !initW || productVariants[k].Price < wholesalePriceMin {
+				wholesalePriceMin = productVariants[k].Price
+			}
+			initW = true
+		} else if productVariants[k].Type == enum.ProductRetail {
+			retailUnit = productVariants[k].Unit
+			if !initR || productVariants[k].Price > retailPriceMax {
+				retailPriceMax = productVariants[k].Price
+			}
+			if !initR || productVariants[k].Price < retailPriceMin {
+				retailPriceMin = productVariants[k].Price
+			}
+			initR = true
+		}
+	}
+	return wholesalePriceMax, wholesalePriceMin, retailPriceMax, retailPriceMin, wholesaleUnit, retailUnit
+}
+
+func (s *GoodsService) getGoodsListByPrice(ctx *gin.Context, req types.GoodsListReq) (*types.GoodsListResp, xerr.XErr) {
+	minPriceResult, total, err := s.goods.GetMinPriceList(ctx, req)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	goods := s.ConvertMinPriceResultToGoodsList(minPriceResult)
+	result := types.GoodsListResp{PageResult: types.PageResult{PageNum: req.PageNum, PageSize: req.PageSize, TotalNum: total}}
+	for i, v := range goods {
+		productVariants, rr := s.goods.GetProductVariantListByGoodsID(ctx, v.ID, req.ProductVariantType)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
+		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
+	}
+	result.GoodsList = goods
+	return &result, nil
+}
+
+func (s *GoodsService) ConvertMinPriceResultToGoodsList(minPriceResults []*types.MinPriceResult) []*types.GoodsList {
+	goodsList := make([]*types.GoodsList, len(minPriceResults))
+	for i, result := range minPriceResults {
+		goodsList[i] = &types.GoodsList{
+			ID:              result.GoodsID,
+			Name:            result.Name,
+			GoodsFrontImage: result.GoodsFrontImage,
+			Images:          result.Images,
+		}
+	}
+	return goodsList
 }

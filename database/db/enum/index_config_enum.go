@@ -8,7 +8,7 @@ const (
 	IndexSearchDownHots IndexConfigEnum = 2
 	IndexGoodsHot       IndexConfigEnum = 3
 	IndexGoodsNew       IndexConfigEnum = 4
-	IndexGoodsRecommond IndexConfigEnum = 5
+	IndexGoodsRecommend IndexConfigEnum = 5
 )
 
 func (i IndexConfigEnum) Info() (int, string) {
@@ -21,7 +21,7 @@ func (i IndexConfigEnum) Info() (int, string) {
 		return 3, "三级分类"
 	case IndexGoodsNew:
 		return 4, "三级分类"
-	case IndexGoodsRecommond:
+	case IndexGoodsRecommend:
 		return 5, "三级分类"
 	default:
 		return 0, "DEFAULT"
@@ -38,7 +38,7 @@ func (i IndexConfigEnum) Code() int {
 		return 3
 	case IndexGoodsNew:
 		return 4
-	case IndexGoodsRecommond:
+	case IndexGoodsRecommend:
 		return 5
 	default:
 		return 0

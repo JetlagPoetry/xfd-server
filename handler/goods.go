@@ -40,6 +40,7 @@ func (h *GoodsHandler) AddGoods(c *gin.Context) {
 func (h *GoodsHandler) GetGoodsList(c *gin.Context) {
 	var (
 		req  types.GoodsListReq
+		resp *types.GoodsListResp
 		xErr xerr.XErr
 	)
 	err := c.ShouldBindQuery(&req)
@@ -47,11 +48,15 @@ func (h *GoodsHandler) GetGoodsList(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	xErr = h.goodsService.GetGoodsList(c, req)
+	resp, xErr = h.goodsService.GetGoodsList(c, req)
 	if xErr != nil {
 		log.Println("[GoodsHandler] GetGoodsList failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}
-	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *GoodsHandler) BackstageGetGoodsList(ctx *gin.Context) {
+
 }
