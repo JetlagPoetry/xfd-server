@@ -57,6 +57,59 @@ func (h *GoodsHandler) GetGoodsList(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
-func (h *GoodsHandler) BackstageGetGoodsList(ctx *gin.Context) {
+func (h *GoodsHandler) GetGoodsDetail(c *gin.Context) {
 
+}
+
+//后台操作
+
+func (h *GoodsHandler) GetMyGoodsList(c *gin.Context) {
+
+}
+
+func (h *GoodsHandler) GetMyGoodsDetail(c *gin.Context) {
+
+}
+
+func (h *GoodsHandler) ModifyMyGoods(c *gin.Context) {
+
+}
+
+func (h *GoodsHandler) DeleteMyGoods(c *gin.Context) {
+	var (
+		req  types.GoodsReq
+		xErr xerr.XErr
+	)
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xErr = h.goodsService.DeleteMyGoods(c, req)
+	if xErr != nil {
+		log.Println("[GoodsHandler] DeleteMyGoods failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
+
+}
+
+func (h *GoodsHandler) ModifyMyGoodsStatus(c *gin.Context) {
+	var (
+		req  types.GoodsReq
+		xErr xerr.XErr
+	)
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xErr = h.goodsService.ModifyMyGoodsStatus(c, req)
+	if xErr != nil {
+		log.Println("[GoodsHandler] ModifyMyGoodsStatus failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
 }

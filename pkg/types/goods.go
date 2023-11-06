@@ -184,3 +184,8 @@ type MinPriceResult struct {
 	GoodsFrontImage string  `gorm:"column:goods_front_image"`
 	Images          string  `gorm:"column:images"`
 }
+
+type GoodsReq struct {
+	GoodsID     int32            `json:"goodsID" binding:"required,numeric,gte=1"`
+	GoodsStatus enum.GoodsStatus `json:"goodsStatus" binding:"numeric,gte=0,lte=2"`
+}

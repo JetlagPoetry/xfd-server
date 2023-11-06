@@ -14,7 +14,7 @@ func NewRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall", "/api/v1/common", "/api/v1/goods", "/api/v1/backstage")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall", "/api/v1/common", "/api/v1/goods")) // 登录校验, 参数为跳过登录的路由
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
@@ -76,13 +76,16 @@ func NewRouter() *gin.Engine {
 	}
 	goodsGroup := r.Group("/api/v1/goods")
 	{
-		goodsGroup.POST("/addGoods", handler.Goods.AddGoods)        //添加商品
-		goodsGroup.GET("/getGoodsList", handler.Goods.GetGoodsList) //获取商品列表
+		goodsGroup.POST("/addGoods", handler.Goods.AddGoods)                       //添加商品
+		goodsGroup.GET("/getGoodsList", handler.Goods.GetGoodsList)                //获取商品列表
+		goodsGroup.GET("/getGoodsDetail", handler.Goods.GetGoodsDetail)            //获取商品详情
+		goodsGroup.GET("/getMyGoodsList", handler.Goods.GetMyGoodsList)            //后台获取商品列表
+		goodsGroup.POST("/modifyMyGoods", handler.Goods.ModifyMyGoods)             //修改商品
+		goodsGroup.DELETE("/deleteMyGoods", handler.Goods.DeleteMyGoods)           //删除商品
+		goodsGroup.GET("/getMyGoodsDetail", handler.Goods.GetMyGoodsDetail)        //获取商品详情
+		goodsGroup.POST("/modifyMyGoodsStatus", handler.Goods.ModifyMyGoodsStatus) //修改商品状态
 	}
-	backstageGroup := r.Group("/api/v1/backstage")
-	{
-		backstageGroup.GET("/getGoodsList", handler.Goods.BackstageGetGoodsList) //后台管理获取商品列表
-	}
+
 	commonGroup := r.Group("/api/v1/common")
 	{
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码

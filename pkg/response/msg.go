@@ -48,7 +48,8 @@ var MsgFlags = map[xerr.XCode]string{
 
 	xerr.ErrorDatabase: "数据库操作出错,请重试",
 
-	xerr.ErrorOss: "COS配置错误",
+	xerr.ErrorOss:            "COS配置错误",
+	xerr.ErrorNotExistRecord: "记录不存在",
 }
 
 // GetMsg 获取状态码对应信息

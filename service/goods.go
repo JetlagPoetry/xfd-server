@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"strconv"
@@ -391,4 +392,78 @@ func (s *GoodsService) ConvertMinPriceResultToGoodsList(minPriceResults []*types
 		}
 	}
 	return goodsList
+}
+
+func (s *GoodsService) DeleteMyGoods(ctx *gin.Context, req types.GoodsReq) xerr.XErr {
+	//获取用户ID
+	//userID := common.GetUserID(ctx)
+	////获取用户角色
+	//userRole := common.GetUserRole(ctx)
+	userID := "w2wwww"
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	userRole := user.UserRole
+	if userRole != model.UserRoleSupplier {
+		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
+	}
+	//检查用户权限
+	goods, err := s.goods.GetGoodsByGoodsID(ctx, req.GoodsID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if goods == nil {
+		return xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
+	}
+	if goods.UserID != userID {
+		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户没有权限删除该商品"))
+	}
+
+	//删除商品
+	err = s.goods.UpdateGoodsByID(ctx, req.GoodsID, &model.Goods{Deleted: 1})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+
+}
+
+func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) xerr.XErr {
+	//获取用户ID
+	//userID := common.GetUserID(c)
+	////获取用户角色
+	//userRole := common.GetUserRole(c)
+	userID := "w2wwww"
+	user, err := s.userDao.GetByUserID(c, userID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	userRole := user.UserRole
+	if userRole != model.UserRoleSupplier {
+		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
+	}
+	if req.GoodsStatus != enum.GoodsStatusOnSale && req.GoodsStatus != enum.GoodsStatusOffSale {
+		return xerr.WithCode(xerr.InvalidParams, errors.New("商品状态不合法"))
+	}
+	//检查用户权限
+	goods, err := s.goods.GetGoodsByGoodsID(c, req.GoodsID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if goods == nil {
+		return xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
+	}
+	if goods.UserID != userID {
+		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户没有权限删除该商品"))
+	}
+	if goods.Status == req.GoodsStatus {
+		return xerr.WithCode(xerr.InvalidParams, errors.New("商品状态不正确"))
+	}
+	//修改商品状态
+	err = s.goods.UpdateGoodsByID(c, req.GoodsID, &model.Goods{Status: req.GoodsStatus})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
 }

@@ -128,3 +128,25 @@ func (d *GoodsDao) GetGoodsListByIDs(ctx context.Context, goodsIDs []int32, req 
 	}
 	return goodsList, count, nil
 }
+
+func (d *GoodsDao) GetGoodsByGoodsID(ctx context.Context, id int32) (goods *model.Goods, err error) {
+	var goodsList []*model.Goods
+	err = db.Get().Debug().Model(&model.Goods{}).
+		Where("id = ? and deleted = 0", id).
+		Find(&goodsList).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(goodsList) == 0 {
+		return nil, nil
+	}
+	return goodsList[0], nil
+}
+
+func (d *GoodsDao) UpdateGoodsByID(ctx context.Context, id int32, updateValue *model.Goods) (err error) {
+	updateResult := db.Get().Debug().Model(&model.Goods{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
