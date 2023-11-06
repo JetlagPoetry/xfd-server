@@ -148,6 +148,15 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			GoodsID:         goodsID,
 			Type:            enum.ProductWholesale,
 		}
+		var attributes []model.ProductAttr
+		attributes = append(attributes, model.ProductAttr{
+			Key:   v.SpecAName,
+			Value: v.SpecAValue,
+		}, model.ProductAttr{
+			Key:   v.SpecBName,
+			Value: v.SpecBValue,
+		})
+		productAttrBytes, _ := json.Marshal(attributes)
 		if _, ok := specificationAValueMap[v.SpecAValue]; !ok {
 			specValueAID, err := s.goods.CreateSpecificationValue(ctx, specificationAValue)
 			if err != nil {
@@ -173,6 +182,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			MinOrderQuantity: v.MinOrderQuantity,
 			Type:             enum.ProductWholesale,
 			Status:           v.Status,
+			ProductAttr:      string(productAttrBytes),
 		}
 
 		_, err = s.goods.CreateProductVariant(ctx, productVariant)
@@ -205,6 +215,15 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 		specificationAValueRMap := make(map[string]int32)
 		specificationBValueRMap := make(map[string]int32)
 		for _, v := range req.RetailProducts {
+			var attributes []model.ProductAttr
+			attributes = append(attributes, model.ProductAttr{
+				Key:   v.SpecAName,
+				Value: v.SpecAValue,
+			}, model.ProductAttr{
+				Key:   v.SpecBName,
+				Value: v.SpecBValue,
+			})
+			productAttrBytes, _ := json.Marshal(attributes)
 			specificationAValue := &model.SpecificationValue{
 				Value:           v.SpecAValue,
 				SpecificationID: specificationRAID,
@@ -242,6 +261,7 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				Type:         enum.ProductRetail,
 				Status:       v.Status,
 				Stock:        v.Stock,
+				ProductAttr:  string(productAttrBytes),
 			}
 			_, err = s.goods.CreateProductVariant(ctx, productVariant)
 			if err != nil {
@@ -439,9 +459,10 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
+
 	userRole := user.UserRole
 	if userRole != model.UserRoleSupplier {
-		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
+		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户不是供应商"))
 	}
 	if req.GoodsStatus != enum.GoodsStatusOnSale && req.GoodsStatus != enum.GoodsStatusOffSale {
 		return xerr.WithCode(xerr.InvalidParams, errors.New("商品状态不合法"))
@@ -466,4 +487,39 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	return nil
+}
+
+func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) (*types.GoodsListResp, xerr.XErr) {
+	//获取用户ID
+	//userID := common.GetUserID(c)
+	////获取用户角色
+	//userRole := common.GetUserRole(c)
+	userID := "w2wwww"
+	user, err := s.userDao.GetByUserID(c, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user == nil {
+		return nil, xerr.WithCode(xerr.ErrorNotExistUser, errors.New("用户不存在"))
+	}
+	req.UserID = userID
+	userRole := user.UserRole
+	if userRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户不是供应商"))
+	}
+	goods, total, err := s.goods.GetMyGoodsList(c, req)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	result := types.GoodsListResp{PageResult: types.PageResult{PageNum: req.PageNum, PageSize: req.PageSize, TotalNum: total}}
+	for i, v := range goods {
+		productVariants, rr := s.goods.GetProductVariantListByGoodsID(c, v.ID, 0)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
+		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
+	}
+	result.GoodsList = goods
+	return &result, nil
 }

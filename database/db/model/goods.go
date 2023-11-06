@@ -24,7 +24,7 @@ func (u *Category) TableName() string {
 // Goods 商品表
 type Goods struct {
 	ID                 int32                   `gorm:"primary_key;AUTO_INCREMENT;column:id;type:int"`
-	UserID             string                  `gorm:"type:varchar(100);default:'';not null;column:user_id;not null;comment:供货商ID;index:user_id" `
+	UserID             string                  `gorm:"type:varchar(100);default:'';not null;column:user_id;not null;comment:供货商ID;index:user_id;index:level_status_deleted"`
 	CategoryAID        int32                   `gorm:"type:int;not null;default:0;column:category_a_id;comment:一级分类ID;index:level_status_deleted" `
 	CategoryBID        int32                   `gorm:"type:int;not null;default:0;column:category_b_id;comment:二级分类ID;index:level_status_deleted" `
 	CategoryCID        int32                   `gorm:"type:int;not null;default:0;column:category_c_id;comment:三级分类ID;index:level_status_deleted" `
@@ -92,6 +92,7 @@ type ProductVariant struct {
 	MinOrderQuantity int                       `gorm:"type:int;default:0;column:min_order_quantity;comment:起批量" json:"min_order_quantity"`
 	Type             enum.ProductVariantType   `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:goods_id_deleted_type_status" json:"type"`
 	Status           enum.ProductVariantStatus `gorm:"type:tinyint(1);not null;default:1;column:status;comment:状态 1-启用 2-未启用" json:"status"`
+	ProductAttr      string                    `gorm:"type:varchar(1000);default:'';column:product_attr;comment:商品销售属性:[{\"key\":\"颜色\",\"value\":\"红色\"},{\"key\":\"容量\",\"value\":\"4G\"}]" json:"product_attr"`
 }
 
 // Inventory 商品库存表
@@ -121,4 +122,9 @@ type GoodsApplication struct {
 	GoodsID    int32  `gorm:"type:bigint;not null;default:0;comment:商品ID"`
 	Status     int    `gorm:"type:tinyint(1);not null;default:0;column:status;comment:状态" json:"status"`
 	Comment    string `gorm:"column:comment;not null" json:"comment"`
+}
+
+type ProductAttr struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
