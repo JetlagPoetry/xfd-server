@@ -155,3 +155,79 @@ func (h *UserHandler) AssignAdmin(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
+
+func (h *UserHandler) GetAddressList(c *gin.Context) {
+	var (
+		req  types.UserGetAddressListReq
+		resp *types.UserGetAddressListResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	resp, xErr = h.userService.GetAddressList(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] GetAddressList failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *UserHandler) AddAddress(c *gin.Context) {
+	var (
+		req  types.UserAddAddressReq
+		resp *types.UserAddAddressResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	if len(req.Name) == 0 || len(req.Province) == 0 || len(req.City) == 0 || len(req.Region) == 0 || len(req.Phone) == 0 || len(req.Address) == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+
+	resp, xErr = h.userService.AddAddress(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] AddAddress failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *UserHandler) ModifyAddress(c *gin.Context) {
+	var (
+		req  types.UserModifyAddressReq
+		resp *types.UserModifyAddressResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	resp, xErr = h.userService.ModifyAddress(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] ModifyAddress failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}

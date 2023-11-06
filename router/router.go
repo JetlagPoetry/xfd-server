@@ -32,6 +32,10 @@ func NewRouter() *gin.Engine {
 		userGroup.GET("/info", handler.User.GetUserInfo)
 		userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
 		userGroup.POST("/assignAdmin", handler.User.AssignAdmin)
+
+		userGroup.GET("/getAddressList", handler.User.GetAddressList)
+		userGroup.POST("/addAddress", handler.User.AddAddress)
+		userGroup.POST("/modifyAddress", handler.User.ModifyAddress)
 	}
 	purchaseGroup := r.Group("/api/v1/purchase")
 	{

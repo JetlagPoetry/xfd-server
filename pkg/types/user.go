@@ -86,3 +86,48 @@ type UserAssignAdminReq struct {
 
 type UserAssignAdminResp struct {
 }
+
+type UserGetAddressListReq struct {
+}
+
+type UserGetAddressListResp struct {
+	List []*UserAddress `json:"list"`
+}
+
+type UserAddress struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Phone     string ` json:"phone"`
+	Province  string `json:"province"`
+	City      string `json:"city"`
+	Region    string `json:"region"`
+	Address   string `json:"address"`
+	IsDefault bool   `json:"isDefault"`
+}
+
+type UserAddAddressReq struct {
+	Name      string `json:"name"`
+	Phone     string ` json:"phone"`
+	Province  string `json:"province"`
+	City      string `json:"city"`
+	Region    string `json:"region"`
+	Address   string `json:"address"`
+	IsDefault bool   `json:"isDefault"`
+}
+
+type UserAddAddressResp struct {
+}
+
+type UserModifyAddressReq struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Phone     string `json:"phone"`
+	Province  string `json:"province"`
+	City      string `json:"city"`
+	Region    string `json:"region"`
+	Address   string `json:"address"`
+	IsDefault bool   `json:"isDefault"`
+}
+
+type UserModifyAddressResp struct {
+}

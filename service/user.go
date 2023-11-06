@@ -19,6 +19,7 @@ type UserService struct {
 	userDao         *dao.UserDao
 	userVerifyDao   *dao.UserVerifyDao
 	organizationDao *dao.OrganizationDao
+	userAddressDao  *dao.UserAddressDao
 }
 
 func NewUserService() *UserService {
@@ -26,6 +27,7 @@ func NewUserService() *UserService {
 		userDao:         dao.NewUserDao(),
 		userVerifyDao:   dao.NewUserVerifyDao(),
 		organizationDao: dao.NewOrganizationDao(),
+		userAddressDao:  dao.NewUserAddressDao(),
 	}
 }
 
@@ -310,4 +312,125 @@ func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, phone string) (*model.U
 	}
 
 	return user, nil
+}
+
+func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddressListReq) (*types.UserGetAddressListResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	defaultAddrID := user.AddressID
+
+	addrList, err := s.userAddressDao.ListByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	list := make([]*types.UserAddress, 0)
+	for _, addr := range addrList {
+		list = append(list, &types.UserAddress{
+			ID:        int(addr.ID),
+			Name:      addr.Name,
+			Phone:     addr.Phone,
+			Province:  addr.Province,
+			City:      addr.City,
+			Region:    addr.Region,
+			Address:   addr.Address,
+			IsDefault: int(addr.ID) == defaultAddrID,
+		})
+	}
+	return &types.UserGetAddressListResp{List: list}, nil
+}
+
+func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressReq) (*types.UserAddAddressResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+
+	tx := db.Get().Begin()
+	cErr := s.addAddress(tx, userID, req)
+	if cErr != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, cErr)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.UserAddAddressResp{}, nil
+}
+
+func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAddressReq) xerr.XErr {
+	addr := &model.UserAddress{
+		UserID:   userID,
+		Name:     req.Name,
+		Phone:    req.Phone,
+		Province: req.Province,
+		City:     req.City,
+		Region:   req.Region,
+		Address:  req.Address,
+	}
+	err := s.userAddressDao.CreateInTx(tx, addr)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	if req.IsDefault == true {
+		err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{AddressID: int(addr.ID)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+	return nil
+}
+
+func (s *UserService) ModifyAddress(ctx context.Context, req types.UserModifyAddressReq) (*types.UserModifyAddressResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+
+	addr, err := s.userAddressDao.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if addr.UserID != userID {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, errors.New("address not belong to user"))
+	}
+
+	tx := db.Get().Begin()
+	cErr := s.modifyAddress(tx, userID, req)
+	if cErr != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, cErr)
+	}
+
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.UserModifyAddressResp{}, nil
+}
+
+func (s *UserService) modifyAddress(tx *gorm.DB, userID string, req types.UserModifyAddressReq) xerr.XErr {
+	if len(req.Name) > 0 && len(req.Phone) > 0 && len(req.Province) > 0 && len(req.City) > 0 && len(req.Region) > 0 && len(req.Address) > 0 {
+		addr := &model.UserAddress{
+			Name:     req.Name,
+			Phone:    req.Phone,
+			Province: req.Province,
+			City:     req.City,
+			Region:   req.Region,
+			Address:  req.Address,
+		}
+		err := s.userAddressDao.UpdateByIDInTx(tx, req.ID, addr)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+	if req.IsDefault == true {
+		err := s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{AddressID: req.ID})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+	return nil
 }
