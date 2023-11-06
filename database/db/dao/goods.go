@@ -150,3 +150,31 @@ func (d *GoodsDao) UpdateGoodsByID(ctx context.Context, id int32, updateValue *m
 	}
 	return nil
 }
+
+func (d *GoodsDao) GetMyGoodsList(ctx context.Context, req types.MyGoodsListReq) (goodsList []*types.GoodsList, count int64, err error) {
+	result := db.Get().Debug().Model(&model.Goods{}).Where("deleted = 0 and user_id = ?", req.UserID)
+
+	result = result.Where(&model.Goods{
+		UserID: req.UserID}).
+		Select("id, name, goods_front_image, images, status, sold_num,spu_code,created_at, updated_at")
+	switch req.QueryGoodsListStatus {
+	case enum.QueryGoodsListStatusOnSale:
+		result = result.Where("status = 1")
+	case enum.QueryGoodsListStatusOffSale:
+		result = result.Where("status = 2")
+	case enum.QueryGoodsListStatusSoldOut:
+		result = result.Where("retail_status = 2")
+	}
+	result = result.Count(&count)
+
+	result = result.Order("created_at desc, id desc").
+		Offset(req.Offset()).
+		Limit(req.Limit()).
+		Find(&goodsList)
+
+	// 错误处理
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+	return goodsList, count, nil
+}

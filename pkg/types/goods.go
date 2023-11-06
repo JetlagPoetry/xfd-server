@@ -147,16 +147,21 @@ type GoodsListResp struct {
 }
 
 type GoodsList struct {
-	ID                int32   `json:"id" gorm:"column:id"`
-	Name              string  `json:"name" gorm:"column:name"`
-	GoodsFrontImage   string  `json:"goodsFrontImage" gorm:"column:goods_front_image"`
-	Images            string  `json:"-" gorm:"column:images"`
-	RetailPriceMax    float64 `json:"retailPriceMax,omitempty"`
-	RetailPriceMin    float64 `json:"retailPriceMin,omitempty"`
-	WholesalePriceMax float64 `json:"wholesalePriceMax,omitempty"`
-	WholesalePriceMin float64 `json:"wholesalePriceMin,omitempty"`
-	WholeSaleUnit     string  `json:"wholeSaleUnit,omitempty"`
-	RetailUnit        string  `json:"retailUnit,omitempty"`
+	ID                int32            `json:"id" gorm:"column:id"`
+	Name              string           `json:"name" gorm:"column:name"`
+	GoodsFrontImage   string           `json:"goodsFrontImage" gorm:"column:goods_front_image"`
+	Images            string           `json:"-" gorm:"column:images"`
+	RetailPriceMax    float64          `json:"retailPriceMax,omitempty"`
+	RetailPriceMin    float64          `json:"retailPriceMin,omitempty"`
+	WholesalePriceMax float64          `json:"wholesalePriceMax,omitempty"`
+	WholesalePriceMin float64          `json:"wholesalePriceMin,omitempty"`
+	WholeSaleUnit     string           `json:"wholeSaleUnit,omitempty"`
+	RetailUnit        string           `json:"retailUnit,omitempty"`
+	CreatedAt         string           `json:"createdAt,omitempty" gorm:"column:created_at"`
+	UpdatedAt         string           `json:"updatedAt,omitempty" gorm:"column:updated_at"`
+	Status            enum.GoodsStatus `json:"status,omitempty" gorm:"column:status"`
+	SoldNum           int              `json:"soldNum,omitempty" gorm:"column:sold_num"`
+	SPUCode           string           `json:"spuCode,omitempty" gorm:"column:spu_code"`
 }
 
 func (g *GoodsList) GetGoodsFrontImage() string {
@@ -188,4 +193,10 @@ type MinPriceResult struct {
 type GoodsReq struct {
 	GoodsID     int32            `json:"goodsID" binding:"required,numeric,gte=1"`
 	GoodsStatus enum.GoodsStatus `json:"goodsStatus" binding:"numeric,gte=0,lte=2"`
+}
+
+type MyGoodsListReq struct {
+	PageRequest
+	QueryGoodsListStatus enum.QueryGoodsListStatus `form:"queryGoodsListStatus" binding:"numeric,gte=0,lte=3"`
+	UserID               string
 }

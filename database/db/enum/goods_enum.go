@@ -224,3 +224,42 @@ func (g GoodsListType) Info() (int, string) {
 		return 0, "error"
 	}
 }
+
+type QueryGoodsListStatus int
+
+const (
+	QueryGoodsListStatusNormal  QueryGoodsListStatus = 0 //全部
+	QueryGoodsListStatusOnSale  QueryGoodsListStatus = 1 //在售
+	QueryGoodsListStatusOffSale QueryGoodsListStatus = 2 //下架
+	QueryGoodsListStatusSoldOut QueryGoodsListStatus = 3 //删除
+)
+
+func (q QueryGoodsListStatus) Code() int {
+	switch q {
+	case QueryGoodsListStatusNormal:
+		return 0
+	case QueryGoodsListStatusOnSale:
+		return 1
+	case QueryGoodsListStatusOffSale:
+		return 2
+	case QueryGoodsListStatusSoldOut:
+		return 3
+	default:
+		return 0
+	}
+}
+
+func (q QueryGoodsListStatus) Info() (int, string) {
+	switch q {
+	case QueryGoodsListStatusNormal:
+		return 0, "全部"
+	case QueryGoodsListStatusOnSale:
+		return 1, "在售"
+	case QueryGoodsListStatusOffSale:
+		return 2, "下架"
+	case QueryGoodsListStatusSoldOut:
+		return 3, "售罄"
+	default:
+		return 0, "error"
+	}
+}
