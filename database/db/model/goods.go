@@ -1,6 +1,8 @@
 package model
 
 import (
+	"encoding/json"
+	"github.com/google/martian/log"
 	"time"
 	"xfd-backend/database/db/enum"
 )
@@ -32,17 +34,17 @@ type Goods struct {
 	SPUCode            string                  `gorm:"type:varchar(300);not null;default:'';column:spu_code;comment:商品SPU编号"`
 	Name               string                  `gorm:"type:varchar(300);not null;default:'';column:name;comment:商品名称"`
 	Status             enum.GoodsStatus        `gorm:"type:tinyint(1);not null;default:0;column:status;comment:状态:1-在售2-下架;index:level_status_deleted"`
-	ShipFree           int                     `gorm:"type:tinyint(1);not null;default:0;column:ship_free;comment:是否包邮"`
+	ShipFree           int                     `gorm:"type:tinyint(1);not null;default:0;column:ship_free;comment:是否包邮 0-不包邮 1-包邮"`
 	Description        string                  `gorm:"default:'';type:varchar(1000);column:description;not null;comment:商品详情"`
 	Images             string                  `gorm:"default:'';type:varchar(5000);column:images;not null;comment:商品轮播图"`
 	DescImages         string                  `gorm:"type:varchar(5000);not null;column:desc_images;comment:商品详情图"`
 	GoodsFrontImage    string                  `gorm:"type:varchar(1000);not null;column:goods_front_image;comment:商品封面图"`
-	IsRetail           int                     `gorm:"type:tinyint(1);not null;default:0;column:is_retail;comment:是否支持零售;index:level_status_deleted"`
+	IsRetail           int                     `gorm:"type:tinyint(1);not null;default:0;column:is_retail;comment:是否支持零售 0-不支持 1-支持;index:level_status_deleted"`
 	RetailStatus       enum.GoodsRetailStatus  `gorm:"type:tinyint(1);not null;default:0;column:retail_status;comment:零售状态:1-正常2-售磬;index:level_status_deleted"`
-	IsNew              int                     `gorm:"type:tinyint(1);not null;default:0;column:is_new;comment:是否为新品"`
-	IsHot              int                     `gorm:"default:0;not null;column:is_hot;comment:是否为热卖商品"`
+	IsNew              int                     `gorm:"type:tinyint(1);not null;default:0;column:is_new;comment:是否为新品 0-不是 1-是"`
+	IsHot              int                     `gorm:"default:0;not null;column:is_hot;comment:是否为热卖商品 0-不是 1-是"`
 	SoldNum            int                     `gorm:"type:bigint;default:0;not null;column:sold_num;comment:零售销量"`
-	WholesaleLogistics enum.WholesaleLogistics `gorm:"type:int;default:0;not null;column:wholesale_logistics;comment:批发物流"`
+	WholesaleLogistics string                  `gorm:"type:varchar(500);default:'';not null;column:wholesale_logistics;comment:批发物流"`
 	WholesaleShipping  string                  `gorm:"type:varchar(500);default:'';not null;comment:批发发货地"`
 	WholesaleAreaCodeA int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_a;comment:筛选code省"`
 	WholesaleAreaCodeB int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_b;comment:筛选code区"`
@@ -125,6 +127,60 @@ type GoodsApplication struct {
 }
 
 type ProductAttr struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key     string `json:"key"`
+	KeyID   int32  `json:"keyID"`
+	Value   string `json:"value"`
+	ValueID int32  `json:"valueID"`
+}
+
+func (g *Goods) GetImagesList() []string {
+	var imagesList []string
+	if g.Images != "" {
+		err := json.Unmarshal([]byte(g.Images), &imagesList)
+		if err != nil {
+			log.Errorf(" GetImagesList json.Unmarshal(%s) error: %v", g.Images, err)
+			return nil
+		}
+		return imagesList
+	}
+	return nil
+}
+
+func (g *Goods) GetDescImagesList() []string {
+	var descImagesList []string
+	if g.DescImages != "" {
+		err := json.Unmarshal([]byte(g.DescImages), &descImagesList)
+		if err != nil {
+			log.Errorf(" GetImagesList json.Unmarshal(%s) error: %v", g.Images, err)
+			return nil
+		}
+		return descImagesList
+	}
+	return g.GetImagesList()
+}
+
+func (v *ProductVariant) GetProductAttr() []*ProductAttr {
+	var productAttr []*ProductAttr
+	if v.ProductAttr != "" {
+		err := json.Unmarshal([]byte(v.ProductAttr), &productAttr)
+		if err != nil {
+			log.Errorf(" GetProductAttr json.Unmarshal(%s) error: %v", v.ProductAttr, err)
+			return nil
+		}
+		return productAttr
+	}
+	return nil
+}
+
+func (g *Goods) GetWholesaleLogistics() []int {
+	var w []int
+	if g.WholesaleLogistics != "" {
+		err := json.Unmarshal([]byte(g.WholesaleLogistics), &w)
+		if err != nil {
+			log.Errorf(" GetWholesaleLogistics json.Unmarshal(%s) error: %v", g.WholesaleLogistics, err)
+			return nil
+		}
+		return w
+	}
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/google/martian/log"
 	"xfd-backend/database/db/enum"
+	"xfd-backend/database/db/model"
 )
 
 type GoodsAddReq struct {
@@ -20,7 +21,6 @@ func (r GoodsAddReq) CheckParams() error {
 	if len(r.WholesaleProducts) == 0 {
 		return errors.New("批发商品不能为空")
 	}
-
 	// 检查第一个 ProductVariant 的 SpecAName和 SpecBName
 	specAName := r.WholesaleProducts[0].SpecAName
 	specBName := r.WholesaleProducts[0].SpecBName
@@ -38,22 +38,25 @@ func (r GoodsAddReq) CheckParams() error {
 			return errors.New("所有的 SpecBName 必须相同")
 		}
 	}
-	specAName = r.RetailProducts[0].SpecAName
-	specBName = r.RetailProducts[0].SpecBName
-	for _, v := range r.RetailProducts {
-		// 检查 SpecAName 和 SpecBName 是否不相等
-		if v.SpecAName == v.SpecBName {
-			return errors.New("SpecAName 和 SpecBName 不能相等")
-		}
-		// 检查 SpecAName 是否一致
-		if v.SpecAName != specAName {
-			return errors.New("所有的 SpecAName 必须相同")
-		}
-		// 检查 SpecBName 是否一致
-		if v.SpecBName != specBName {
-			return errors.New("所有的 SpecBName 必须相同")
+	if len(r.RetailProducts) != 0 {
+		specAName = r.RetailProducts[0].SpecAName
+		specBName = r.RetailProducts[0].SpecBName
+		for _, v := range r.RetailProducts {
+			// 检查 SpecAName 和 SpecBName 是否不相等
+			if v.SpecAName == v.SpecBName {
+				return errors.New("SpecAName 和 SpecBName 不能相等")
+			}
+			// 检查 SpecAName 是否一致
+			if v.SpecAName != specAName {
+				return errors.New("所有的 SpecAName 必须相同")
+			}
+			// 检查 SpecBName 是否一致
+			if v.SpecBName != specBName {
+				return errors.New("所有的 SpecBName 必须相同")
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -104,7 +107,7 @@ type GoodsDetail struct {
 	Description        string                  `json:"description"`                                       // 商品详情
 	Images             []string                `json:"images" binding:"required"`                         // 商品轮播图
 	DescImages         []string                `json:"descImages"`                                        // 商品详情图
-	WholesaleLogistics enum.WholesaleLogistics `json:"wholesaleLogistics" binding:"required,gte=1,lte=6"` // 批发物流
+	WholesaleLogistics []int                   `json:"wholesaleLogistics" binding:"required"`             // 批发物流
 	WholesaleShipping  string                  `json:"wholesaleShipping" binding:"required"`              // 批发发货地
 	WholesaleAreaCodeA int                     `json:"wholesaleAreaCodeA" binding:"required"`             // 筛选code省
 	WholesaleAreaCodeB int                     `json:"wholesaleAreaCodeB" binding:"required"`             // 筛选code区
@@ -191,12 +194,51 @@ type MinPriceResult struct {
 }
 
 type GoodsReq struct {
-	GoodsID     int32            `json:"goodsID" binding:"required,numeric,gte=1"`
+	GoodsID     int32            `json:"goodsID" form:"goodsID" binding:"required,numeric,gte=1"`
 	GoodsStatus enum.GoodsStatus `json:"goodsStatus" binding:"numeric,gte=0,lte=2"`
+	ReqType     int
 }
 
 type MyGoodsListReq struct {
 	PageRequest
 	QueryGoodsListStatus enum.QueryGoodsListStatus `form:"queryGoodsListStatus" binding:"numeric,gte=0,lte=3"`
 	UserID               string
+}
+
+// GoodsDetailResp 商品详情信息
+type GoodsDetailResp struct {
+	ID                 int32                   `json:"id"`
+	Name               string                  `json:"name"`
+	GoodsFrontImage    string                  `json:"goodsFrontImage"`              // 商品首图
+	Images             []string                `json:"images"`                       // 商品轮播图
+	Description        string                  `json:"description"`                  // 商品详情
+	DescImages         []string                `json:"descImages"`                   // 商品详情图
+	WholesaleLogistics []int                   `json:"wholesaleLogistics,omitempty"` // 批发物流
+	WholesaleShipping  string                  `json:"wholesaleShipping,omitempty"`  // 批发发货地
+	RetailShippingTime enum.RetailDeliveryTime `json:"retailShippingTime,omitempty"`
+	RetailShippingFee  float64                 `json:"retailShippingFee,omitempty"`
+	SpecInfo           []*SpecInfo             `json:"specInfo"`
+	WholesaleProducts  []*ProductVariantInfo   `json:"wholesaleProducts,omitempty"`
+	RetailProducts     []*ProductVariantInfo   `json:"retailProduct,omitempty"`
+}
+
+type ProductVariantInfo struct {
+	ID               int32                `json:"id"`
+	Unit             string               `json:"unit"`
+	Price            float64              `json:"price"`
+	MinOrderQuantity int                  `json:"minOrderQuantity,omitempty"`
+	Stock            int                  `json:"stock,omitempty"`
+	SKUCode          string               `json:"skuCode"`
+	ProductAttr      []*model.ProductAttr `json:"productAttr,omitempty"`
+}
+
+type SpecValue struct {
+	ID    int32  `json:"id"`
+	Value string `json:"value"`
+}
+
+type SpecInfo struct {
+	SpecID    int32        `json:"specID"`
+	SpecName  string       `json:"specName"`
+	SpecValue []*SpecValue `json:"specValue"`
 }

@@ -88,7 +88,7 @@ func (d *GoodsDao) GetProductVariantListByGoodsID(ctx context.Context, goodsID i
 		Where(&model.ProductVariant{
 			GoodsID: goodsID,
 			Type:    productVariantType,
-		}).Find(&productVariants).Error
+		}).Preload("SpecValueA").Preload("SpecValueB").Find(&productVariants).Error
 	if err != nil {
 		return nil, err
 	}
@@ -177,4 +177,33 @@ func (d *GoodsDao) GetMyGoodsList(ctx context.Context, req types.MyGoodsListReq)
 		return nil, 0, result.Error
 	}
 	return goodsList, count, nil
+}
+
+func (d *GoodsDao) GetSpecificationByGoodsID(ctx context.Context, goodsID int32, productVariantType enum.ProductVariantType) (specifications []*model.Specification, err error) {
+	err = db.Get().Debug().Model(&model.Specification{}).
+		Where("deleted = 0").
+		Where(&model.Specification{
+			GoodsID: goodsID,
+			Type:    productVariantType,
+		}).
+		Find(&specifications).Error
+	if err != nil {
+		return nil, err
+	}
+	return specifications, nil
+}
+
+//GetSpecificationValueBySpecID
+
+func (d *GoodsDao) GetSpecificationValueBySpecID(ctx context.Context, specID int32) (specificationValues []*model.SpecificationValue, err error) {
+	err = db.Get().Model(&model.SpecificationValue{}).
+		Where("deleted = 0").
+		Where(&model.SpecificationValue{
+			SpecificationID: specID,
+		}).
+		Find(&specificationValues).Error
+	if err != nil {
+		return nil, err
+	}
+	return specificationValues, nil
 }
