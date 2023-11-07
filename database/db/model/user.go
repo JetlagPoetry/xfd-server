@@ -15,7 +15,6 @@ type User struct {
 	OrganizationName string          `gorm:"column:organization_name;not null" json:"organization_name"`
 	Point            int             `gorm:"column:point;not null" json:"point"`
 	PointStatus      UserPointStatus `gorm:"column:point_status;not null" json:"point_status"`
-	Deleted          int             `gorm:"column:deleted" json:"deleted"`
 }
 
 func (u *User) TableName() string {

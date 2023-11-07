@@ -79,7 +79,7 @@ func (d *UserDao) GetByUserIDInTx(tx *gorm.DB, userID string) (User *model.User,
 	return User, nil
 }
 func (d *UserDao) GetByPhoneInTx(tx *gorm.DB, phone string) (User *model.User, err error) {
-	err = tx.Model(&model.User{}).Where("phone = ? AND deleted = 0", phone).First(&User).Error
+	err = tx.Model(&model.User{}).Where("phone = ?", phone).First(&User).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	} else if err != nil {

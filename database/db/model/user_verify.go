@@ -22,7 +22,6 @@ type UserVerify struct {
 	Comment          string           `gorm:"column:comment;not null" json:"comment"`
 	VerifyTime       time.Time        `gorm:"column:verify_time;not null" json:"verify_time"`
 	VerifyUsername   string           `gorm:"column:verify_username;not null" json:"verify_username"`
-	Deleted          *int             `gorm:"column:deleted" json:"deleted"`
 }
 
 type UserVerifyStatus int32

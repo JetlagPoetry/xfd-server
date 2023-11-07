@@ -96,3 +96,11 @@ func (d *OrderPurchaseDao) UpdateByID(ctx context.Context, id int, updateValue *
 	}
 	return nil
 }
+
+func (d *OrderPurchaseDao) Delete(ctx context.Context, id int) (err error) {
+	updateResult := db.Get().Model(&model.OrderPurchase{}).Where("id =?", id).Delete(&model.OrderPurchase{})
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}

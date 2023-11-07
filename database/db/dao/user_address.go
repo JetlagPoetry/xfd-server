@@ -28,7 +28,7 @@ func (r *UserAddressDao) Lists(ctx context.Context, limit, offset int) (list []*
 }
 
 func (r *UserAddressDao) ListByUserID(ctx context.Context, userID string) (list []*model.UserAddress, err error) {
-	err = db.Get().Model(&model.UserAddress{}).Where("user_id = ? AND deleted = 0", userID).Find(&list).Error
+	err = db.Get().Model(&model.UserAddress{}).Where("user_id = ?", userID).Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (r *UserAddressDao) ListByUserID(ctx context.Context, userID string) (list 
 }
 
 func (r *UserAddressDao) GetByID(ctx context.Context, id int) (addr *model.UserAddress, err error) {
-	err = db.Get().Model(&model.UserAddress{}).Where("id = ? AND deleted = 0", id).Find(&addr).Error
+	err = db.Get().Model(&model.UserAddress{}).Where("id = ?", id).Find(&addr).Error
 	if err != nil {
 		return nil, err
 	}

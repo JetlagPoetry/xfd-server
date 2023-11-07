@@ -120,8 +120,8 @@ func (s *PurchaseService) ModifyOrderStatus(ctx context.Context, req types.Purch
 	}
 
 	// 删除报价单
-	if req.Delete && order.Deleted == 0 {
-		err = s.purchaseDao.UpdateByID(ctx, req.OrderID, &model.OrderPurchase{Deleted: 1})
+	if req.Delete {
+		err = s.purchaseDao.Delete(ctx, req.OrderID)
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
