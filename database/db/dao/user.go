@@ -37,6 +37,18 @@ func (d *UserDao) ListByOrgID(ctx context.Context, page types.PageRequest, orgID
 	return list, count, nil
 }
 
+func (d *UserDao) ListByStatus(ctx context.Context, page types.PageRequest, roles []model.UserRole) (list []*model.User, count int64, err error) {
+	sql := db.Get().Model(&model.User{}).Where("user_role IN (?)", roles)
+	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+	return list, count, nil
+}
+
 func (d *UserDao) ListByUserIDs(ctx context.Context, userIDs []string) (UserList []*model.User, err error) {
 	if err = db.Get().Model(&model.User{}).Where("user_id in (?)", userIDs).Find(&UserList).Error; err != nil {
 		return nil, err
@@ -103,6 +115,14 @@ func (d *UserDao) CreateInTx(tx *gorm.DB, User *model.User) (err error) {
 	return nil
 }
 
+func (d *UserDao) SaveInTx(tx *gorm.DB, User *model.User) (err error) {
+	err = tx.Model(&model.User{}).Save(User).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *UserDao) Upsert(ctx context.Context, User *model.User) (err error) {
 	err = db.Get().Save(User).Error
 	if err != nil {
@@ -149,4 +169,11 @@ func (d *UserDao) CountByOrganizationAndStatus(ctx context.Context, orgID int, s
 		return 0, err
 	}
 	return count, nil
+}
+
+func (d *UserDao) DeleteByUserID(ctx context.Context, userID string) (err error) {
+	if err = db.Get().Model(&model.User{}).Where("user_id = ?", userID).Delete(&model.User{}).Error; err != nil {
+		return err
+	}
+	return nil
 }

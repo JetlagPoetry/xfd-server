@@ -275,7 +275,7 @@ func (s *UserService) AssignAdmin(ctx context.Context, req types.UserAssignAdmin
 	}
 
 	tx := db.Get().Begin()
-	_, err = s.assignOrRegisterAdmin(tx, req.Phone)
+	_, err = s.assignOrRegisterAdmin(tx, req)
 	if err != nil {
 		tx.Rollback()
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -289,44 +289,114 @@ func (s *UserService) AssignAdmin(ctx context.Context, req types.UserAssignAdmin
 	return &types.UserAssignAdminResp{}, nil
 }
 
-func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, phone string) (*model.User, error) {
+func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, req types.UserAssignAdminReq) (*model.User, error) {
 	var (
 		user *model.User
 		err  error
 	)
-	user, err = s.userDao.GetByPhoneInTx(tx, phone)
+	user, err = s.userDao.GetByPhoneInTx(tx, req.Phone)
 	if err != nil {
 		return nil, err
 	}
 	if user != nil && user.UserRole != model.UserRoleCustomer {
 		return nil, errors.New("user exists")
 	}
-	user = &model.User{
-		UserID:   utils.GenUUID(),
-		Phone:    phone,
-		UserRole: model.UserRoleAdmin,
-		Username: utils.GenUsername(phone),
+	if user == nil {
+		user = &model.User{
+			UserID:   utils.GenUUID(),
+			Phone:    req.Phone,
+			Username: req.Username,
+		}
 	}
-	if err = s.userDao.CreateInTx(tx, user); err != nil {
+	user.UserRole = req.Role
+	if err = s.userDao.SaveInTx(tx, user); err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddressListReq) (*types.UserGetAddressListResp, xerr.XErr) {
+func (s *UserService) GetAdmins(ctx context.Context, req types.UserGetAdminsReq) (*types.UserGetAdminsResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
-
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	defaultAddrID := user.AddressID
+	if user.UserRole != model.UserRoleRoot {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+	}
+
+	userList, count, err := s.userDao.ListByStatus(ctx, req.PageRequest, []model.UserRole{model.UserRoleAdmin, model.UserRoleRoot})
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	_, rootCount, err := s.userDao.ListByStatus(ctx, req.PageRequest, []model.UserRole{model.UserRoleRoot})
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	list := make([]*types.UserAdmin, 0)
+	for _, user := range userList {
+		list = append(list, &types.UserAdmin{
+			UserID:   user.UserID,
+			Username: user.Username,
+			Phone:    user.Phone,
+			Role:     user.UserRole,
+			RoleName: func() string {
+				if user.UserRole == model.UserRoleAdmin {
+					return "管理员"
+				} else if user.UserRole == model.UserRoleRoot {
+					return "超级管理员"
+				}
+				return ""
+			}(),
+			Comment: func() string {
+				if user.UserRole == model.UserRoleAdmin {
+					return "积分审核、身份审核、订单售后"
+				} else if user.UserRole == model.UserRoleRoot {
+					return "添加新管理员、积分审核、身份审核、订单售后"
+				}
+				return ""
+			}(),
+		})
+	}
+	return &types.UserGetAdminsResp{List: list, TotalNum: int(count), RootNum: int(rootCount)}, nil
+}
+
+func (s *UserService) DeleteUser(ctx context.Context, req types.UserDeleteUserReq) (*types.UserDeleteUserResp, xerr.XErr) {
+	currentUserID := common.GetUserID(ctx)
+	currentUser, err := s.userDao.GetByUserID(ctx, currentUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if currentUser.UserRole != model.UserRoleRoot {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+	}
+
+	err = s.userDao.DeleteByUserID(ctx, req.UserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.UserDeleteUserResp{}, nil
+}
+
+func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddressListReq) (*types.UserGetAddressListResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
 
 	addrList, err := s.userAddressDao.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
+	defaultAddr := 0
+	for _, addr := range addrList {
+		if addr.IsDefault == 1 {
+			defaultAddr = int(addr.ID)
+			break
+		}
+	}
+
 	list := make([]*types.UserAddress, 0)
 	for _, addr := range addrList {
 		list = append(list, &types.UserAddress{
@@ -337,7 +407,7 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 			City:      addr.City,
 			Region:    addr.Region,
 			Address:   addr.Address,
-			IsDefault: int(addr.ID) == defaultAddrID,
+			IsDefault: int(addr.ID) == defaultAddr,
 		})
 	}
 	return &types.UserGetAddressListResp{List: list}, nil
@@ -346,43 +416,22 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressReq) (*types.UserAddAddressResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
-	tx := db.Get().Begin()
-	cErr := s.addAddress(tx, userID, req)
-	if cErr != nil {
-		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, cErr)
+	addr := &model.UserAddress{
+		UserID:    userID,
+		Name:      req.Name,
+		Phone:     req.Phone,
+		Province:  req.Province,
+		City:      req.City,
+		Region:    req.Region,
+		Address:   req.Address,
+		IsDefault: utils.BoolToInt(req.IsDefault),
 	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
+	err := s.userAddressDao.Create(ctx, addr)
+	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	return &types.UserAddAddressResp{}, nil
-}
-
-func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAddressReq) xerr.XErr {
-	addr := &model.UserAddress{
-		UserID:   userID,
-		Name:     req.Name,
-		Phone:    req.Phone,
-		Province: req.Province,
-		City:     req.City,
-		Region:   req.Region,
-		Address:  req.Address,
-	}
-	err := s.userAddressDao.CreateInTx(tx, addr)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	if req.IsDefault == true {
-		err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{AddressID: int(addr.ID)})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-	}
-	return nil
 }
 
 func (s *UserService) ModifyAddress(ctx context.Context, req types.UserModifyAddressReq) (*types.UserModifyAddressResp, xerr.XErr) {
@@ -412,22 +461,25 @@ func (s *UserService) ModifyAddress(ctx context.Context, req types.UserModifyAdd
 }
 
 func (s *UserService) modifyAddress(tx *gorm.DB, userID string, req types.UserModifyAddressReq) xerr.XErr {
-	if len(req.Name) > 0 && len(req.Phone) > 0 && len(req.Province) > 0 && len(req.City) > 0 && len(req.Region) > 0 && len(req.Address) > 0 {
-		addr := &model.UserAddress{
-			Name:     req.Name,
-			Phone:    req.Phone,
-			Province: req.Province,
-			City:     req.City,
-			Region:   req.Region,
-			Address:  req.Address,
-		}
-		err := s.userAddressDao.UpdateByIDInTx(tx, req.ID, addr)
+	if req.IsDefault {
+		// 取消所有默认地址
+		err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 	}
-	if req.IsDefault == true {
-		err := s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{AddressID: req.ID})
+
+	if len(req.Name) > 0 && len(req.Phone) > 0 && len(req.Province) > 0 && len(req.City) > 0 && len(req.Region) > 0 && len(req.Address) > 0 {
+		addr := &model.UserAddress{
+			Name:      req.Name,
+			Phone:     req.Phone,
+			Province:  req.Province,
+			City:      req.City,
+			Region:    req.Region,
+			Address:   req.Address,
+			IsDefault: utils.BoolToInt(req.IsDefault),
+		}
+		err := s.userAddressDao.UpdateByIDInTx(tx, req.ID, addr)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}

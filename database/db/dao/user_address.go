@@ -74,3 +74,11 @@ func (r *UserAddressDao) UpdateByIDInTx(tx *gorm.DB, id int, updateValue *model.
 	}
 	return nil
 }
+
+func (r *UserAddressDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateValue *model.UserAddress) (err error) {
+	updateResult := tx.Model(&model.UserAddress{}).Where("user_id =?", userID).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
