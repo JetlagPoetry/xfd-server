@@ -58,7 +58,23 @@ func (h *GoodsHandler) GetGoodsList(c *gin.Context) {
 }
 
 func (h *GoodsHandler) GetGoodsDetail(c *gin.Context) {
-
+	var (
+		req  types.GoodsReq
+		resp *types.GoodsDetailResp
+		xErr xerr.XErr
+	)
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.goodsService.GetGoodsDetail(c, req)
+	if xErr != nil {
+		log.Println("[GoodsHandler] GetGoodsDetail failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
 //后台操作
@@ -85,6 +101,23 @@ func (h *GoodsHandler) GetMyGoodsList(c *gin.Context) {
 }
 
 func (h *GoodsHandler) GetMyGoodsDetail(c *gin.Context) {
+	var (
+		req  types.GoodsReq
+		resp *types.GoodsDetailResp
+		xErr xerr.XErr
+	)
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.goodsService.GetGoodsDetail(c, req)
+	if xErr != nil {
+		log.Println("[GoodsHandler] GetGoodsDetail failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 
 }
 

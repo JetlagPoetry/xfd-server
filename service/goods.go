@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"strconv"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
@@ -42,9 +41,9 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 	//if userRole != model.UserRoleSupplier {
 	//	return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
 	//}
-	userID := "w2wwww"
-	spuCode := fmt.Sprintf("SP%s%s%s", utils.TimeFormatUs(), utils.GenSixDigitCode(), utils.GenerateRandCode("", 5))
-	var images, descImages string
+	userID := "123456"
+	spuCode := fmt.Sprintf("SP%s%s", time.Now().Format("20060102150405"), utils.GenSixDigitCode())
+	var images, descImages, wholesaleLogistics string
 	if len(req.GoodsDetail.Images) != 0 {
 		imagesBytes, _ := json.Marshal(req.GoodsDetail.Images)
 		images = string(imagesBytes)
@@ -55,7 +54,10 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		descImagesBytes, _ := json.Marshal(req.GoodsDetail.DescImages)
 		descImages = string(descImagesBytes)
 	}
-
+	if len(req.GoodsDetail.WholesaleLogistics) != 0 {
+		wholesaleLogisticsBytes, _ := json.Marshal(req.GoodsDetail.WholesaleLogistics)
+		wholesaleLogistics = string(wholesaleLogisticsBytes)
+	}
 	modelGoods := &model.Goods{
 		UserID:             userID,
 		CategoryAID:        req.GoodsDetail.CategoryAID,
@@ -71,7 +73,7 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		GoodsFrontImage:    req.GoodsDetail.Images[0],
 		RetailStatus:       enum.GoodsRetailNormal,
 		IsRetail:           0,
-		WholesaleLogistics: req.GoodsDetail.WholesaleLogistics,
+		WholesaleLogistics: wholesaleLogistics,
 		WholesaleShipping:  req.GoodsDetail.WholesaleShipping,
 		WholesaleAreaCodeA: req.GoodsDetail.WholesaleAreaCodeA,
 		WholesaleAreaCodeB: req.GoodsDetail.WholesaleAreaCodeB,
@@ -148,15 +150,6 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			GoodsID:         goodsID,
 			Type:            enum.ProductWholesale,
 		}
-		var attributes []model.ProductAttr
-		attributes = append(attributes, model.ProductAttr{
-			Key:   v.SpecAName,
-			Value: v.SpecAValue,
-		}, model.ProductAttr{
-			Key:   v.SpecBName,
-			Value: v.SpecBValue,
-		})
-		productAttrBytes, _ := json.Marshal(attributes)
 		if _, ok := specificationAValueMap[v.SpecAValue]; !ok {
 			specValueAID, err := s.goods.CreateSpecificationValue(ctx, specificationAValue)
 			if err != nil {
@@ -171,7 +164,20 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			}
 			specificationBValueMap[v.SpecBValue] = specValueBID
 		}
-		skuCode := fmt.Sprintf("SK%d%s%d%d", time.Now().UnixNano(), utils.GenerateRandCode("", 5), specificationBValueMap[v.SpecAValue], specificationBValueMap[v.SpecBValue])
+		skuCode := fmt.Sprintf("SK%d%d%d", time.Now().UnixNano(), specificationBValueMap[v.SpecAValue], specificationBValueMap[v.SpecBValue])
+		var attributes []model.ProductAttr
+		attributes = append(attributes, model.ProductAttr{
+			Key:     v.SpecAName,
+			KeyID:   specificationWAID,
+			Value:   v.SpecAValue,
+			ValueID: specificationAValueMap[v.SpecAValue],
+		}, model.ProductAttr{
+			Key:     v.SpecBName,
+			KeyID:   specificationWBID,
+			Value:   v.SpecBValue,
+			ValueID: specificationBValueMap[v.SpecBValue],
+		})
+		productAttrBytes, _ := json.Marshal(attributes)
 		productVariant := &model.ProductVariant{
 			SKUCode:          skuCode,
 			GoodsID:          goodsID,
@@ -215,15 +221,6 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 		specificationAValueRMap := make(map[string]int32)
 		specificationBValueRMap := make(map[string]int32)
 		for _, v := range req.RetailProducts {
-			var attributes []model.ProductAttr
-			attributes = append(attributes, model.ProductAttr{
-				Key:   v.SpecAName,
-				Value: v.SpecAValue,
-			}, model.ProductAttr{
-				Key:   v.SpecBName,
-				Value: v.SpecBValue,
-			})
-			productAttrBytes, _ := json.Marshal(attributes)
 			specificationAValue := &model.SpecificationValue{
 				Value:           v.SpecAValue,
 				SpecificationID: specificationRAID,
@@ -250,7 +247,20 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				}
 				specificationBValueRMap[v.SpecBValue] = specValueBID
 			}
-			skuCode := fmt.Sprintf("SK%s%s%d%d", strconv.FormatInt(time.Now().UnixNano(), 10), utils.GenerateRandCode("", 5), specificationAValueRMap[v.SpecAValue], specificationBValueRMap[v.SpecBValue])
+			var attributes []model.ProductAttr
+			attributes = append(attributes, model.ProductAttr{
+				Key:     v.SpecAName,
+				KeyID:   specificationRAID,
+				Value:   v.SpecAValue,
+				ValueID: specificationAValueRMap[v.SpecAValue],
+			}, model.ProductAttr{
+				Key:     v.SpecBName,
+				KeyID:   specificationRBID,
+				Value:   v.SpecBValue,
+				ValueID: specificationBValueRMap[v.SpecBValue],
+			})
+			productAttrBytes, _ := json.Marshal(attributes)
+			skuCode := fmt.Sprintf("SK%d%d%d", time.Now().UnixNano(), specificationBValueMap[v.SpecAValue], specificationBValueMap[v.SpecBValue])
 			productVariant := &model.ProductVariant{
 				SKUCode:      skuCode,
 				GoodsID:      goodsID,
@@ -276,7 +286,7 @@ func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) (*
 	if req.CheckParams() != nil {
 		return nil, xerr.WithCode(xerr.InvalidParams, req.CheckParams())
 	}
-	userID := "w2wwww"
+	userID := "123456"
 
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
@@ -419,7 +429,7 @@ func (s *GoodsService) DeleteMyGoods(ctx *gin.Context, req types.GoodsReq) xerr.
 	//userID := common.GetUserID(ctx)
 	////获取用户角色
 	//userRole := common.GetUserRole(ctx)
-	userID := "w2wwww"
+	userID := "123456"
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -454,7 +464,7 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 	//userID := common.GetUserID(c)
 	////获取用户角色
 	//userRole := common.GetUserRole(c)
-	userID := "w2wwww"
+	userID := "123456"
 	user, err := s.userDao.GetByUserID(c, userID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -494,7 +504,7 @@ func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) 
 	//userID := common.GetUserID(c)
 	////获取用户角色
 	//userRole := common.GetUserRole(c)
-	userID := "w2wwww"
+	userID := "123456"
 	user, err := s.userDao.GetByUserID(c, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -522,4 +532,151 @@ func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) 
 	}
 	result.GoodsList = goods
 	return &result, nil
+}
+
+func (s *GoodsService) GetGoodsDetail(c *gin.Context, req types.GoodsReq) (*types.GoodsDetailResp, xerr.XErr) {
+	goods, err := s.goods.GetGoodsByGoodsID(c, req.GoodsID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if goods == nil {
+		return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
+	}
+	goodsDetail := &types.GoodsDetailResp{
+		ID:              goods.ID,
+		Name:            goods.Name,
+		GoodsFrontImage: goods.GoodsFrontImage,
+		Images:          goods.GetImagesList(),
+		Description:     goods.Description,
+		DescImages:      goods.GetDescImagesList(),
+	}
+	userID := "123456"
+	user, err := s.userDao.GetByUserID(c, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user == nil {
+		return nil, xerr.WithCode(xerr.ErrorNotExistUser, errors.New("用户不存在"))
+	}
+	if req.ReqType == 1 {
+		return s.handleSupplierGoodsDetailRequest(c, req, user, goods, goodsDetail)
+	} else {
+		return s.handleGoodsDetailRequestByRole(c, req, user, goods, goodsDetail)
+	}
+}
+func (s *GoodsService) handleSupplierGoodsDetailRequest(c *gin.Context, req types.GoodsReq, user *model.User, goods *model.Goods, goodsDetail *types.GoodsDetailResp) (*types.GoodsDetailResp, xerr.XErr) {
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户不是供应商"))
+	}
+
+	if err := s.fillWholesaleDetails(c, req, goods, goodsDetail); err != nil {
+		return nil, err
+	}
+
+	if goods.IsRetail == 1 {
+		if err := s.fillRetailDetails(c, req, goods, goodsDetail); err != nil {
+			return nil, err
+		}
+	}
+	return goodsDetail, nil
+}
+
+func (s *GoodsService) fillWholesaleDetails(c *gin.Context, req types.GoodsReq, goods *model.Goods, goodsDetail *types.GoodsDetailResp) xerr.XErr {
+	goodsDetail.WholesaleShipping = goods.WholesaleShipping
+	goodsDetail.WholesaleLogistics = goods.GetWholesaleLogistics()
+	specInfo, err := s.getSpecificationByType(c, req, enum.ProductWholesale)
+	if err != nil {
+		return err
+	}
+	goodsDetail.SpecInfo = specInfo
+	productsInfo, err := s.getProductsInfoByType(c, req, enum.ProductWholesale)
+	if err != nil {
+		return err
+	}
+	goodsDetail.WholesaleProducts = productsInfo
+
+	return nil
+}
+
+func (s *GoodsService) fillRetailDetails(c *gin.Context, req types.GoodsReq, goods *model.Goods, goodsDetail *types.GoodsDetailResp) xerr.XErr {
+	goodsDetail.RetailShippingTime = goods.RetailShippingTime
+	goodsDetail.RetailShippingFee = goods.RetailShippingFee
+	specInfo, err := s.getSpecificationByType(c, req, enum.ProductRetail)
+	if err != nil {
+		return err
+	}
+	goodsDetail.SpecInfo = specInfo
+	productsInfo, err := s.getProductsInfoByType(c, req, enum.ProductRetail)
+	if err != nil {
+		return err
+	}
+	goodsDetail.RetailProducts = productsInfo
+
+	return nil
+}
+
+func (s *GoodsService) handleGoodsDetailRequestByRole(c *gin.Context, req types.GoodsReq, user *model.User, goods *model.Goods, goodsDetail *types.GoodsDetailResp) (*types.GoodsDetailResp, xerr.XErr) {
+	if user.UserRole == model.UserRoleCustomer {
+		if goods.IsRetail == 0 || goods.RetailStatus == enum.GoodsRetailSoldOut {
+			return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
+		}
+
+		if err := s.fillRetailDetails(c, req, goods, goodsDetail); err != nil {
+			return nil, err
+		}
+	}
+	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
+		if err := s.fillWholesaleDetails(c, req, goods, goodsDetail); err != nil {
+			return nil, err
+		}
+	}
+	return goodsDetail, nil
+}
+
+// getSpecificationByType
+func (s *GoodsService) getSpecificationByType(c *gin.Context, req types.GoodsReq, productVariantType enum.ProductVariantType) ([]*types.SpecInfo, xerr.XErr) {
+	specifications, err := s.goods.GetSpecificationByGoodsID(c, req.GoodsID, productVariantType)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	result := make([]*types.SpecInfo, 0)
+	for _, v := range specifications {
+		specInfo := &types.SpecInfo{
+			SpecID:   v.ID,
+			SpecName: v.Name,
+		}
+		specificationValues, rr := s.goods.GetSpecificationValueBySpecID(c, v.ID)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		for _, vv := range specificationValues {
+			specInfo.SpecValue = append(specInfo.SpecValue, &types.SpecValue{
+				ID:    vv.ID,
+				Value: vv.Value,
+			})
+		}
+		result = append(result, specInfo)
+	}
+	return result, nil
+}
+
+func (s *GoodsService) getProductsInfoByType(c *gin.Context, req types.GoodsReq, productVariantType enum.ProductVariantType) ([]*types.ProductVariantInfo, xerr.XErr) {
+	products := make([]*types.ProductVariantInfo, 0)
+	productVariants, rr1 := s.goods.GetProductVariantListByGoodsID(c, req.GoodsID, productVariantType)
+	if rr1 != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, rr1)
+	}
+	for _, vv := range productVariants {
+		productVariantInfo := &types.ProductVariantInfo{
+			ID:               vv.ID,
+			Unit:             vv.Unit,
+			Price:            vv.Price,
+			MinOrderQuantity: vv.MinOrderQuantity,
+			Stock:            vv.Stock,
+			SKUCode:          vv.SKUCode,
+			ProductAttr:      vv.GetProductAttr(),
+		}
+		products = append(products, productVariantInfo)
+	}
+	return products, nil
 }
