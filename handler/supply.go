@@ -77,7 +77,7 @@ func (h *SupplyHandler) SubmitQuote(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	if req.OrderID == 0 || req.ItemID == 0 || req.Price == 0 {
+	if req.OrderID == 0 || req.GoodsID == 0 || req.Price == 0 {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}

@@ -18,14 +18,14 @@ func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, cat
 	sql := db.Get().Model(&model.OrderPurchase{})
 	if len(like) > 0 {
 		sql = sql.Where("category_name LIKE ? AND status = 1", "%"+like+"%")
-	} else {
+	} else if categoryA > 0 && categoryB > 0 {
 		sql = sql.Where("category_a = ? AND category_b = ? AND status = 1", categoryA, categoryB)
 
 		if categoryC > 0 {
 			sql = sql.Where("category_c = ?", categoryC)
 		}
 	}
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("created_at desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -51,7 +51,7 @@ func (d *OrderPurchaseDao) ListByOrderIDs(ctx context.Context, page types.PageRe
 }
 
 func (d *OrderPurchaseDao) ListByUser(ctx context.Context, page types.PageRequest, userID string, status model.OrderPurchaseStatus) (list []*model.OrderPurchase, count int64, err error) {
-	sql := db.Get().Model(&model.OrderPurchase{}).Where("userID = ?", userID)
+	sql := db.Get().Model(&model.OrderPurchase{}).Where("user_id = ?", userID)
 	if status != 0 {
 		sql = sql.Where("status = ?", status)
 	}

@@ -8,6 +8,7 @@ import (
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/xerr"
+	"xfd-backend/service/cache"
 )
 
 type SupplyService struct {
@@ -71,21 +72,26 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPur
 		quoteMap[int(quote.ID)] = quote
 	}
 
+	category := cache.GetCategory()
+
 	list := make([]*types.PurchaseOrder, 0)
 	for _, purchase := range purchaseList {
 		user := userMap[purchase.UserID]
 		list = append(list, &types.PurchaseOrder{
-			OrderID:      int(purchase.ID),
-			CategoryName: purchase.CategoryName,
-			Period:       purchase.Period,
-			Quantity:     purchase.Quantity,
-			Unit:         purchase.Unit,
-			Requirement:  purchase.Requirement,
-			UserID:       purchase.UserID,
-			UserName:     user.Username,
-			UserAvatar:   user.AvatarURL,
-			SubmitTime:   purchase.CreatedAt.Unix(),
-			HasQuote:     quoteMap[int(purchase.ID)] != nil,
+			OrderID:       int(purchase.ID),
+			CategoryNameA: category[int32(purchase.CategoryA)].Name,
+			CategoryNameB: category[int32(purchase.CategoryB)].Name,
+			CategoryNameC: category[int32(purchase.CategoryC)].Name,
+			CategoryName:  purchase.CategoryName,
+			Period:        purchase.Period,
+			Quantity:      purchase.Quantity,
+			Unit:          purchase.Unit,
+			Requirement:   purchase.Requirement,
+			UserID:        purchase.UserID,
+			UserName:      user.Username,
+			UserAvatar:    user.AvatarURL,
+			SubmitTime:    purchase.CreatedAt.Unix(),
+			HasQuote:      quoteMap[int(purchase.ID)] != nil,
 		})
 	}
 	return &types.SupplyGetPurchasesResp{List: list, TotalNum: count}, nil
@@ -149,7 +155,7 @@ func (s *SupplyService) SubmitQuote(ctx context.Context, req types.SupplySubmitQ
 		PurchaseOrderID: req.OrderID,
 		PurchaseUserID:  purchaseOrder.UserID,
 		QuoteUserID:     userID,
-		ItemID:          req.ItemID,
+		GoodsID:         req.GoodsID,
 		Price:           req.Price,
 		NotifySupply:    true,
 		NotifyPurchase:  true,

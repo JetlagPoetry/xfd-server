@@ -25,7 +25,7 @@ type SupplyGetQuotesResp struct {
 
 type SupplySubmitQuoteReq struct {
 	OrderID int     `json:"orderID"`
-	ItemID  int     `json:"itemID"`
+	GoodsID int     `json:"goodsID"`
 	Price   float64 `json:"price"`
 }
 
