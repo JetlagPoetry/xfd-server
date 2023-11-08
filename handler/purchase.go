@@ -166,11 +166,6 @@ func (h *PurchaseHandler) GetStatistics(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
 	resp, xErr = h.purchaseService.GetStatistics(c, req)
 	if xErr != nil {
 		log.Println("[PurchaseHandler] GetStatistics failed, err=", xErr)

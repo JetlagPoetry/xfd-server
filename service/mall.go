@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
@@ -38,6 +39,8 @@ func (s *MallService) SetCategoryCache(ctx context.Context) xerr.XErr {
 		return nil
 	}
 
+	log.Println("[SetCategoryCache] category get, len=", len(categoryList))
+
 	m := make(map[int32]*cache.Category)
 	for _, c := range categoryList {
 		m[c.ID] = &cache.Category{
@@ -49,7 +52,7 @@ func (s *MallService) SetCategoryCache(ctx context.Context) xerr.XErr {
 		}
 	}
 	for _, c := range categoryList {
-		if c.ParentCategoryID == 0 {
+		if c.ParentCategoryID == 0 || m[c.ParentCategoryID] == nil {
 			continue
 		}
 		if m[c.ParentCategoryID].SubCategoryIDs == nil {
