@@ -252,7 +252,7 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQu
 			UserID:     userID,
 			UserName:   user.Username,
 			UserAvatar: user.AvatarURL,
-			IsNew:      quote.NotifySupply,
+			IsNew:      quote.NotifyPurchase,
 		})
 	}
 
