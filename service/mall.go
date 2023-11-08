@@ -49,6 +49,9 @@ func (s *MallService) SetCategoryCache(ctx context.Context) xerr.XErr {
 		}
 	}
 	for _, c := range categoryList {
+		if c.ParentCategoryID == 0 {
+			continue
+		}
 		if m[c.ParentCategoryID].SubCategoryIDs == nil {
 			m[c.ParentCategoryID].SubCategoryIDs = make([]int32, 0)
 		}
