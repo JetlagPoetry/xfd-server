@@ -11,7 +11,7 @@ type UserAddress struct {
 	City      string `gorm:"column:city" json:"city"`
 	Region    string `gorm:"column:region" json:"region"`
 	Address   string `gorm:"column:address" json:"address"`
-	IsDefault int    `gorm:"column:is_default" json:"is_default"` // 0非默认，1默认
+	IsDefault *int   `gorm:"column:is_default" json:"is_default"` // 0非默认，1默认
 }
 
 func (UserAddress) TableName() string {

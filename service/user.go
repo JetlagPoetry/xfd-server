@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"gorm.io/gorm"
-	"log"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
@@ -395,7 +394,7 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 	}
 	defaultAddr := 0
 	for _, addr := range addrList {
-		if addr.IsDefault == 1 {
+		if *addr.IsDefault == 1 {
 			defaultAddr = int(addr.ID)
 			break
 		}
@@ -436,19 +435,12 @@ func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressRe
 }
 
 func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAddressReq) xerr.XErr {
-	log.Println("[UserService] addAddress called, req=", utils.ToJson(req))
-	//if req.IsDefault {
-	//	// 取消所有默认地址
-	//	err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
-	//	if err != nil {
-	//		return xerr.WithCode(xerr.ErrorDatabase, err)
-	//	}
-	//}
-
-	// 取消所有默认地址
-	err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+	if req.IsDefault {
+		// 取消所有默认地址
+		err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: utils.IntPtr(0)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 	}
 
 	addr := &model.UserAddress{
@@ -459,9 +451,9 @@ func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAd
 		City:      req.City,
 		Region:    req.Region,
 		Address:   req.Address,
-		IsDefault: utils.BoolToInt(req.IsDefault),
+		IsDefault: utils.IntPtr(utils.BoolToInt(req.IsDefault)),
 	}
-	err = s.userAddressDao.CreateInTx(tx, addr)
+	err := s.userAddressDao.CreateInTx(tx, addr)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -498,7 +490,7 @@ func (s *UserService) ModifyAddress(ctx context.Context, req types.UserModifyAdd
 func (s *UserService) modifyAddress(tx *gorm.DB, userID string, req types.UserModifyAddressReq) xerr.XErr {
 	if req.IsDefault {
 		// 取消所有默认地址
-		err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
+		err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: utils.IntPtr(0)})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
@@ -515,7 +507,7 @@ func (s *UserService) modifyAddress(tx *gorm.DB, userID string, req types.UserMo
 		addr.Address = req.Address
 	}
 	if req.IsDefault {
-		addr.IsDefault = utils.BoolToInt(req.IsDefault)
+		addr.IsDefault = utils.IntPtr(utils.BoolToInt(req.IsDefault))
 	}
 	err := s.userAddressDao.UpdateByIDInTx(tx, req.ID, addr)
 	if err != nil {

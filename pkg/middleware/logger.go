@@ -9,6 +9,7 @@ import (
 	"time"
 	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/response"
+	"xfd-backend/pkg/utils"
 )
 
 func Logger() gin.HandlerFunc {
@@ -33,6 +34,6 @@ func Logger() gin.HandlerFunc {
 
 		latency := time.Now().Sub(start)
 		respBody, _ := c.Get(consts.CONTEXT_HEADER_RESP_BODY)
-		log.Printf("[%s] %s | %s | responseBody=%s, latency=%s\n", reqID, c.Request.Method, c.Request.RequestURI, respBody, latency)
+		log.Printf("[%s] %s | %s | responseBody=%s, latency=%s\n", reqID, c.Request.Method, c.Request.RequestURI, utils.ToJson(respBody), latency)
 	}
 }
