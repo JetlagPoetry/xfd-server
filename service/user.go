@@ -227,7 +227,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		Username:     user.Username,
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
-		VerifyStatus: types.UserVerifyStatusUnfinished,
+		VerifyStatus: model.UserVerifyStatusUnknown,
 		Point:        user.Point,
 		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
 	}
@@ -240,7 +240,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		if len(verifyList) > 0 {
 			verify := verifyList[0]
 
-			resp.VerifyStatus = types.UserVerifyStatusDone
+			resp.VerifyStatus = verify.Status
 			resp.VerifyComment = verify.Comment
 			resp.Organization = verify.Organization
 
@@ -374,7 +374,7 @@ func (s *UserService) DeleteUser(ctx context.Context, req types.UserDeleteUserRe
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if currentUser.UserRole != model.UserRoleRoot {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not root"))
 	}
 
 	err = s.userDao.DeleteByUserID(ctx, req.UserID)
@@ -419,6 +419,30 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressReq) (*types.UserAddAddressResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
+	tx := db.Get().Begin()
+	cErr := s.addAddress(tx, userID, req)
+	if cErr != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, cErr)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.UserAddAddressResp{}, nil
+}
+
+func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAddressReq) xerr.XErr {
+	if req.IsDefault {
+		// 取消所有默认地址
+		err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+
 	addr := &model.UserAddress{
 		UserID:    userID,
 		Name:      req.Name,
@@ -429,12 +453,12 @@ func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressRe
 		Address:   req.Address,
 		IsDefault: utils.BoolToInt(req.IsDefault),
 	}
-	err := s.userAddressDao.Create(ctx, addr)
+	err := s.userAddressDao.CreateInTx(tx, addr)
 	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	return &types.UserAddAddressResp{}, nil
+	return nil
 }
 
 func (s *UserService) ModifyAddress(ctx context.Context, req types.UserModifyAddressReq) (*types.UserModifyAddressResp, xerr.XErr) {

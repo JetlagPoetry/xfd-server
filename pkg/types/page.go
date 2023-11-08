@@ -5,8 +5,8 @@ import (
 )
 
 type PageRequest struct {
-	PageNum  int `form:"pageNum" binding:"required,gte=1"`
-	PageSize int `form:"pageSize" binding:"required,gte=1"`
+	PageNum  int `form:"pageNum" binding:"required"`
+	PageSize int `form:"pageSize" binding:"required"`
 }
 
 type PageResult struct {
