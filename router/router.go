@@ -84,7 +84,7 @@ func NewRouter() *gin.Engine {
 		goodsGroup.GET("/getGoodsList", handler.Goods.GetGoodsList)                //获取商品列表
 		goodsGroup.GET("/getGoodsDetail", handler.Goods.GetGoodsDetail)            //获取商品详情
 		goodsGroup.GET("/getMyGoodsList", handler.Goods.GetMyGoodsList)            //后台获取商品列表
-		goodsGroup.POST("/modifyMyGoods", handler.Goods.ModifyMyGoods)             //修改商品
+		goodsGroup.POST("/modifyMyGoods", handler.Goods.ModifyMyGoods)             //修改商品信息
 		goodsGroup.DELETE("/deleteMyGoods", handler.Goods.DeleteMyGoods)           //删除商品
 		goodsGroup.GET("/getMyGoodsDetail", handler.Goods.GetMyGoodsDetail)        //获取商品详情
 		goodsGroup.POST("/modifyMyGoodsStatus", handler.Goods.ModifyMyGoodsStatus) //修改商品状态

@@ -23,7 +23,6 @@ func (imp *CounterInterfaceImp) UpsertCounter(counter *model.CounterModel) error
 func (imp *CounterInterfaceImp) GetCounter(id int32) (*model.CounterModel, error) {
 	var err error
 	var counter = new(model.CounterModel)
-
 	cli := db.Get()
 	err = cli.Table(tableName).Where("id = ?", id).First(counter).Error
 
