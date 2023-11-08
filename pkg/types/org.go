@@ -129,7 +129,7 @@ type AccountVerifyRecord struct {
 
 type GetOrganizationsReq struct {
 	PageRequest
-	Name string `json:"name"`
+	Name string `form:"name"`
 }
 
 type GetOrganizationsResp struct {
@@ -148,9 +148,9 @@ type Organization struct {
 
 type GetOrgMembersReq struct {
 	PageRequest
-	OrgID    int    `json:"orgID"`
-	Username string `json:"username"`
-	Phone    string `json:"phone"`
+	OrgID    int    `form:"orgID"`
+	Username string `form:"username"`
+	Phone    string `form:"phone"`
 }
 
 type GetOrgMembersResp struct {
