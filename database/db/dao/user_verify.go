@@ -16,8 +16,8 @@ func NewUserVerifyDao() *UserVerifyDao {
 }
 
 func (d *UserVerifyDao) ListUserVerifyByUserID(ctx context.Context, userID string) (userVerifyList []*model.UserVerify, err error) {
-	if err = db.Get().Model(&model.UserVerify{}).Where("user_id = ? AND status = ?", userID, model.UserVerifyStatusSuccess).
-		Order("created_at desc").Find(&userVerifyList).Error; err != nil {
+	if err = db.Get().Model(&model.UserVerify{}).Where("user_id = ?", userID).
+		Order("id desc").Find(&userVerifyList).Error; err != nil {
 		return nil, err
 	}
 	return userVerifyList, nil

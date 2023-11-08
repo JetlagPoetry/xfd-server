@@ -6,7 +6,6 @@ import (
 	"errors"
 	jwt_go "github.com/dgrijalva/jwt-go"
 	"time"
-	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/consts"
 )
 
@@ -42,9 +41,8 @@ var defaultOptions = &JWTAuth{
 }
 
 type SubjectInfo struct {
-	UserID string         `json:"user_id"` // 用户ID
-	Phone  string         `json:"phone"`   // 手机号
-	Role   model.UserRole `json:"role"`
+	UserID string `json:"user_id"` // 用户ID
+	Phone  string `json:"phone"`   // 手机号
 }
 
 func Init() {

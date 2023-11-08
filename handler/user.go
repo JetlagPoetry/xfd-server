@@ -61,6 +61,11 @@ func (h *UserHandler) SubmitRole(c *gin.Context) {
 		return
 	}
 
+	if req.Role != model.UserRoleBuyer && req.Role != model.UserRoleSupplier && req.Role != model.UserRoleCustomer {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+
 	if (req.Role == model.UserRoleSupplier || req.Role == model.UserRoleBuyer) && (len(req.Organization) == 0 || len(req.OrganizationCode) == 0 ||
 		len(req.OrganizationURL) == 0 || len(req.IdentityURLA) == 0 || len(req.IdentityURLB) == 0 ||
 		len(req.RealName) == 0 || len(req.CertificateNo) == 0 || len(req.Position) == 0 || !utils.Mobile(req.Phone)) {
@@ -276,6 +281,33 @@ func (h *UserHandler) ModifyAddress(c *gin.Context) {
 	resp, xErr = h.userService.ModifyAddress(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] ModifyAddress failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *UserHandler) DeleteAddress(c *gin.Context) {
+	var (
+		req  types.UserDeleteAddressReq
+		resp *types.UserDeleteAddressResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	resp, xErr = h.userService.DeleteAddress(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] DeleteAddress failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}

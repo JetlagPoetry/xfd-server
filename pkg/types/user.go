@@ -159,3 +159,10 @@ type UserModifyAddressReq struct {
 
 type UserModifyAddressResp struct {
 }
+
+type UserDeleteAddressReq struct {
+	ID int `json:"id"`
+}
+
+type UserDeleteAddressResp struct {
+}

@@ -24,11 +24,12 @@ func (u *User) TableName() string {
 type UserRole int
 
 const (
-	UserRoleCustomer UserRole = 0
-	UserRoleSupplier UserRole = 1
-	UserRoleBuyer    UserRole = 2
-	UserRoleAdmin    UserRole = 3
-	UserRoleRoot     UserRole = 4
+	UserRoleUnknown  UserRole = 0
+	UserRoleCustomer UserRole = 1
+	UserRoleSupplier UserRole = 2
+	UserRoleBuyer    UserRole = 3
+	UserRoleAdmin    UserRole = 4
+	UserRoleRoot     UserRole = 5
 )
 
 type UserPointStatus int

@@ -82,3 +82,10 @@ func (r *UserAddressDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateVa
 	}
 	return nil
 }
+
+func (r *UserAddressDao) Delete(ctx context.Context, id int) (err error) {
+	if err = db.Get().Where("id =? ", id).Delete(&model.UserAddress{}).Error; err != nil {
+		return err
+	}
+	return nil
+}

@@ -52,7 +52,7 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		if len(verifyList) > 0 {
-			verifyHistory = verifyList[0]
+			verifyHistory = verifyList[0] // 选取最后一次认证
 		}
 	}
 
@@ -60,7 +60,6 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 	info := &jwt.SubjectInfo{
 		UserID: user.UserID,
 		Phone:  user.Phone,
-		Role:   user.UserRole,
 	}
 	token, err := jwt.Auth.GenerateToken(ctx, info)
 	if err != nil {
@@ -91,7 +90,6 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	}
 	if user == nil {
 		user = &model.User{
-			UserRole: model.UserRoleCustomer,
 			UserID:   utils.GenUUID(),
 			Phone:    phone,
 			Username: utils.GenUsername(phone),
@@ -111,7 +109,7 @@ func (s *UserService) SubmitRole(ctx context.Context, req types.UserSubmitRoleRe
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	// 允许初次提交&重复提交认证
-	if user.UserRole != model.UserRoleCustomer && user.UserRole != req.Role {
+	if user.UserRole != model.UserRoleUnknown && user.UserRole != req.Role {
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}
 
@@ -485,4 +483,23 @@ func (s *UserService) modifyAddress(tx *gorm.DB, userID string, req types.UserMo
 		}
 	}
 	return nil
+}
+
+func (s *UserService) DeleteAddress(ctx context.Context, req types.UserDeleteAddressReq) (*types.UserDeleteAddressResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+
+	addr, err := s.userAddressDao.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if addr.UserID != userID {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, errors.New("address not belong to user"))
+	}
+
+	err = s.userAddressDao.Delete(ctx, req.ID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.UserDeleteAddressResp{}, nil
 }
