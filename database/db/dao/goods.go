@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
@@ -84,12 +85,12 @@ func (d *GoodsDao) GetGoodsList(ctx context.Context, req types.GoodsListReq) (go
 }
 
 // GetProductVariantListByGoodsID 获取SKU信息
-func (d *GoodsDao) GetProductVariantListByGoodsID(ctx context.Context, goodsID int32, productVariantType enum.ProductVariantType) (productVariants []*model.ProductVariant, err error) {
+func (d *GoodsDao) GetProductVariantListByGoodsID(ctx context.Context, goodsID int32, productVariantType enum.ProductVariantType, status enum.ProductVariantStatus) (productVariants []*model.ProductVariant, err error) {
 	err = db.Get().Debug().Model(&model.ProductVariant{}).
-		Where("status = 1").
 		Where(&model.ProductVariant{
 			GoodsID: goodsID,
 			Type:    productVariantType,
+			Status:  status,
 		}).Find(&productVariants).Error
 	if err != nil {
 		return nil, err
@@ -201,6 +202,21 @@ func (d *GoodsDao) GetSpecificationByGoodsID(ctx context.Context, goodsID int32,
 	return specifications, nil
 }
 
+//GetSpecificationByID
+
+func (d *GoodsDao) GetSpecificationByID(ctx context.Context, id int32) (specification *model.Specification, err error) {
+	var specifications []*model.Specification
+	err = db.Get().Debug().Model(&model.Specification{}).
+		Where(&model.Specification{
+			ID: id,
+		}).
+		Find(&specifications).Error
+	if err != nil {
+		return nil, err
+	}
+	return specifications[0], nil
+}
+
 //GetSpecificationValueBySpecID
 
 func (d *GoodsDao) GetSpecificationValueBySpecID(ctx context.Context, specID int32) (specificationValues []*model.SpecificationValue, err error) {
@@ -252,12 +268,34 @@ func (d *GoodsDao) UpdateSpecificationValueByID(ctx context.Context, id int32, u
 }
 
 // updateProductVariantByID
-func (d *GoodsDao) UpdateProductVariantByID(ctx context.Context, id int32, updateValue *model.ProductVariant) (err error) {
-	updateResult := db.Get().Debug().
-		Model(&model.ProductVariant{}).
+func (d *GoodsDao) UpdateProductVariantByID(ctx context.Context, id int32, updateValue *model.ProductVariant) (int64, error) {
+	updateResult := d.repo.GetDB(ctx).
+		Debug().Model(&model.ProductVariant{}).
 		Where("id =?", id).
 		Updates(updateValue)
-	if err = updateResult.Error; err != nil {
+
+	return updateResult.RowsAffected, updateResult.Error
+}
+
+func (d *GoodsDao) DeleteSpecificationByID(c *gin.Context, id int32) (err error) {
+	err = d.repo.GetDB(c).Debug().Where("id =?", id).Delete(&model.Specification{}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *GoodsDao) DeleteSpecificationValueBySpecID(c *gin.Context, id int32) error {
+	err := d.repo.GetDB(c).Debug().Where("specification_id =?", id).Delete(&model.SpecificationValue{}).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *GoodsDao) DeleteSpecificationValueByID(c *gin.Context, vid int32) error {
+	err := d.repo.GetDB(c).Debug().Where("id =?", vid).Delete(&model.SpecificationValue{}).Error
+	if err != nil {
 		return err
 	}
 	return nil

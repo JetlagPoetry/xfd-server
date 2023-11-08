@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/google/martian/log"
 	"gorm.io/gorm"
 	"time"
@@ -13,7 +14,7 @@ type Category struct {
 	ID               int32                   `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
 	CreatedAt        time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
 	UpdatedAt        time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
-	Deleted          *int                    `gorm:"type:tinyint(1);not null;default:0;column:deleted;index:deleted" json:"-"`
+	DeletedAt        gorm.DeletedAt          `gorm:"column:deleted_at;index"`
 	Name             string                  `gorm:"type:varchar(100);default:'';not null;comment:分类名称" json:"name"`
 	ParentCategoryID int32                   `gorm:"type:int;comment:父分类ID;index:parent_status" json:"parentID,omitempty"` // 父级分类ID
 	ParentCategory   *Category               `json:"-"`                                                                    // 序列化json数据时忽略该字段
@@ -38,12 +39,12 @@ type Goods struct {
 	SPUCode            string                  `gorm:"type:varchar(300);not null;default:'';column:spu_code;comment:商品SPU编号"`
 	Name               string                  `gorm:"type:varchar(300);not null;default:'';column:name;comment:商品名称"`
 	Status             enum.GoodsStatus        `gorm:"type:tinyint(1);not null;default:0;column:status;comment:状态:1-在售2-下架;index:level_status_deleted"`
-	ShipFree           int                     `gorm:"type:tinyint(1);not null;default:0;column:ship_free;comment:是否包邮 0-不包邮 1-包邮"`
+	ShipFree           *int                    `gorm:"type:tinyint(1);not null;default:0;column:ship_free;comment:是否包邮 0-不包邮 1-包邮"`
 	Description        string                  `gorm:"default:'';type:varchar(1000);column:description;not null;comment:商品详情"`
 	Images             string                  `gorm:"default:'';type:varchar(5000);column:images;not null;comment:商品轮播图"`
 	DescImages         string                  `gorm:"type:varchar(5000);not null;column:desc_images;comment:商品详情图"`
 	GoodsFrontImage    string                  `gorm:"type:varchar(1000);not null;column:goods_front_image;comment:商品封面图"`
-	IsRetail           int                     `gorm:"type:tinyint(1);not null;default:0;column:is_retail;comment:是否支持零售 0-不支持 1-支持;index:level_status_deleted"`
+	IsRetail           *int                    `gorm:"type:tinyint(1);not null;default:0;column:is_retail;comment:是否支持零售 0-不支持 1-支持;index:level_status_deleted"`
 	RetailStatus       enum.GoodsRetailStatus  `gorm:"type:tinyint(1);not null;default:0;column:retail_status;comment:零售状态:1-正常2-售磬;index:level_status_deleted"`
 	IsNew              int                     `gorm:"type:tinyint(1);not null;default:0;column:is_new;comment:是否为新品 0-不是 1-是"`
 	IsHot              int                     `gorm:"default:0;not null;column:is_hot;comment:是否为热卖商品 0-不是 1-是"`
@@ -54,7 +55,7 @@ type Goods struct {
 	WholesaleAreaCodeB int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_b;comment:筛选code区"`
 	WholesaleAreaCodeC int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_c;comment:筛选code县/市"`
 	RetailShippingTime enum.RetailDeliveryTime `gorm:"type:int;not null;default:0;column:retail_shipping_time;comment:零售发货时间"`
-	RetailShippingFee  float64                 `gorm:"type:decimal(9,2);not null;default:0.0;column:retail_shipping_fee;comment:零售运费"`
+	RetailShippingFee  *float64                `gorm:"type:decimal(9,2);not null;default:0.0;column:retail_shipping_fee;comment:零售运费"`
 	CreatedAt          time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);index:created_at;index:level_status_deleted"`
 	UpdatedAt          time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);index:updated_at;index:level_status_deleted"`
 	DeletedAt          gorm.DeletedAt          `gorm:"column:deleted_at;index"`
@@ -72,14 +73,15 @@ type Specification struct {
 }
 
 type SpecificationValue struct {
-	ID              int32                   `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
-	CreatedAt       time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
-	UpdatedAt       time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
-	DeletedAt       gorm.DeletedAt          `gorm:"column:deleted_at;index"`
-	Value           string                  `gorm:"type:varchar(100);not null;comment:规格属性值;index:specification_type_value_deleted" json:"value"`
-	SpecificationID int32                   `gorm:"type:int;not null;default:0;column:specification_id;comment:规格ID;index:specification_type_value_deleted"`
-	GoodsID         int32                   `gorm:"type:int;not null;default:0;column:goods_id;comment:商品ID"`
-	Type            enum.ProductVariantType `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:specification_type_value_deleted" json:"type"`
+	ID                int32                   `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
+	CreatedAt         time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt         time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	DeletedAt         gorm.DeletedAt          `gorm:"column:deleted_at;index"`
+	Value             string                  `gorm:"type:varchar(100);not null;comment:规格属性值;index:specification_type_value_deleted" json:"value"`
+	SpecificationID   int32                   `gorm:"type:int;not null;default:0;column:specification_id;comment:规格ID;index:specification_type_value_deleted"`
+	GoodsID           int32                   `gorm:"type:int;not null;default:0;column:goods_id;comment:商品ID"`
+	Type              enum.ProductVariantType `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:specification_type_value_deleted" json:"type"`
+	SpecificationName string                  `gorm:"-"`
 }
 
 // ProductVariant 产品SKU表
@@ -92,7 +94,7 @@ type ProductVariant struct {
 	GoodsID          int32                     `gorm:"type:int;not null;default:0;comment:商品ID;index:goods_id_type_status" json:"goods_id"`
 	Unit             string                    `gorm:"type:varchar(100);default:'';not null;column:unit;comment:单位" json:"unit"`
 	Price            float64                   `gorm:"type:decimal(9,2);default:0.0;not null;column:price;comment:价格" json:"price"`
-	Stock            int                       `gorm:"type:int;default:0;column:stock;not null;comment:库存" json:"stock"`
+	Stock            *int                      `gorm:"type:int;default:0;column:stock;not null;comment:库存" json:"stock"`
 	MinOrderQuantity int                       `gorm:"type:int;default:0;column:min_order_quantity;comment:起批量" json:"min_order_quantity"`
 	Type             enum.ProductVariantType   `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:goods_id_type_status" json:"type"`
 	Status           enum.ProductVariantStatus `gorm:"type:tinyint(1);not null;default:1;column:status;comment:状态 1-启用 2-未启用;index:goods_id_type_status" json:"status"`
@@ -133,6 +135,13 @@ type ProductAttr struct {
 	KeyID   int32  `json:"keyID"`
 	Value   string `json:"value"`
 	ValueID int32  `json:"valueID"`
+}
+
+func (p *ProductAttr) CheckProductAttr() error {
+	if p.Key == "" || p.Value == "" {
+		return errors.New("key or value is empty")
+	}
+	return nil
 }
 
 func (g *Goods) GetImagesList() []string {

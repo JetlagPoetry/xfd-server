@@ -9,77 +9,26 @@ import (
 )
 
 type GoodsAddReq struct {
-	GoodsDetail       GoodsDetail        `json:"goodsDetail"`
-	WholesaleProducts []ProductWholesale `json:"wholesaleProducts"`
-	RetailProducts    []ProductRetail    `json:"retailProducts"`
-}
-
-func (r GoodsAddReq) CheckParams() error {
-	if err := r.GoodsDetail.CheckParams(); err != nil {
-		return err
-	}
-	if len(r.WholesaleProducts) == 0 {
-		return errors.New("批发商品不能为空")
-	}
-	specAName := r.WholesaleProducts[0].SpecAName
-	specBName := r.WholesaleProducts[0].SpecBName
-	for i, v := range r.WholesaleProducts {
-		if err := r.WholesaleProducts[i].CheckParams(); err != nil {
-			return err
-		}
-		// 检查 SpecAName 和 SpecBName 是否不相等
-		if v.SpecAName == v.SpecBName {
-			return errors.New("SpecAName 和 SpecBName 不能相等")
-		}
-		// 检查 SpecAName 是否一致
-		if v.SpecAName != specAName {
-			return errors.New("所有的 SpecAName 必须相同")
-		}
-		// 检查 SpecBName 是否一致
-		if v.SpecBName != specBName {
-			return errors.New("所有的 SpecBName 必须相同")
-		}
-	}
-	if len(r.RetailProducts) != 0 {
-		specAName = r.RetailProducts[0].SpecAName
-		specBName = r.RetailProducts[0].SpecBName
-		for i, v := range r.RetailProducts {
-			if err := r.RetailProducts[i].CheckParams(); err != nil {
-				return err
-			}
-			// 检查 SpecAName 和 SpecBName 是否不相等
-			if v.SpecAName == v.SpecBName {
-				return errors.New("SpecAName 和 SpecBName 不能相等")
-			}
-			// 检查 SpecAName 是否一致
-			if v.SpecAName != specAName {
-				return errors.New("所有的 SpecAName 必须相同")
-			}
-			// 检查 SpecBName 是否一致
-			if v.SpecBName != specBName {
-				return errors.New("所有的 SpecBName 必须相同")
-			}
-		}
-	}
-	return nil
+	GoodsDetail       GoodsDetail   `json:"goodsDetail"`
+	WholesaleProducts []*AddProduct `json:"wholesaleProducts"`
+	RetailProducts    []*AddProduct `json:"retailProducts"`
 }
 
 type ProductWholesale struct {
-	SpecAName        string                    `json:"specAName" binding:"required,gte=1,lte=2"`
-	SpecBName        string                    `json:"specBName"`
-	SpecAValue       string                    `json:"specAValue" binding:"required"`
-	SpecBValue       string                    `json:"specBValue"`
+	ProductAttr      []*model.ProductAttr      `json:"productAttr" binding:"required"`
 	Unit             string                    `json:"unit" binding:"required,gte=1,lte=10"`
 	Price            float64                   `json:"price" binding:"required"`
-	MinOrderQuantity int                       `json:"minOrderQuantity" binding:"required"`
 	Status           enum.ProductVariantStatus `json:"status" binding:"required,gte=1,lte=2"`
+	MinOrderQuantity int                       `json:"minOrderQuantity" binding:"required"`
+	Stock            int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
 }
-
-func (p ProductWholesale) CheckParams() error {
-	if (p.SpecBName == "" && p.SpecBValue != "") || (p.SpecBName != "" && p.SpecBValue == "") {
-		return errors.New("specBName and specBValue must be either both filled or both empty")
-	}
-	return nil
+type AddProduct struct {
+	ProductAttr      []*model.ProductAttr      `json:"productAttr" binding:"required"`
+	Unit             string                    `json:"unit" binding:"required,gte=1,lte=10"`
+	Price            float64                   `json:"price" binding:"required"`
+	Status           enum.ProductVariantStatus `json:"status" binding:"required,gte=1,lte=2"`
+	MinOrderQuantity int                       `json:"minOrderQuantity" binding:"required"`
+	Stock            int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
 }
 
 type ProductRetail struct {
@@ -225,13 +174,14 @@ type GoodsDetailResp struct {
 }
 
 type ProductVariantInfo struct {
-	ID               int32                `json:"id"`
-	Unit             string               `json:"unit"`
-	Price            float64              `json:"price"`
-	MinOrderQuantity int                  `json:"minOrderQuantity,omitempty"`
-	Stock            int                  `json:"stock,omitempty"`
-	SKUCode          string               `json:"skuCode"`
-	ProductAttr      []*model.ProductAttr `json:"productAttr,omitempty"`
+	ID               int32                     `json:"id"`
+	Unit             string                    `json:"unit"`
+	Price            float64                   `json:"price"`
+	MinOrderQuantity int                       `json:"minOrderQuantity,omitempty"`
+	Stock            int                       `json:"stock,omitempty"`
+	SKUCode          string                    `json:"skuCode"`
+	Status           enum.ProductVariantStatus `json:"status"`
+	ProductAttr      []*model.ProductAttr      `json:"productAttr,omitempty"`
 }
 
 type SpecValue struct {
@@ -240,9 +190,10 @@ type SpecValue struct {
 }
 
 type SpecInfo struct {
-	SpecID    int32        `json:"specID"`
-	SpecName  string       `json:"specName"`
-	SpecValue []*SpecValue `json:"specValue"`
+	SpecID    int32                   `json:"specID"`
+	SpecName  string                  `json:"specName"`
+	Type      enum.ProductVariantType `json:"type"`
+	SpecValue []*SpecValue            `json:"specValue"`
 }
 
 type GoodsModifyReq struct {
@@ -262,82 +213,59 @@ type GoodsModifyReq struct {
 	WholesaleAreaCodeB      int                     `json:"wholesaleAreaCodeB" `     // 筛选code区
 	WholesaleAreaCodeC      int                     `json:"wholesaleAreaCodeC"`      // 筛选code县/市
 	RetailShippingTime      enum.RetailDeliveryTime `json:"retailShippingTime"`      // 零售发货时间
-	RetailShippingFee       float64                 `json:"retailShippingFee"`       // 零售运费 8-0/0-8/8-8
+	RetailShippingFee       *float64                `json:"retailShippingFee"`       // 零售运费 8-0/0-8/8-8
 	ChangeRetailShippingFee bool                    `json:"changeRetailShippingFee"` // 是否修改零售运费
-	SpecInfo                []*SpecInfo             `json:"specInfo" binding:"required"`
 	WholesaleProducts       []*ModifyProduct        `json:"wholesaleProducts"`
 	RetailProducts          []*ModifyProduct        `json:"retailProducts"`
 }
 
 type ModifyProduct struct {
 	ID               int32                     `json:"id"`
-	SpecAName        string                    `json:"specAName"`
-	SpecANameID      int32                     `json:"specANameID"`
-	SpecBName        string                    `json:"specBName" `
-	SpecBNameID      int32                     `json:"specBNameID"`
-	SpecAValue       string                    `json:"specAValue"`
-	SpecAValueID     int32                     `json:"specAValueID"`
-	SpecBValue       string                    `json:"specBValue"`
-	SpecBValueID     int32                     `json:"specBValueID"`
 	Unit             string                    `json:"unit"`
 	Price            float64                   `json:"price"`
 	MinOrderQuantity int                       `json:"minOrderQuantity"`
 	Status           enum.ProductVariantStatus `json:"status"`
-	Stock            int                       `json:"stock" binding:"gte=0,lte=9999999"`
+	Stock            *int                      `json:"stock" binding:"gte=1,lte=9999999"`
+	ProductAttr      []*model.ProductAttr      `json:"productAttr"`
 }
 
-func (g *GoodsModifyReq) CheckParams() error {
-	if g.WholesaleShipping != "" {
-		if g.WholesaleAreaCodeA == 0 || g.WholesaleAreaCodeB == 0 || g.WholesaleAreaCodeC == 0 {
-			return errors.New("wholesaleAreaCodeA,wholesaleAreaCodeB,wholesaleAreaCodeC must have a value")
+func (m *ModifyProduct) HandleProductAttr() (map[string]string, map[string]bool, map[string]bool) {
+	valueKeyMap := make(map[string]string)
+	keySet := make(map[string]bool)
+	valueSet := make(map[string]bool)
+	if len(m.ProductAttr) != 0 {
+		for _, attr := range m.ProductAttr {
+			keySet[attr.Key] = true
+			valueSet[attr.Value] = true
+			valueKeyMap[attr.Value] = attr.Key
 		}
 	}
-	if g.WholesaleProducts != nil {
-		for _, v := range g.WholesaleProducts {
-			if err := v.CheckParams(); err != nil {
-				return err
-			}
+	return valueKeyMap, keySet, valueSet
+}
+
+func (m *ModifyProduct) CheckParams() error {
+	if m.Stock != nil {
+		if *m.Stock < 1 || *m.Stock > 9999999 {
+			return errors.New("库存数量必须在1-9999999之间")
 		}
 	}
-	if g.RetailProducts != nil {
-		for _, v := range g.RetailProducts {
-			if err := v.CheckParams(); err != nil {
-				return err
-			}
-		}
-	}
-	if g.CategoryName != "" {
-		if g.CategoryAID == 0 || g.CategoryBID == 0 || g.CategoryCID == 0 {
-			return errors.New("categoryAID,categoryBID,categoryCID must have a value")
+	if m.ID == 0 {
+		if m.Unit == "" || m.Price == 0 || m.Status == 0 || m.ProductAttr == nil {
+			return errors.New("商品规格信息不完整")
 		}
 	}
 	return nil
 }
 
-func (m *ModifyProduct) CheckParams() error {
-	if m.ID == 0 {
-		if m.SpecAName == "" || m.SpecBName == "" || m.SpecAValue == "" || m.SpecBValue == "" ||
-			m.Unit == "" || m.Price == 0 || m.Status == 0 {
-			return errors.New("SpecAName, SpecBName, SpecAValue, SpecBValue, Unit, Price, and Status are required")
-		}
-		if m.MinOrderQuantity == 0 && m.Stock == 0 {
-			return errors.New("either MinOrderQuantity or Stock must have a value")
+func (g *GoodsModifyReq) CheckParams() error {
+	if g.WholesaleShipping != "" {
+		if g.WholesaleAreaCodeA == 0 || g.WholesaleAreaCodeB == 0 || g.WholesaleAreaCodeC == 0 {
+			return errors.New("修改了批发发货地，批发发货地code不能为空")
 		}
 	}
-	if m.SpecAName != "" && m.SpecBName != "" {
-		if m.SpecAName == m.SpecBName {
-			return errors.New("规格A不能等于规格B")
-		}
-	}
-	if m.SpecAName != "" && m.SpecANameID == 0 {
-		return errors.New("specANameID must have a value")
-	}
-	if m.SpecBName != "" && m.SpecBNameID == 0 {
-		return errors.New("specBNameID must have a value")
-	}
-	if m.SpecAValue != "" && m.SpecBValue != "" {
-		if m.SpecAValue == m.SpecAValue {
-			return errors.New("规格A的属性值不能等于规格B的属性值")
+	if g.CategoryName != "" {
+		if g.CategoryAID == 0 || g.CategoryBID == 0 || g.CategoryCID == 0 {
+			return errors.New("修改了分类名称，分类ID不能为空")
 		}
 	}
 	return nil
