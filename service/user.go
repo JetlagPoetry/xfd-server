@@ -461,7 +461,7 @@ func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAd
 		Address:   req.Address,
 		IsDefault: utils.BoolToInt(req.IsDefault),
 	}
-	err := s.userAddressDao.CreateInTx(tx, addr)
+	err = s.userAddressDao.CreateInTx(tx, addr)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
