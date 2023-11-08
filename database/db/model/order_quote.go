@@ -11,7 +11,6 @@ type OrderQuote struct {
 	Price           float64 `gorm:"column:price;not null" json:"price"`
 	NotifySupply    bool    `gorm:"column:notify_supply;not null" json:"notify_supply"`
 	NotifyPurchase  bool    `gorm:"column:notify_purchase;not null" json:"notify_purchase"`
-	Deleted         int     `gorm:"column:deleted" json:"deleted"`
 }
 
 func (u *OrderQuote) TableName() string {

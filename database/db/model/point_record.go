@@ -17,7 +17,6 @@ type PointRecord struct {
 	Comment            string            `gorm:"column:comment;not null" json:"comment"`
 	OperateUserID      string            `gorm:"column:operate_user_id;not null" json:"operate_user_id"`
 	OperateUsername    string            `gorm:"column:operate_username;not null" json:"operate_username"`
-	Deleted            int               `gorm:"column:deleted" json:"deleted"`
 }
 
 func (u *PointRecord) TableName() string {

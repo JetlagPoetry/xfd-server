@@ -81,10 +81,38 @@ type UserModifyInfoResp struct {
 }
 
 type UserAssignAdminReq struct {
-	Phone string `json:"phone"`
+	Phone    string         `json:"phone"`
+	Username string         `json:"username"`
+	Role     model.UserRole `json:"role"`
 }
 
 type UserAssignAdminResp struct {
+}
+
+type UserGetAdminsReq struct {
+	PageRequest
+}
+
+type UserGetAdminsResp struct {
+	List     []*UserAdmin `json:"list"`
+	TotalNum int          `json:"totalNum"`
+	RootNum  int          `json:"rootNum"`
+}
+
+type UserAdmin struct {
+	UserID   string         `json:"userID"`
+	Username string         `json:"username"`
+	Phone    string         `json:"phone"`
+	Role     model.UserRole `json:"role"`
+	RoleName string         `json:"roleName"`
+	Comment  string         `json:"comment"`
+}
+
+type UserDeleteUserReq struct {
+	UserID string `json:"userID"`
+}
+
+type UserDeleteUserResp struct {
 }
 
 type UserGetAddressListReq struct {

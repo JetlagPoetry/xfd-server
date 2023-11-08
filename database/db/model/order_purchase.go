@@ -14,7 +14,6 @@ type OrderPurchase struct {
 	Unit         string              `gorm:"column:unit;not null" json:"unit"`
 	Requirement  string              `gorm:"column:requirement" json:"requirement"`
 	Status       OrderPurchaseStatus `gorm:"column:status" json:"status"`
-	Deleted      int                 `gorm:"column:deleted" json:"deleted"`
 }
 
 type PurchasePeriod int

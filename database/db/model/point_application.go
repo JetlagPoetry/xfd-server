@@ -16,7 +16,6 @@ type PointApplication struct {
 	VerifyComment  string                 `gorm:"column:verify_comment;not null" json:"verify_comment"`
 	VerifyUserID   string                 `gorm:"column:verify_user_id;not null" json:"verify_user_id"`
 	VerifyUsername string                 `gorm:"column:verify_username;not null" json:"verify_username"`
-	Deleted        int                    `gorm:"column:deleted" json:"deleted"`
 }
 
 func (u *PointApplication) TableName() string {
