@@ -20,7 +20,7 @@ type UserVerify struct {
 	Phone            string           `gorm:"column:phone;not null" json:"phone"`
 	Status           UserVerifyStatus `gorm:"column:status;not null" json:"status"`
 	Comment          string           `gorm:"column:comment;not null" json:"comment"`
-	VerifyTime       time.Time        `gorm:"column:verify_time" json:"verify_time"`
+	VerifyTime       time.Time        `gorm:"column:verify_time;not null" json:"verify_time"`
 	VerifyUsername   string           `gorm:"column:verify_username;not null" json:"verify_username"`
 }
 

@@ -146,6 +146,7 @@ func (s *UserService) updateRoleAndVerify(tx *gorm.DB, userID string, req types.
 			Position:         req.Position,
 			Phone:            req.Phone,
 			Status:           model.UserVerifyStatusSubmitted,
+			VerifyTime:       consts.TimeZeroValue,
 		}
 		err = s.userVerifyDao.CreateInTx(tx, verify)
 		if err != nil {
