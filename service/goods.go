@@ -31,6 +31,7 @@ func NewGoodsService() *GoodsService {
 
 func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XErr {
 	//检查参数
+
 	if err := req.CheckParams(); err != nil {
 		return xerr.WithCode(xerr.InvalidParams, err)
 	}
@@ -41,12 +42,16 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 	//if userRole != model.UserRoleSupplier {
 	//	return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
 	//}
+	if len(req.GoodsDetail.Images) == 0 {
+		return xerr.WithCode(xerr.InvalidParams, errors.New("商品图片不能为空"))
+	}
 	userID := "123456"
 	spuCode := fmt.Sprintf("SP%s%s", time.Now().Format("20060102150405"), utils.GenSixDigitCode())
-	var images, descImages, wholesaleLogistics string
+	var images, descImages, wholesaleLogistics, goodsFrontImage string
 	if len(req.GoodsDetail.Images) != 0 {
 		imagesBytes, _ := json.Marshal(req.GoodsDetail.Images)
 		images = string(imagesBytes)
+		goodsFrontImage = req.GoodsDetail.Images[0]
 	}
 	if len(req.GoodsDetail.DescImages) == 0 {
 		descImages = images
@@ -70,7 +75,7 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		Description:        req.GoodsDetail.Description,
 		Images:             images,
 		DescImages:         descImages,
-		GoodsFrontImage:    req.GoodsDetail.Images[0],
+		GoodsFrontImage:    goodsFrontImage,
 		RetailStatus:       enum.GoodsRetailNormal,
 		IsRetail:           0,
 		WholesaleLogistics: wholesaleLogistics,
@@ -118,20 +123,22 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 		GoodsID: goodsID,
 		Type:    enum.ProductWholesale,
 	}
-	specificationWB := &model.Specification{
-		Name:    req.WholesaleProducts[0].SpecBName,
-		GoodsID: goodsID,
-		Type:    enum.ProductWholesale,
-	}
-
 	//创建批发商品规格
 	specificationWAID, err := s.goods.CreateSpecification(ctx, specificationWA)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	specificationWBID, err := s.goods.CreateSpecification(ctx, specificationWB)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+	var specificationWBID int32
+	if req.WholesaleProducts[0].SpecBName != "" {
+		specificationWB := &model.Specification{
+			Name:    req.WholesaleProducts[0].SpecBName,
+			GoodsID: goodsID,
+			Type:    enum.ProductWholesale,
+		}
+		specificationWBID, err = s.goods.CreateSpecification(ctx, specificationWB)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 	}
 
 	//创建批发商品规格属性
@@ -144,12 +151,6 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			GoodsID:         goodsID,
 			Type:            enum.ProductWholesale,
 		}
-		specificationBValue := &model.SpecificationValue{
-			Value:           v.SpecBValue,
-			SpecificationID: specificationWBID,
-			GoodsID:         goodsID,
-			Type:            enum.ProductWholesale,
-		}
 		if _, ok := specificationAValueMap[v.SpecAValue]; !ok {
 			specValueAID, err := s.goods.CreateSpecificationValue(ctx, specificationAValue)
 			if err != nil {
@@ -157,12 +158,20 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			}
 			specificationAValueMap[v.SpecAValue] = specValueAID
 		}
-		if _, ok := specificationBValueMap[v.SpecBValue]; !ok {
-			specValueBID, err := s.goods.CreateSpecificationValue(ctx, specificationBValue)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
+		if v.SpecBValue != "" {
+			specificationBValue := &model.SpecificationValue{
+				Value:           v.SpecBValue,
+				SpecificationID: specificationWBID,
+				GoodsID:         goodsID,
+				Type:            enum.ProductWholesale,
 			}
-			specificationBValueMap[v.SpecBValue] = specValueBID
+			if _, ok := specificationBValueMap[v.SpecBValue]; !ok {
+				specValueBID, err := s.goods.CreateSpecificationValue(ctx, specificationBValue)
+				if err != nil {
+					return xerr.WithCode(xerr.ErrorDatabase, err)
+				}
+				specificationBValueMap[v.SpecBValue] = specValueBID
+			}
 		}
 		skuCode := fmt.Sprintf("SK%d%d%d", time.Now().UnixNano(), specificationBValueMap[v.SpecAValue], specificationBValueMap[v.SpecBValue])
 		var attributes []model.ProductAttr
@@ -171,18 +180,19 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			KeyID:   specificationWAID,
 			Value:   v.SpecAValue,
 			ValueID: specificationAValueMap[v.SpecAValue],
-		}, model.ProductAttr{
-			Key:     v.SpecBName,
-			KeyID:   specificationWBID,
-			Value:   v.SpecBValue,
-			ValueID: specificationBValueMap[v.SpecBValue],
 		})
+		if v.SpecBName != "" && v.SpecBValue != "" {
+			attributes = append(attributes, model.ProductAttr{
+				Key:     v.SpecBName,
+				KeyID:   specificationWBID,
+				Value:   v.SpecBValue,
+				ValueID: specificationBValueMap[v.SpecBValue],
+			})
+		}
 		productAttrBytes, _ := json.Marshal(attributes)
 		productVariant := &model.ProductVariant{
 			SKUCode:          skuCode,
 			GoodsID:          goodsID,
-			SpecValueAID:     specificationAValueMap[v.SpecAValue],
-			SpecValueBID:     specificationBValueMap[v.SpecBValue],
 			Unit:             v.Unit,
 			Price:            v.Price,
 			MinOrderQuantity: v.MinOrderQuantity,
@@ -190,7 +200,6 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			Status:           v.Status,
 			ProductAttr:      string(productAttrBytes),
 		}
-
 		_, err = s.goods.CreateProductVariant(ctx, productVariant)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -203,20 +212,24 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 			GoodsID: goodsID,
 			Type:    enum.ProductRetail,
 		}
-		specificationRB := &model.Specification{
-			Name:    req.RetailProducts[0].SpecBName,
-			GoodsID: goodsID,
-			Type:    enum.ProductRetail,
-		}
 		//创建零售规格
 		specificationRAID, err := s.goods.CreateSpecification(ctx, specificationRA)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		specificationRBID, err := s.goods.CreateSpecification(ctx, specificationRB)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
+		var specificationRBID int32
+		if req.RetailProducts[0].SpecBName != "" {
+			specificationRB := &model.Specification{
+				Name:    req.RetailProducts[0].SpecBName,
+				GoodsID: goodsID,
+				Type:    enum.ProductRetail,
+			}
+			specificationRBID, err = s.goods.CreateSpecification(ctx, specificationRB)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
 		}
+
 		//创建零售规格属性
 		specificationAValueRMap := make(map[string]int32)
 		specificationBValueRMap := make(map[string]int32)
@@ -227,12 +240,6 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				GoodsID:         goodsID,
 				Type:            enum.ProductRetail,
 			}
-			specificationBValue := &model.SpecificationValue{
-				Value:           v.SpecBValue,
-				SpecificationID: specificationRBID,
-				GoodsID:         goodsID,
-				Type:            enum.ProductRetail,
-			}
 			if _, ok := specificationAValueRMap[v.SpecAValue]; !ok {
 				specValueAID, err := s.goods.CreateSpecificationValue(ctx, specificationAValue)
 				if err != nil {
@@ -240,12 +247,20 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				}
 				specificationAValueRMap[v.SpecAValue] = specValueAID
 			}
-			if _, ok := specificationBValueRMap[v.SpecBValue]; !ok {
-				specValueBID, err := s.goods.CreateSpecificationValue(ctx, specificationBValue)
-				if err != nil {
-					return xerr.WithCode(xerr.ErrorDatabase, err)
+			if v.SpecBValue != "" {
+				specificationBValue := &model.SpecificationValue{
+					Value:           v.SpecBValue,
+					SpecificationID: specificationRBID,
+					GoodsID:         goodsID,
+					Type:            enum.ProductRetail,
 				}
-				specificationBValueRMap[v.SpecBValue] = specValueBID
+				if _, ok := specificationBValueRMap[v.SpecBValue]; !ok {
+					specValueBID, err := s.goods.CreateSpecificationValue(ctx, specificationBValue)
+					if err != nil {
+						return xerr.WithCode(xerr.ErrorDatabase, err)
+					}
+					specificationBValueRMap[v.SpecBValue] = specValueBID
+				}
 			}
 			var attributes []model.ProductAttr
 			attributes = append(attributes, model.ProductAttr{
@@ -253,25 +268,26 @@ func (s *GoodsService) CreateWithTransaction(ctx context.Context, req types.Good
 				KeyID:   specificationRAID,
 				Value:   v.SpecAValue,
 				ValueID: specificationAValueRMap[v.SpecAValue],
-			}, model.ProductAttr{
-				Key:     v.SpecBName,
-				KeyID:   specificationRBID,
-				Value:   v.SpecBValue,
-				ValueID: specificationBValueRMap[v.SpecBValue],
 			})
+			if v.SpecBName != "" && v.SpecBValue != "" {
+				attributes = append(attributes, model.ProductAttr{
+					Key:     v.SpecBName,
+					KeyID:   specificationRBID,
+					Value:   v.SpecBValue,
+					ValueID: specificationBValueRMap[v.SpecBValue],
+				})
+			}
 			productAttrBytes, _ := json.Marshal(attributes)
 			skuCode := fmt.Sprintf("SK%d%d%d", time.Now().UnixNano(), specificationBValueMap[v.SpecAValue], specificationBValueMap[v.SpecBValue])
 			productVariant := &model.ProductVariant{
-				SKUCode:      skuCode,
-				GoodsID:      goodsID,
-				SpecValueAID: specificationAValueRMap[v.SpecAValue],
-				SpecValueBID: specificationBValueRMap[v.SpecBValue],
-				Unit:         v.Unit,
-				Price:        v.Price,
-				Type:         enum.ProductRetail,
-				Status:       v.Status,
-				Stock:        v.Stock,
-				ProductAttr:  string(productAttrBytes),
+				SKUCode:     skuCode,
+				GoodsID:     goodsID,
+				Unit:        v.Unit,
+				Price:       v.Price,
+				Type:        enum.ProductRetail,
+				Status:      v.Status,
+				Stock:       v.Stock,
+				ProductAttr: string(productAttrBytes),
 			}
 			_, err = s.goods.CreateProductVariant(ctx, productVariant)
 			if err != nil {
@@ -438,20 +454,13 @@ func (s *GoodsService) DeleteMyGoods(ctx *gin.Context, req types.GoodsReq) xerr.
 	if userRole != model.UserRoleSupplier {
 		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
 	}
-	//检查用户权限
-	goods, err := s.goods.GetGoodsByGoodsID(ctx, req.GoodsID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if goods == nil {
-		return xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
-	}
-	if goods.UserID != userID {
-		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户没有权限删除该商品"))
-	}
 
+	_, xrr := s.checkGoodsValid(ctx, req.GoodsID, userID)
+	if xrr != nil {
+		return xrr
+	}
 	//删除商品
-	err = s.goods.UpdateGoodsByID(ctx, req.GoodsID, &model.Goods{Deleted: 1})
+	err = s.goods.DeleteGoodsByID(ctx, req.GoodsID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -478,18 +487,9 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 		return xerr.WithCode(xerr.InvalidParams, errors.New("商品状态不合法"))
 	}
 	//检查用户权限
-	goods, err := s.goods.GetGoodsByGoodsID(c, req.GoodsID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if goods == nil {
-		return xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
-	}
-	if goods.UserID != userID {
-		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户没有权限删除该商品"))
-	}
-	if goods.Status == req.GoodsStatus {
-		return xerr.WithCode(xerr.InvalidParams, errors.New("商品状态不正确"))
+	_, xrr := s.checkGoodsValid(c, req.GoodsID, userID)
+	if xrr != nil {
+		return xrr
 	}
 	//修改商品状态
 	err = s.goods.UpdateGoodsByID(c, req.GoodsID, &model.Goods{Status: req.GoodsStatus})
@@ -679,4 +679,140 @@ func (s *GoodsService) getProductsInfoByType(c *gin.Context, req types.GoodsReq,
 		products = append(products, productVariantInfo)
 	}
 	return products, nil
+}
+
+func (s *GoodsService) ModifyMyGoods(c *gin.Context, req types.GoodsModifyReq) xerr.XErr {
+	////1.检查参数
+	//if req.CheckParams() != nil {
+	//	return xerr.WithCode(xerr.InvalidParams, req.CheckParams())
+	//}
+	//userID := "123456"
+	//
+	//user, err := s.userDao.GetByUserID(c, userID)
+	//if err != nil {
+	//	return xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
+	//if user == nil {
+	//	return xerr.WithCode(xerr.ErrorNotExistUser, errors.New("用户不存在"))
+	//}
+	//if user.UserRole != model.UserRoleSupplier {
+	//	return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户不是供应商"))
+	//}
+	//goods, xrr := s.checkGoodsValid(c, req.Id, userID)
+	//if xrr != nil {
+	//	return xrr
+	//}
+	//var wholesaleLogistics, descImages, images, goodsFrontImage string
+	//if len(req.WholesaleLogistics) != 0 {
+	//	wholesaleLogisticsBytes, _ := json.Marshal(req.WholesaleLogistics)
+	//	wholesaleLogistics = string(wholesaleLogisticsBytes)
+	//}
+	//if len(req.DescImages) != 0 {
+	//	descImagesBytes, _ := json.Marshal(req.DescImages)
+	//	descImages = string(descImagesBytes)
+	//}
+	//if len(req.Images) != 0 {
+	//	imagesBytes, _ := json.Marshal(req.Images)
+	//	images = string(imagesBytes)
+	//	goodsFrontImage = req.Images[0]
+	//}
+	//updateValue := &model.Goods{
+	//	CategoryAID:        req.CategoryAID,
+	//	CategoryBID:        req.CategoryBID,
+	//	CategoryCID:        req.CategoryCID,
+	//	CategoryName:       req.CategoryName,
+	//	Name:               req.Name,
+	//	Description:        req.Description,
+	//	Images:             images,
+	//	DescImages:         descImages,
+	//	GoodsFrontImage:    goodsFrontImage,
+	//	WholesaleLogistics: wholesaleLogistics,
+	//	WholesaleShipping:  req.WholesaleShipping,
+	//	WholesaleAreaCodeA: req.WholesaleAreaCodeA,
+	//	WholesaleAreaCodeB: req.WholesaleAreaCodeB,
+	//	WholesaleAreaCodeC: req.WholesaleAreaCodeC,
+	//	RetailShippingTime: req.RetailShippingTime,
+	//	RetailShippingFee:  req.RetailShippingFee,
+	//}
+	//var zeroShipFree, zeroRetailShippingFee bool
+	//if req.ChangeRetailShippingFee && req.RetailShippingFee == 0 {
+	//	updateValue.ShipFree = 1
+	//	zeroRetailShippingFee = true
+	//}
+	//if req.ChangeRetailShippingFee && req.RetailShippingFee != 0 && goods.ShipFree == 1 {
+	//	zeroShipFree = true
+	//}
+	////修改SKU信息
+	//if len(req.WholesaleProducts) != 0 {
+	//	for i, v := range req.WholesaleProducts {
+	//		//1.修改批发产品SKU信息
+	//		if v.ID != 0 {
+	//			//不修改规格&规格属性
+	//			if v.SpecAName == "" && v.SpecBName == "" && v.SpecAValue == "" && v.SpecBValue == "" {
+	//				updateProductVariantValue := &model.ProductVariant{
+	//					Unit:             v.Unit,
+	//					Price:            v.Price,
+	//					MinOrderQuantity: v.MinOrderQuantity,
+	//					Status:           v.Status,
+	//				}
+	//				err = s.goods.UpdateProductVariantByID(c, v.ID, updateProductVariantValue)
+	//				if err != nil {
+	//					return xerr.WithCode(xerr.ErrorDatabase, err)
+	//				}
+	//			}
+	//			//修改规格A名称
+	//			if v.SpecAName != "" && v.SpecBName == "" {
+	//				if v.SpecANameID != 0 {
+	//					err = s.goods.UpdateSpecificationByID(c, v.SpecANameID, &model.Specification{Name: v.SpecAName})
+	//					if err != nil {
+	//						return xerr.WithCode(xerr.ErrorDatabase, err)
+	//					}
+	//				} else {
+	//					specification := &model.Specification{
+	//						Name:    v.SpecAName,
+	//						GoodsID: goods.ID,
+	//						Type:    enum.ProductWholesale,
+	//					}
+	//					specificationAID, err := s.goods.CreateSpecification(c, specification)
+	//					if err != nil {
+	//						return xerr.WithCode(xerr.ErrorDatabase, err)
+	//					}
+	//					req.WholesaleProducts[i].SpecANameID = specificationAID
+	//				}
+	//			}
+	//			//修改规格B名称
+	//			if v.SpecAName == "" && v.SpecBName != "" {
+	//
+	//			}
+	//		}
+	//	}
+	//
+	//}
+	//if len(req.RetailProducts) != 0 {
+	//
+	//}
+	////2.修改商品信息
+	//err = s.goods.ModifyGoodsByID(c, goods.ID, updateValue)
+	//if err != nil {
+	//	return xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
+	return nil
+}
+
+func (s *GoodsService) checkGoodsValid(c context.Context, goodsID int32, userID string) (*model.Goods, xerr.XErr) {
+	goods, err := s.goods.GetGoodsByGoodsID(c, goodsID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if goods == nil {
+		return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
+	}
+	if userID == "" {
+		return goods, nil
+	} else {
+		if goods.UserID != userID {
+			return nil, xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户没有权限修改该商品信息"))
+		}
+		return goods, nil
+	}
 }

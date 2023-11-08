@@ -111,6 +111,7 @@ func (h *GoodsHandler) GetMyGoodsDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	req.ReqType = 1
 	resp, xErr = h.goodsService.GetGoodsDetail(c, req)
 	if xErr != nil {
 		log.Println("[GoodsHandler] GetGoodsDetail failed, err=", xErr)
@@ -118,10 +119,6 @@ func (h *GoodsHandler) GetMyGoodsDetail(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
-
-}
-
-func (h *GoodsHandler) ModifyMyGoods(c *gin.Context) {
 
 }
 
@@ -158,6 +155,25 @@ func (h *GoodsHandler) ModifyMyGoodsStatus(c *gin.Context) {
 	xErr = h.goodsService.ModifyMyGoodsStatus(c, req)
 	if xErr != nil {
 		log.Println("[GoodsHandler] ModifyMyGoodsStatus failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
+}
+
+func (h *GoodsHandler) ModifyMyGoods(c *gin.Context) {
+	var (
+		req  types.GoodsModifyReq
+		xErr xerr.XErr
+	)
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xErr = h.goodsService.ModifyMyGoods(c, req)
+	if xErr != nil {
+		log.Println("[GoodsHandler] ModifyMyGoods failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}
