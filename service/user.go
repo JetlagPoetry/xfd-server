@@ -496,20 +496,22 @@ func (s *UserService) modifyAddress(tx *gorm.DB, userID string, req types.UserMo
 		}
 	}
 
+	addr := &model.UserAddress{}
+
 	if len(req.Name) > 0 && len(req.Phone) > 0 && len(req.Province) > 0 && len(req.City) > 0 && len(req.Region) > 0 && len(req.Address) > 0 {
-		addr := &model.UserAddress{
-			Name:      req.Name,
-			Phone:     req.Phone,
-			Province:  req.Province,
-			City:      req.City,
-			Region:    req.Region,
-			Address:   req.Address,
-			IsDefault: utils.BoolToInt(req.IsDefault),
-		}
-		err := s.userAddressDao.UpdateByIDInTx(tx, req.ID, addr)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
+		addr.Name = req.Name
+		addr.Phone = req.Phone
+		addr.Province = req.Province
+		addr.City = req.City
+		addr.Region = req.Region
+		addr.Address = req.Address
+	}
+	if req.IsDefault {
+		addr.IsDefault = utils.BoolToInt(req.IsDefault)
+	}
+	err := s.userAddressDao.UpdateByIDInTx(tx, req.ID, addr)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	return nil
 }
