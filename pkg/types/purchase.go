@@ -80,9 +80,9 @@ type PurchaseGetQuotesResp struct {
 type PurchaseQuote struct {
 	QuoteID    int     `json:"quoteID"`
 	OrderID    int     `json:"orderID"`
-	ItemID     int     `json:"itemID"`
-	ItemURL    string  `json:"itemURL"`
-	ItemName   string  `json:"itemName"`
+	GoodsID    int     `json:"goodsID"`
+	GoodsURL   string  `json:"goodsURL"`
+	GoodsName  string  `json:"goodsName"`
 	Price      float64 `json:"price"`
 	Unit       string  `json:"unit"`
 	Time       int64   `json:"time"`

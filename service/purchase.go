@@ -243,9 +243,9 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQu
 		list = append(list, &types.PurchaseQuote{
 			QuoteID:    int(quote.ID),
 			OrderID:    int(purchaseOrder.ID),
-			ItemID:     quote.ItemID,
-			ItemName:   "",
-			ItemURL:    "",
+			GoodsID:    quote.GoodsID,
+			GoodsName:  "",
+			GoodsURL:   "",
 			Price:      quote.Price,
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),

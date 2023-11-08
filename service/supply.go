@@ -119,12 +119,11 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotes
 	list := make([]*types.PurchaseQuote, 0)
 	for _, quote := range quoteList {
 		list = append(list, &types.PurchaseQuote{
-			QuoteID: int(quote.ID),
-			OrderID: int(purchaseOrder.ID),
-			ItemID:  quote.ItemID,
-			// todo
-			ItemURL:    "",
-			ItemName:   "",
+			QuoteID:    int(quote.ID),
+			OrderID:    int(purchaseOrder.ID),
+			GoodsID:    quote.GoodsID,
+			GoodsURL:   "", // todo
+			GoodsName:  "",
 			Price:      quote.Price,
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),
