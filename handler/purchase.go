@@ -31,6 +31,11 @@ func (h *PurchaseHandler) GetPurchases(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if err = req.CheckParams(); err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
 	resp, xErr = h.purchaseService.GetPurchases(c, req)
 	if xErr != nil {
 		log.Println("[PurchaseHandler] GetPurchases failed, err=", xErr)
@@ -139,6 +144,10 @@ func (h *PurchaseHandler) GetQuotes(c *gin.Context) {
 	}
 	if req.OrderID == 0 {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+	if err = req.CheckParams(); err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
 	resp, xErr = h.purchaseService.GetQuotes(c, req)

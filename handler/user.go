@@ -174,6 +174,11 @@ func (h *UserHandler) GetAdmins(c *gin.Context) {
 		return
 	}
 
+	if err = req.CheckParams(); err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
 	resp, xErr = h.userService.GetAdmins(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] GetAdmins failed, err=", xErr)

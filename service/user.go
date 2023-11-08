@@ -274,7 +274,7 @@ func (s *UserService) AssignAdmin(ctx context.Context, req types.UserAssignAdmin
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if user.UserRole != model.UserRoleRoot {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not root"))
 	}
 
 	tx := db.Get().Begin()
@@ -301,7 +301,7 @@ func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, req types.UserAssignAdm
 	if err != nil {
 		return nil, err
 	}
-	if user != nil && user.UserRole != model.UserRoleCustomer {
+	if user != nil && user.UserRole != model.UserRoleUnknown {
 		return nil, errors.New("user exists")
 	}
 	if user == nil {

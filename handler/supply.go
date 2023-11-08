@@ -31,6 +31,10 @@ func (h *SupplyHandler) GetPurchases(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if err = req.CheckParams(); err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
 	resp, xErr = h.supplyService.GetPurchases(c, req)
 	if xErr != nil {
 		log.Println("[SupplyHandler] GetPurchases failed, err=", xErr)
@@ -95,6 +99,10 @@ func (h *SupplyHandler) GetQuotedPurchases(c *gin.Context) {
 
 	err := c.BindQuery(&req)
 	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if err = req.CheckParams(); err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
