@@ -319,6 +319,7 @@ func (s *OrgService) GetAccountVerifyList(ctx context.Context, req types.GetAcco
 }
 
 func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganizationsReq) (*types.GetOrganizationsResp, xerr.XErr) {
+	log.Println(ctx, "[OrgService] GetOrganizations called, name=", req.Name)
 	orgList, count, err := s.orgDao.Lists(ctx, req.PageRequest, req.Name)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
