@@ -44,7 +44,6 @@ func verifyToken(c *gin.Context) xerr.XErr {
 	}
 
 	c.Set(consts.CONTEXT_HEADER_USER_PHONE, subjectInfo.Phone)
-	c.Set(consts.CONTEXT_HEADER_USER_ROLE, subjectInfo.Role)
 	c.Set(consts.CONTEXT_HEADER_USER_ID, subjectInfo.UserID)
 	c.Set(consts.CONTEXT_HEADER_USER_AUTH_INFO, subjectInfo)
 	return nil
