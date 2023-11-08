@@ -17,7 +17,7 @@ func NewPointRecordDao() *PointRecordDao {
 func (d *PointRecordDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int, like string) (list []*model.PointRecord, count int64, err error) {
 	sql := db.Get().Model(&model.PointRecord{})
 	if len(like) > 0 {
-		sql = sql.Where("category_name LIKE '%?%' AND status = 1", like) // todo debug
+		sql = sql.Where("category_name LIKE ? AND status = 1", "%"+like+"%")
 	} else {
 		sql = sql.Where("category_a = ? AND category_b = ? AND status = 1", categoryA, categoryB)
 

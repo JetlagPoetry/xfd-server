@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"gorm.io/gorm"
 	"time"
 	"xfd-backend/database/db"
@@ -174,6 +175,10 @@ func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountR
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	if userVerify.Status != model.UserVerifyStatusSubmitted {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("verify finished"))
+	}
+
 	newUserVerify := &model.UserVerify{
 		Status:         req.Status,
 		Comment:        req.Comment,
@@ -331,6 +336,7 @@ func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganiza
 		}
 
 		list = append(list, &types.Organization{
+			ID:          int(org.ID),
 			Name:        org.Name,
 			Code:        org.Code,
 			TotalMember: int(totalMember),
