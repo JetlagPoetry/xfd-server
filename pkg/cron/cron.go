@@ -42,5 +42,15 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointDistribute success")
 	})
 
+	c.AddFunc("*/10 * * * * ?", func() {
+		log.Println("[Cron] SetCategoryCache start")
+		err := service.NewMallService().SetCategoryCache(context.Background())
+		if err != nil {
+			log.Println("[Cron] SetCategoryCache failed, err=", err)
+			return
+		}
+		log.Println("[Cron] SetCategoryCache success")
+	})
+
 	c.Start()
 }

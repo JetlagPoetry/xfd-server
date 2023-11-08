@@ -29,3 +29,11 @@ func (d *CategoryDao) GetCategoriesList(ctx context.Context, level, parentCatego
 	}
 	return categories, nil
 }
+
+func (d *CategoryDao) ListAll(ctx context.Context) (list []*model.Category, err error) {
+	result := db.Get().Model(&model.Category{}).Find(&list)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return list, nil
+}

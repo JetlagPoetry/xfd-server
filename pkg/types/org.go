@@ -44,7 +44,7 @@ type OrgGetApplyToVerifyResp struct {
 
 type OrgGetApplysReq struct {
 	PageRequest
-	OrgID int `json:"orgID"`
+	OrgID int `form:"orgID"`
 }
 
 type OrgGetApplysResp struct {
@@ -169,7 +169,7 @@ type OrgMember struct {
 
 type GetPointRecordsByApplyReq struct {
 	PageRequest
-	ApplyID int `json:"applyID"`
+	ApplyID int `form:"applyID"`
 }
 
 type GetPointRecordsByApplyResp struct {
@@ -183,7 +183,7 @@ type GetPointRecordsByApplyResp struct {
 
 type GetPointRecordsByUserReq struct {
 	PageRequest
-	UserID string `json:"userID"`
+	UserID string `form:"userID"`
 }
 
 type GetPointRecordsByUserResp struct {
@@ -193,7 +193,7 @@ type GetPointRecordsByUserResp struct {
 
 type GetPointRecordsReq struct {
 	PageRequest
-	OrgID int `json:"orgID"`
+	OrgID int `form:"orgID"`
 }
 
 type GetPointRecordsResp struct {

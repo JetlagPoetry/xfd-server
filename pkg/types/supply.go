@@ -4,10 +4,10 @@ import "xfd-backend/database/db/model"
 
 type SupplyGetPurchasesReq struct {
 	PageRequest
-	CategoryA int    `json:"categoryA"`
-	CategoryB int    `json:"categoryB"`
-	CategoryC int    `json:"categoryC"`
-	Like      string `json:"like"`
+	CategoryA int    `form:"categoryA"`
+	CategoryB int    `form:"categoryB"`
+	CategoryC int    `form:"categoryC"`
+	Like      string `form:"like"`
 }
 
 type SupplyGetPurchasesResp struct {
@@ -16,7 +16,7 @@ type SupplyGetPurchasesResp struct {
 }
 
 type SupplyGetQuotesReq struct {
-	OrderID int `json:"orderID"`
+	OrderID int `form:"orderID"`
 }
 
 type SupplyGetQuotesResp struct {
@@ -34,7 +34,7 @@ type SupplySubmitQuoteResp struct {
 
 type SupplyGetQuotedPurchasesReq struct {
 	PageRequest
-	Status model.OrderPurchaseStatus `json:"status"`
+	Status model.OrderPurchaseStatus `form:"status"`
 }
 
 type SupplyGetQuotedPurchasesResp struct {

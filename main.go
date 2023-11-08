@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"xfd-backend/pkg/cron"
 	"xfd-backend/pkg/jwt"
 	"xfd-backend/router"
+	"xfd-backend/service"
 )
 
 func main() {
@@ -27,4 +29,15 @@ func Init() {
 	}
 	jwt.Init()
 	//config.InitConfig()
+	if err := initCache(); err != nil {
+		panic(fmt.Sprintf("Local cache init failed with %+v", err))
+	}
+}
+
+func initCache() error {
+	err := service.NewMallService().SetCategoryCache(context.Background())
+	if err != nil {
+		return err
+	}
+	return nil
 }

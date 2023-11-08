@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"gorm.io/gorm"
-	"log"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
@@ -319,7 +318,6 @@ func (s *OrgService) GetAccountVerifyList(ctx context.Context, req types.GetAcco
 }
 
 func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganizationsReq) (*types.GetOrganizationsResp, xerr.XErr) {
-	log.Println(ctx, "[OrgService] GetOrganizations called, name=", req.Name)
 	orgList, count, err := s.orgDao.Lists(ctx, req.PageRequest, req.Name)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -363,7 +361,6 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 	if req.OrgID == 0 {
 		req.OrgID = user.OrganizationID
 	}
-	log.Println("[OrgService] GetOrgMembers, orgID=", req.OrgID, ", username=", req.Username, ", phone=", req.Phone)
 	userList, count, err := s.userDao.ListByOrgID(ctx, req.PageRequest, req.OrgID, req.Username, req.Phone)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)

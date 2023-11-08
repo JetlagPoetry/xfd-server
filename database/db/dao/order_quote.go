@@ -93,6 +93,14 @@ func (d *OrderQuoteDao) CountByOrderIDAndNotifyPurchase(ctx context.Context, ord
 	return count, nil
 }
 
+func (d *OrderQuoteDao) CountBySupplyUserIDAndNotifySupply(ctx context.Context, userID string, notifySupply bool) (count int64, err error) {
+	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ? AND notify_supply = ?", userID, notifySupply).Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (d *OrderQuoteDao) Create(ctx context.Context, order *model.OrderQuote) (err error) {
 	err = db.Get().Model(&model.OrderQuote{}).Create(order).Error
 	if err != nil {

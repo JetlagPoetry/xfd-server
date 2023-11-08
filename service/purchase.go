@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/xerr"
+	"xfd-backend/service/cache"
 )
 
 type PurchaseService struct {
@@ -26,6 +28,15 @@ func NewPurchaseService() *PurchaseService {
 
 func (s *PurchaseService) GetPurchases(ctx context.Context, req types.PurchaseGetPurchasesReq) (*types.PurchaseGetPurchasesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+
 	purchaseList, count, err := s.purchaseDao.ListByUser(ctx, req.PageRequest, userID, req.Status)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -70,19 +81,39 @@ func (s *PurchaseService) GetPurchases(ctx context.Context, req types.PurchaseGe
 func (s *PurchaseService) SubmitOrder(ctx context.Context, req types.PurchaseSubmitOrderReq) (*types.PurchaseSubmitOrderResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+
+	category := cache.GetCategory()
+	if category[int32(req.CategoryB)] == nil {
+		return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("category not found"))
+	}
+	orderName := category[int32(req.CategoryB)].Name
+	if req.CategoryC > 0 {
+		if category[int32(req.CategoryC)] == nil {
+			return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("category not found"))
+		}
+		orderName += " - " + category[int32(req.CategoryC)].Name
+	}
+
 	newPurchase := &model.OrderPurchase{
 		UserID:       userID,
 		CategoryA:    req.CategoryA,
 		CategoryB:    req.CategoryB,
 		CategoryC:    req.CategoryC,
-		CategoryName: req.CategoryName,
+		CategoryName: orderName,
 		Period:       req.Period,
 		Quantity:     req.Quantity,
 		Unit:         req.Unit,
 		Requirement:  req.Requirement,
 		Status:       model.OrderPurchaseStatusSubmitted,
 	}
-	err := s.purchaseDao.Create(ctx, newPurchase)
+	err = s.purchaseDao.Create(ctx, newPurchase)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -114,9 +145,22 @@ func (s *PurchaseService) SubmitOrder(ctx context.Context, req types.PurchaseSub
 //}
 
 func (s *PurchaseService) ModifyOrderStatus(ctx context.Context, req types.PurchaseModifyOrderStatusReq) (*types.PurchaseModifyOrderStatusResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+
 	order, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	if order.UserID != userID {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("not belong to user"))
 	}
 
 	// 删除报价单
@@ -160,12 +204,20 @@ func (s *PurchaseService) ModifyOrderStatus(ctx context.Context, req types.Purch
 
 func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQuotesReq) (*types.PurchaseGetQuotesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+
 	purchaseOrder, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if purchaseOrder.UserID != userID {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("not belong to user"))
 	}
 	quoteList, count, err := s.quoteDao.ListByOrderID(ctx, req.OrderID, req.PageRequest)
 	if err != nil {
@@ -212,6 +264,13 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQu
 
 func (s *PurchaseService) GetStatistics(ctx context.Context, req types.PurchaseGetStatisticsReq) (*types.PurchaseGetStatisticsResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
 
 	count, err := s.quoteDao.CountByPurchaseUserIDAndNotifyPurchase(ctx, userID, true)
 	if err != nil {
@@ -225,8 +284,15 @@ func (s *PurchaseService) GetStatistics(ctx context.Context, req types.PurchaseG
 
 func (s *PurchaseService) AnswerQuote(ctx context.Context, req types.PurchaseAnswerQuoteReq) (*types.PurchaseAnswerQuoteResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
 
-	err := s.quoteDao.UpdateByPurchaseUserAndQuoteUser(ctx, userID, req.SupplyUserID, &model.OrderQuote{NotifySupply: false})
+	err = s.quoteDao.UpdateByPurchaseUserAndQuoteUser(ctx, userID, req.SupplyUserID, &model.OrderQuote{NotifySupply: false})
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}

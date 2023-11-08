@@ -19,8 +19,8 @@ func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, nam
 	sql := db.Get().Model(&model.Organization{})
 
 	if len(name) > 0 {
-		//where := "name LIKE '%" + name + "%'"
-		sql = sql.Where("name LIKE '%111%'")
+		where := "name LIKE '%" + name + "%'"
+		sql = sql.Where(where)
 	}
 	if err = sql.Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
 		return nil, 0, err

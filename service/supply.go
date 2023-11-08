@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
@@ -25,6 +26,14 @@ func NewSupplyService() *SupplyService {
 
 func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPurchasesReq) (*types.SupplyGetPurchasesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
+	}
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
+
 	purchaseList, count, err := s.purchaseDao.List(ctx, req.PageRequest, req.CategoryA, req.CategoryB, req.CategoryC, req.Like)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -86,8 +95,12 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotes
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
 	}
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
+
 	purchaseOrder, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -119,6 +132,13 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotes
 
 func (s *SupplyService) SubmitQuote(ctx context.Context, req types.SupplySubmitQuoteReq) (*types.SupplySubmitQuoteResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
+	}
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
 
 	purchaseOrder, err := s.purchaseDao.GetByID(ctx, req.OrderID)
 	if err != nil {
@@ -143,6 +163,14 @@ func (s *SupplyService) SubmitQuote(ctx context.Context, req types.SupplySubmitQ
 
 func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.SupplyGetQuotedPurchasesReq) (*types.SupplyGetQuotedPurchasesResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
+	}
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
+
 	quoteList, err := s.quoteDao.ListByQuoteUserID(ctx, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -174,7 +202,19 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.Supply
 }
 
 func (s *SupplyService) GetStatistics(ctx context.Context, req types.SupplyGetStatisticsReq) (*types.SupplyGetStatisticsResp, xerr.XErr) {
-	//userID := common.GetUserID(ctx)
-	// todo implement
-	return &types.SupplyGetStatisticsResp{NewPurchase: 0}, nil
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
+	}
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
+
+	count, err := s.quoteDao.CountBySupplyUserIDAndNotifySupply(ctx, userID, true)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.SupplyGetStatisticsResp{NewPurchase: int(count)}, nil
 }

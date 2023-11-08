@@ -58,7 +58,7 @@ func (h *PurchaseHandler) SubmitOrder(c *gin.Context) {
 		return
 	}
 
-	if req.Period == 0 || req.Quantity == 0 || req.Unit == "" || len(req.CategoryName) == 0 {
+	if req.Period == 0 || req.Quantity == 0 || req.Unit == "" {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}

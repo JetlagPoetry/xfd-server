@@ -4,7 +4,7 @@ import "xfd-backend/database/db/model"
 
 type PurchaseGetPurchasesReq struct {
 	PageRequest
-	Status model.OrderPurchaseStatus `json:"status"`
+	Status model.OrderPurchaseStatus `form:"status"`
 }
 
 type PurchaseGetPurchasesResp struct {
@@ -32,14 +32,13 @@ type PurchaseOrder struct {
 }
 
 type PurchaseSubmitOrderReq struct {
-	CategoryA    int                  `json:"categoryA"`
-	CategoryB    int                  `json:"categoryB"`
-	CategoryC    int                  `json:"categoryC"`
-	CategoryName string               `json:"categoryName"`
-	Period       model.PurchasePeriod `json:"period"`
-	Quantity     int                  `json:"quantity"`
-	Unit         string               `json:"unit"`
-	Requirement  string               `json:"requirement"`
+	CategoryA   int                  `json:"categoryA"`
+	CategoryB   int                  `json:"categoryB"`
+	CategoryC   int                  `json:"categoryC"`
+	Period      model.PurchasePeriod `json:"period"`
+	Quantity    int                  `json:"quantity"`
+	Unit        string               `json:"unit"`
+	Requirement string               `json:"requirement"`
 }
 
 type PurchaseSubmitOrderResp struct {
@@ -70,7 +69,7 @@ type PurchaseModifyOrderStatusResp struct {
 
 type PurchaseGetQuotesReq struct {
 	PageRequest
-	OrderID int `json:"orderID"`
+	OrderID int `form:"orderID"`
 }
 
 type PurchaseGetQuotesResp struct {
