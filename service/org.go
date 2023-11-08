@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gorm.io/gorm"
+	"log"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
@@ -361,6 +362,7 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 	if req.OrgID == 0 {
 		req.OrgID = user.OrganizationID
 	}
+	log.Println("[OrgService] GetOrgMembers, orgID=", req.OrgID, ", username=", req.Username, ", phone=", req.Phone)
 	userList, count, err := s.userDao.ListByOrgID(ctx, req.PageRequest, req.OrgID, req.Username, req.Phone)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)

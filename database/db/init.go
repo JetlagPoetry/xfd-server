@@ -33,6 +33,7 @@ func Init() error {
 		fmt.Println("DB Open error,err=", err.Error())
 		return err
 	}
+	db = db.Debug()
 	//_ = db.AutoMigrate(&model.Category{})
 	//_ = db.AutoMigrate(&model.AreaCode{})
 	//_ = db.AutoMigrate(&model.Goods{})

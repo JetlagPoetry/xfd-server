@@ -27,7 +27,7 @@ func (d *UserDao) ListByOrgID(ctx context.Context, page types.PageRequest, orgID
 	if len(phone) > 0 {
 		sql = sql.Where("phone = ? ", phone)
 	}
-	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
