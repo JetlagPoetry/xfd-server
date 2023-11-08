@@ -50,7 +50,7 @@ func (d *OrderQuoteDao) ListByOrderID(ctx context.Context, orderID int, page typ
 	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
-	return list, 0, nil
+	return list, count, nil
 }
 
 func (d *OrderQuoteDao) ListByQuoteUserID(ctx context.Context, userID string) (list []*model.OrderQuote, err error) {

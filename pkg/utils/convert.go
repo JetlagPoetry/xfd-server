@@ -28,3 +28,7 @@ func IntPtr(i int) *int {
 func StringPtr(s string) *string {
 	return &s
 }
+
+func BoolPtr(i bool) *bool {
+	return &i
+}

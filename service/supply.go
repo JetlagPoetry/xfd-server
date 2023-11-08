@@ -7,6 +7,7 @@ import (
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
+	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 	"xfd-backend/service/cache"
 )
@@ -156,8 +157,8 @@ func (s *SupplyService) SubmitQuote(ctx context.Context, req types.SupplySubmitQ
 		QuoteUserID:     userID,
 		GoodsID:         req.GoodsID,
 		Price:           req.Price,
-		NotifySupply:    true,
-		NotifyPurchase:  true,
+		NotifySupply:    utils.BoolPtr(true),
+		NotifyPurchase:  utils.BoolPtr(true),
 	}
 	err = s.quoteDao.Create(ctx, newQuote)
 	if err != nil {

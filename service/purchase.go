@@ -8,6 +8,7 @@ import (
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
+	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 	"xfd-backend/service/cache"
 )
@@ -252,12 +253,12 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQu
 			UserID:     userID,
 			UserName:   user.Username,
 			UserAvatar: user.AvatarURL,
-			IsNew:      quote.NotifyPurchase,
+			IsNew:      *quote.NotifyPurchase,
 		})
 	}
 
 	// 修改报价单状态为已读
-	go s.quoteDao.UpdateByOrderID(ctx, req.OrderID, &model.OrderQuote{NotifyPurchase: false})
+	go s.quoteDao.UpdateByOrderID(ctx, req.OrderID, &model.OrderQuote{NotifyPurchase: utils.BoolPtr(false)})
 
 	return &types.PurchaseGetQuotesResp{List: list, TotalNum: count}, nil
 }
@@ -292,7 +293,7 @@ func (s *PurchaseService) AnswerQuote(ctx context.Context, req types.PurchaseAns
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
 	}
 
-	err = s.quoteDao.UpdateByPurchaseUserAndQuoteUser(ctx, userID, req.SupplyUserID, &model.OrderQuote{NotifySupply: false})
+	err = s.quoteDao.UpdateByPurchaseUserAndQuoteUser(ctx, userID, req.SupplyUserID, &model.OrderQuote{NotifySupply: utils.BoolPtr(false)})
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}

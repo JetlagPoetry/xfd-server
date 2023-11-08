@@ -9,8 +9,8 @@ type OrderQuote struct {
 	QuoteUserID     string  `gorm:"column:quote_user_id;not null" json:"quote_user_id"`
 	GoodsID         int     `gorm:"column:goods_id;not null" json:"goods_id"`
 	Price           float64 `gorm:"column:price;not null" json:"price"`
-	NotifySupply    bool    `gorm:"column:notify_supply;not null" json:"notify_supply"`
-	NotifyPurchase  bool    `gorm:"column:notify_purchase;not null" json:"notify_purchase"`
+	NotifySupply    *bool   `gorm:"column:notify_supply;not null" json:"notify_supply"`
+	NotifyPurchase  *bool   `gorm:"column:notify_purchase;not null" json:"notify_purchase"`
 }
 
 func (u *OrderQuote) TableName() string {
