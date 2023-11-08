@@ -41,7 +41,9 @@ func (d *OrganizationDao) GetByID(ctx context.Context, id int) (org *model.Organ
 
 func (d *OrganizationDao) GetByCode(ctx context.Context, code string) (org *model.Organization, err error) {
 	err = db.Get().Model(&model.Organization{}).Where("code = ?", code).First(&org).Error
-	if err != nil {
+	if err != gorm.ErrRecordNotFound {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	return org, nil

@@ -239,15 +239,19 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		}
 		if len(verifyList) > 0 {
 			verify := verifyList[0]
+
+			resp.VerifyStatus = types.UserVerifyStatusDone
+			resp.VerifyComment = verify.Comment
+			resp.Organization = verify.Organization
+
 			organization, err := s.organizationDao.GetByCode(ctx, verify.OrganizationCode)
 			if err != nil {
 				return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 			}
-
-			resp.VerifyStatus = types.UserVerifyStatusDone
-			resp.Organization = organization.Name
-			resp.OrganizationID = int(organization.ID)
-			resp.VerifyComment = verify.Comment
+			if organization != nil {
+				resp.Organization = organization.Name
+				resp.OrganizationID = int(organization.ID)
+			}
 		}
 	}
 
