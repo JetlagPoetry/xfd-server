@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"gorm.io/gorm"
+	"log"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
@@ -435,12 +436,19 @@ func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressRe
 }
 
 func (s *UserService) addAddress(tx *gorm.DB, userID string, req types.UserAddAddressReq) xerr.XErr {
-	if req.IsDefault {
-		// 取消所有默认地址
-		err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
+	log.Println("[UserService] addAddress called, req=", utils.ToJson(req))
+	//if req.IsDefault {
+	//	// 取消所有默认地址
+	//	err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
+	//	if err != nil {
+	//		return xerr.WithCode(xerr.ErrorDatabase, err)
+	//	}
+	//}
+
+	// 取消所有默认地址
+	err := s.userAddressDao.UpdateByUserIDInTx(tx, userID, &model.UserAddress{IsDefault: 0})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	addr := &model.UserAddress{
