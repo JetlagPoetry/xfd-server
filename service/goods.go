@@ -698,16 +698,6 @@ func (s *GoodsService) checkGoodsValid(c context.Context, goodsID int32, userID 
 }
 
 func (s *GoodsService) ModifyGoodsWithTransaction(c context.Context, req types.GoodsModifyReq, updateValue *model.Goods) xerr.XErr {
-	if updateValue != nil {
-		rowsAffected, err := s.goods.UpdateGoodsByID(c, req.Id, updateValue)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if rowsAffected == 0 {
-			return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.Id))
-		}
-	}
-
 	xrr := s.processModifyProducts(c, req.WholesaleProducts, req.Id, enum.ProductWholesale)
 	if xrr != nil {
 		return xrr
@@ -716,6 +706,35 @@ func (s *GoodsService) ModifyGoodsWithTransaction(c context.Context, req types.G
 	xrr = s.processModifyProducts(c, req.RetailProducts, req.Id, enum.ProductRetail)
 	if xrr != nil {
 		return xrr
+	}
+
+	zero := 0
+	one := 1
+	totalStock := 0
+	retailProductVariants, rr := s.goods.GetProductVariantListByGoodsID(c, req.Id, enum.ProductRetail, enum.ProductVariantEnabled)
+	if rr != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, rr)
+	}
+	if len(retailProductVariants) != 0 {
+		updateValue.IsRetail = &one
+		for _, v := range retailProductVariants {
+			totalStock += *v.Stock
+		}
+		if totalStock > 0 {
+			updateValue.RetailStatus = enum.GoodsRetailNormal
+		}
+		if totalStock <= 0 {
+			updateValue.RetailStatus = enum.GoodsRetailSoldOut
+		}
+	} else {
+		updateValue.IsRetail = &zero
+	}
+	rowsAffected, err := s.goods.UpdateGoodsByID(c, req.Id, updateValue)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.Id))
 	}
 	return nil
 }
