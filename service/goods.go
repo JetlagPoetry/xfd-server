@@ -698,60 +698,75 @@ func (s *GoodsService) checkGoodsValid(c context.Context, goodsID int32, userID 
 }
 
 func (s *GoodsService) ModifyGoodsWithTransaction(c context.Context, req types.GoodsModifyReq, updateValue *model.Goods) xerr.XErr {
-	xrr := s.processModifyProducts(c, req.WholesaleProducts, req.Id, enum.ProductWholesale)
+	_, _, xrr := s.processModifyProducts(c, req.WholesaleProducts, req.Id, enum.ProductWholesale)
 	if xrr != nil {
 		return xrr
 	}
-
-	xrr = s.processModifyProducts(c, req.RetailProducts, req.Id, enum.ProductRetail)
-	if xrr != nil {
-		return xrr
-	}
-
-	zero := 0
 	one := 1
-	totalStock := 0
-	retailProductVariants, rr := s.goods.GetProductVariantListByGoodsID(c, req.Id, enum.ProductRetail, enum.ProductVariantEnabled)
-	if rr != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, rr)
+	totalStock, hasRetail, xrr := s.processModifyProducts(c, req.RetailProducts, req.Id, enum.ProductRetail)
+	if xrr != nil {
+		return xrr
 	}
-	if len(retailProductVariants) != 0 {
+	if hasRetail {
 		updateValue.IsRetail = &one
-		for _, v := range retailProductVariants {
-			totalStock += *v.Stock
+	}
+	if totalStock > 0 {
+		updateValue.RetailStatus = enum.GoodsRetailNormal
+	}
+	if hasRetail && totalStock > 0 {
+		rowsAffected, err := s.goods.UpdateGoodsByID(c, req.Id, updateValue)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		if totalStock > 0 {
-			updateValue.RetailStatus = enum.GoodsRetailNormal
-		}
-		if totalStock <= 0 {
-			updateValue.RetailStatus = enum.GoodsRetailSoldOut
+		if rowsAffected == 0 {
+			return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.Id))
 		}
 	} else {
-		updateValue.IsRetail = &zero
+		stock := 0
+		zero := 0
+		time.Sleep(50 * time.Millisecond)
+		retailProductVariants, rr := s.goods.GetProductVariantListByGoodsID(c, req.Id, enum.ProductRetail, enum.ProductVariantEnabled)
+		if rr != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		if len(retailProductVariants) != 0 {
+			updateValue.IsRetail = &one
+			for _, v := range retailProductVariants {
+				stock += *v.Stock
+			}
+			if stock > 0 {
+				updateValue.RetailStatus = enum.GoodsRetailNormal
+			}
+			if stock <= 0 {
+				updateValue.RetailStatus = enum.GoodsRetailSoldOut
+			}
+		} else {
+			updateValue.IsRetail = &zero
+		}
 	}
-	rowsAffected, err := s.goods.UpdateGoodsByID(c, req.Id, updateValue)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if rowsAffected == 0 {
-		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.Id))
-	}
+
 	return nil
 }
 
-func (s *GoodsService) processModifyProducts(ctx context.Context, products []*types.ModifyProduct, goodsID int32, productType enum.ProductVariantType) xerr.XErr {
+func (s *GoodsService) processModifyProducts(ctx context.Context, products []*types.ModifyProduct, goodsID int32, productType enum.ProductVariantType) (int, bool, xerr.XErr) {
 	if len(products) == 0 {
-		return nil
+		return 0, false, nil
 	}
 	hasValue, hasValid := s.validateProductAttr(products)
 	if !hasValid {
-		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,must all hasValue or all hasEmpty", products))
+		return 0, false, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,must all hasValue or all hasEmpty", products))
 	}
 	keyIDMap, valueIDMap, xrr := s.updateOrCreateSpecificationsAndValues(ctx, products, goodsID, productType)
 	if xrr != nil {
-		return xrr
+		return 0, false, xrr
 	}
+	totalStock := 0
+	var hasRetail bool
 	for i := range products {
+		if productType == enum.ProductRetail && products[i].Status == enum.ProductVariantEnabled {
+			totalStock += *products[i].Stock
+			hasRetail = true
+		}
 		productVariant := &model.ProductVariant{
 			Unit:             products[i].Unit,
 			Price:            products[i].Price,
@@ -760,7 +775,7 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 			Stock:            products[i].Stock,
 		}
 		if products[i].CheckParams(productType) != nil {
-			return xerr.WithCode(xerr.InvalidParams, products[i].CheckParams(productType))
+			return 0, false, xerr.WithCode(xerr.InvalidParams, products[i].CheckParams(productType))
 		}
 		if hasValue {
 			for j, attr := range products[i].ProductAttr {
@@ -777,16 +792,16 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 				//创建新的productVariant
 				_, err := s.goods.CreateProductVariant(ctx, productVariant)
 				if err != nil {
-					return xerr.WithCode(xerr.ErrorDatabase, err)
+					return 0, false, xerr.WithCode(xerr.ErrorDatabase, err)
 				}
 			} else {
 				//更新productVariant
 				rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, products[i].ID, productVariant)
 				if err != nil {
-					return xerr.WithCode(xerr.ErrorDatabase, err)
+					return 0, false, xerr.WithCode(xerr.ErrorDatabase, err)
 				}
 				if rowsAffected == 0 {
-					return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update productVariant failed,productVariantID:%d,wait updateValue %v", products[i].ID, productVariant))
+					return 0, false, xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update productVariant failed,productVariantID:%d,wait updateValue %v", products[i].ID, productVariant))
 				}
 			}
 		} else {
@@ -794,16 +809,16 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 				//更新productVariant
 				rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, products[i].ID, productVariant)
 				if err != nil {
-					return xerr.WithCode(xerr.ErrorDatabase, err)
+					return 0, false, xerr.WithCode(xerr.ErrorDatabase, err)
 				}
 				if rowsAffected == 0 {
-					return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update productVariant failed,productVariantID:%d,wait updateValue %v", products[i].ID, productVariant))
+					return 0, false, xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update productVariant failed,productVariantID:%d,wait updateValue %v", products[i].ID, productVariant))
 				}
 			}
-			return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,id is empty,productAttr must all hasValue ", products))
+			return 0, false, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,id is empty,productAttr must all hasValue ", products))
 		}
 	}
-	return nil
+	return totalStock, hasRetail, nil
 }
 
 func (s *GoodsService) updateOrCreateSpecificationsAndValues(ctx context.Context, products []*types.ModifyProduct, goodsID int32, productType enum.ProductVariantType) (map[string]int32, map[string]int32, xerr.XErr) {
