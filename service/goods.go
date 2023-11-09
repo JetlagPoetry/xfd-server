@@ -14,6 +14,7 @@ import (
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
 	"xfd-backend/database/repo"
+	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
@@ -32,18 +33,17 @@ func NewGoodsService() *GoodsService {
 }
 
 func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XErr {
-	//检查参数
-	////获取用户ID
-	//userID := common.GetUserID(ctx)
-	////获取用户角色
-	//userRole := common.GetUserRole(ctx)
-	//if userRole != model.UserRoleSupplier {
-	//	return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, errors.New("用户权限不是供应商"))
-	//}
+	//获取用户ID
+	userID := common.GetUserID(ctx)
+	//获取用户角色
+	userRole := common.GetUserRole(ctx)
+	if userRole != model.UserRoleSupplier {
+		return xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, fmt.Errorf("user %suserRole:%d is not supplier", userID, userRole))
+	}
 	if len(req.GoodsDetail.Images) == 0 {
 		return xerr.WithCode(xerr.InvalidParams, errors.New("商品图片不能为空"))
 	}
-	userID := "123456"
+
 	spuCode := fmt.Sprintf("SP%s%s", time.Now().Format("20060102150405"), utils.GenSixDigitCode())
 	var images, descImages, wholesaleLogistics, goodsFrontImage string
 	if len(req.GoodsDetail.Images) != 0 {
