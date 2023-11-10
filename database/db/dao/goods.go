@@ -8,21 +8,19 @@ import (
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
-	"xfd-backend/database/repo"
 	"xfd-backend/pkg/types"
 )
 
 type GoodsDao struct {
-	repo repo.IRepo
 }
 
 func NewGoodsDao() *GoodsDao {
-	return &GoodsDao{repo: repo.NewRepo(db.Get())}
+	return &GoodsDao{}
 }
 
 // CreateGoods 创建商品SPU
 func (d *GoodsDao) CreateGoods(ctx context.Context, goods *model.Goods) (id int32, err error) {
-	err = d.repo.GetDB(ctx).Model(&model.Goods{}).Create(goods).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.Goods{}).Create(goods).Error
 	if err != nil {
 		return 0, err
 	}
@@ -31,7 +29,7 @@ func (d *GoodsDao) CreateGoods(ctx context.Context, goods *model.Goods) (id int3
 
 // CreateSpecification 创建商品规格
 func (d *GoodsDao) CreateSpecification(ctx context.Context, specification *model.Specification) (id int32, err error) {
-	err = d.repo.GetDB(ctx).Model(&model.Specification{}).Create(specification).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.Specification{}).Create(specification).Error
 	if err != nil {
 		return 0, err
 	}
@@ -41,7 +39,7 @@ func (d *GoodsDao) CreateSpecification(ctx context.Context, specification *model
 
 // CreateSpecificationValue 创建商品规格属性
 func (d *GoodsDao) CreateSpecificationValue(ctx context.Context, specificationValue *model.SpecificationValue) (id int32, err error) {
-	err = d.repo.GetDB(ctx).Model(&model.SpecificationValue{}).Create(specificationValue).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.SpecificationValue{}).Create(specificationValue).Error
 	if err != nil {
 		return 0, err
 	}
@@ -50,7 +48,7 @@ func (d *GoodsDao) CreateSpecificationValue(ctx context.Context, specificationVa
 
 // CreateProductVariant 创建SKU
 func (d *GoodsDao) CreateProductVariant(ctx context.Context, productVariant *model.ProductVariant) (id int32, err error) {
-	err = d.repo.GetDB(ctx).Model(&model.ProductVariant{}).Create(productVariant).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.ProductVariant{}).Create(productVariant).Error
 	if err != nil {
 		return 0, err
 	}
@@ -149,7 +147,7 @@ func (d *GoodsDao) GetGoodsByGoodsID(ctx context.Context, id int32) (goods *mode
 }
 
 func (d *GoodsDao) UpdateGoodsByID(ctx context.Context, id int32, updateValue *model.Goods) (int64, error) {
-	updateResult := d.repo.GetDB(ctx).Debug().
+	updateResult := db.GetRepo().GetDB(ctx).Debug().
 		Model(&model.Goods{}).
 		Where("id =?", id).
 		Updates(updateValue)
@@ -260,7 +258,7 @@ func (d *GoodsDao) GetSpecificationValueBySpecID(ctx context.Context, specID int
 
 // updateSpecificationByID
 func (d *GoodsDao) UpdateSpecificationByID(ctx context.Context, id int32, updateValue *model.Specification) (int64, error) {
-	updateResult := d.repo.GetDB(ctx).Debug().
+	updateResult := db.GetRepo().GetDB(ctx).Debug().
 		Model(&model.Specification{}).
 		Where("id =?", id).
 		Updates(updateValue)
@@ -269,7 +267,7 @@ func (d *GoodsDao) UpdateSpecificationByID(ctx context.Context, id int32, update
 
 // updateSpecificationValueByID
 func (d *GoodsDao) UpdateSpecificationValueByID(ctx context.Context, id int32, updateValue *model.SpecificationValue) (int64, error) {
-	updateResult := d.repo.GetDB(ctx).Debug().
+	updateResult := db.GetRepo().GetDB(ctx).Debug().
 		Model(&model.SpecificationValue{}).
 		Where("id =?", id).
 		Updates(updateValue)
@@ -278,7 +276,7 @@ func (d *GoodsDao) UpdateSpecificationValueByID(ctx context.Context, id int32, u
 
 // updateProductVariantByID
 func (d *GoodsDao) UpdateProductVariantByID(ctx context.Context, id int32, updateValue *model.ProductVariant) (int64, error) {
-	updateResult := d.repo.GetDB(ctx).
+	updateResult := db.GetRepo().GetDB(ctx).
 		Debug().Model(&model.ProductVariant{}).
 		Where("id =?", id).
 		Updates(updateValue)
@@ -286,7 +284,7 @@ func (d *GoodsDao) UpdateProductVariantByID(ctx context.Context, id int32, updat
 }
 
 func (d *GoodsDao) DeleteSpecificationByID(c *gin.Context, id int32) (err error) {
-	err = d.repo.GetDB(c).Debug().Where("id =?", id).Delete(&model.Specification{}).Error
+	err = db.GetRepo().GetDB(c).Debug().Where("id =?", id).Delete(&model.Specification{}).Error
 	if err != nil {
 		return err
 	}
@@ -294,7 +292,7 @@ func (d *GoodsDao) DeleteSpecificationByID(c *gin.Context, id int32) (err error)
 }
 
 func (d *GoodsDao) DeleteSpecificationValueBySpecID(c *gin.Context, id int32) error {
-	err := d.repo.GetDB(c).Debug().Where("specification_id =?", id).Delete(&model.SpecificationValue{}).Error
+	err := db.GetRepo().GetDB(c).Debug().Where("specification_id =?", id).Delete(&model.SpecificationValue{}).Error
 	if err != nil {
 		return err
 	}
@@ -302,7 +300,7 @@ func (d *GoodsDao) DeleteSpecificationValueBySpecID(c *gin.Context, id int32) er
 }
 
 func (d *GoodsDao) DeleteSpecificationValueByID(c *gin.Context, vid int32) error {
-	err := d.repo.GetDB(c).Debug().Where("id =?", vid).Delete(&model.SpecificationValue{}).Error
+	err := db.GetRepo().GetDB(c).Debug().Where("id =?", vid).Delete(&model.SpecificationValue{}).Error
 	if err != nil {
 		return err
 	}
@@ -323,7 +321,7 @@ func (d *GoodsDao) GetSpecificationValueByGoodID(ctx context.Context, goodsID in
 }
 
 func (d *GoodsDao) DeleteSpecificationByIDs(ctx context.Context, ids []int32) (int64, error) {
-	deleteResult := d.repo.GetDB(ctx).Debug().Model(&model.Specification{}).
+	deleteResult := db.GetRepo().GetDB(ctx).Debug().Model(&model.Specification{}).
 		Where("id IN ?", ids).
 		Updates(&model.Specification{DeletedAt: gorm.DeletedAt{Time: time.Now(), Valid: true}})
 
@@ -331,14 +329,14 @@ func (d *GoodsDao) DeleteSpecificationByIDs(ctx context.Context, ids []int32) (i
 }
 
 func (d *GoodsDao) DeleteSpecificationValueByIDs(ctx context.Context, ids []int32) (int64, error) {
-	deleteResult := d.repo.GetDB(ctx).Debug().Model(&model.SpecificationValue{}).
+	deleteResult := db.GetRepo().GetDB(ctx).Debug().Model(&model.SpecificationValue{}).
 		Where("id IN ?", ids).
 		Updates(&model.SpecificationValue{DeletedAt: gorm.DeletedAt{Time: time.Now(), Valid: true}})
 	return deleteResult.RowsAffected, deleteResult.Error
 }
 
 func (d *GoodsDao) DeleteProductVariantByIDs(ctx context.Context, ids []int32) (int64, error) {
-	deleteResult := d.repo.GetDB(ctx).Debug().Model(&model.ProductVariant{}).Where("id IN ?", ids).
+	deleteResult := db.GetRepo().GetDB(ctx).Debug().Model(&model.ProductVariant{}).Where("id IN ?", ids).
 		Updates(&model.ProductVariant{DeletedAt: gorm.DeletedAt{Time: time.Now(), Valid: true}})
 	return deleteResult.RowsAffected, deleteResult.Error
 }

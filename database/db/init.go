@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm/schema"
 	"os"
 	"time"
+	"xfd-backend/database/repo"
 )
 
 var dbInstance *gorm.DB
@@ -55,6 +56,7 @@ func Init() error {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	dbInstance = db
+	repo.NewRepo(dbInstance)
 
 	fmt.Println("finish init mysql with ", source)
 	return nil
@@ -63,4 +65,8 @@ func Init() error {
 // Get ...
 func Get() *gorm.DB {
 	return dbInstance
+}
+
+func GetRepo() repo.IRepo {
+	return repo.NewRepo(dbInstance)
 }
