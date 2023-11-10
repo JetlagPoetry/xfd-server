@@ -80,7 +80,8 @@ type GoodsListReq struct {
 	CategoryAID        int32              `form:"categoryAID" binding:"numeric"`
 	CategoryBID        int32              `form:"categoryBID" binding:"numeric"`
 	CategoryCID        int32              `form:"categoryCID" binding:"numeric"`
-	ListType           enum.GoodsListType `form:"listType" binding:"required,gte=1,lte=4"`
+	ListType           enum.GoodsListType `form:"listType" binding:"required,lte=5,gte=1"`
+	QueryText          string             `form:"queryText"`
 	ProductVariantType enum.ProductVariantType
 	IsRetail           int
 	UserID             string
@@ -90,8 +91,11 @@ type GoodsListReq struct {
 func (r GoodsListReq) CheckParams() error {
 	if r.ListType == enum.GoodsListTypeCategory {
 		if r.CategoryAID == 0 {
-			return errors.New("一级分类ID不能为空")
+			return fmt.Errorf("categoryAID must be filled")
 		}
+	}
+	if r.ListType == enum.GoodsListTypeQuery && r.QueryText == "" {
+		return fmt.Errorf("queryText must be filled")
 	}
 	return nil
 }

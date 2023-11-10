@@ -238,6 +238,8 @@ func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) (*
 			return s.normalGetGoodsList(ctx, req)
 		case enum.GoodsListTypeCategory:
 			return s.normalGetGoodsList(ctx, req)
+		case enum.GoodsListTypeQuery:
+			return s.normalGetGoodsList(ctx, req)
 		default:
 			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d ", req.ListType, user.UserRole))
 		}
@@ -258,6 +260,8 @@ func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) (*
 			return s.normalGetGoodsList(ctx, req)
 		case enum.GoodsListTypePrice:
 			return s.getGoodsListByPrice(ctx, req)
+		case enum.GoodsListTypeQuery:
+			return s.normalGetGoodsList(ctx, req)
 		default:
 			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d ", req.ListType, user.UserRole))
 		}
@@ -273,6 +277,8 @@ func (s *GoodsService) GetGoodsList(ctx *gin.Context, req types.GoodsListReq) (*
 			return s.normalGetGoodsList(ctx, req)
 		case enum.GoodsListTypePrice:
 			return s.getGoodsListByPrice(ctx, req)
+		case enum.GoodsListTypeQuery:
+			return s.normalGetGoodsList(ctx, req)
 		default:
 			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("listType:%d is not supported userRole:%d ", req.ListType, user.UserRole))
 		}
