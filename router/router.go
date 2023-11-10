@@ -14,7 +14,7 @@ func NewRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/mall", "/api/v1/common")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login")) // 登录校验, 参数为跳过登录的路由
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
