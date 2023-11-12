@@ -193,6 +193,7 @@ const (
 	GoodsListTypeSale     GoodsListType = 2 // 销量列表
 	GoodsListTypePrice    GoodsListType = 3 // 价格列表，按照价格排序，一个货品可以有多个sku、多个价格，这里按其sku中的最低价格排序
 	GoodsListTypeCategory GoodsListType = 4 // 分类列表，按照分类排序
+	GoodsListTypeQuery    GoodsListType = 5 // 热门列表，按照热门排序
 )
 
 func (g GoodsListType) Code() int {

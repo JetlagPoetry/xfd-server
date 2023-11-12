@@ -132,6 +132,7 @@ func (h *GoodsHandler) DeleteMyGoods(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+
 	xErr = h.goodsService.DeleteMyGoods(c, req)
 	if xErr != nil {
 		log.Println("[GoodsHandler] DeleteMyGoods failed, err=", xErr)
@@ -139,7 +140,6 @@ func (h *GoodsHandler) DeleteMyGoods(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
-
 }
 
 func (h *GoodsHandler) ModifyMyGoodsStatus(c *gin.Context) {

@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/google/martian/log"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
@@ -79,7 +80,8 @@ type GoodsListReq struct {
 	CategoryAID        int32              `form:"categoryAID" binding:"numeric"`
 	CategoryBID        int32              `form:"categoryBID" binding:"numeric"`
 	CategoryCID        int32              `form:"categoryCID" binding:"numeric"`
-	ListType           enum.GoodsListType `form:"listType" binding:"required,gte=1,lte=4"`
+	ListType           enum.GoodsListType `form:"listType" binding:"required,lte=5,gte=1"`
+	QueryText          string             `form:"queryText"`
 	ProductVariantType enum.ProductVariantType
 	IsRetail           int
 	UserID             string
@@ -89,8 +91,11 @@ type GoodsListReq struct {
 func (r GoodsListReq) CheckParams() error {
 	if r.ListType == enum.GoodsListTypeCategory {
 		if r.CategoryAID == 0 {
-			return errors.New("一级分类ID不能为空")
+			return fmt.Errorf("categoryAID must be filled")
 		}
+	}
+	if r.ListType == enum.GoodsListTypeQuery && r.QueryText == "" {
+		return fmt.Errorf("queryText must be filled")
 	}
 	return nil
 }
@@ -148,6 +153,8 @@ type GoodsReq struct {
 	GoodsID     int32            `json:"goodsID" form:"goodsID" binding:"required,numeric,gte=1"`
 	GoodsStatus enum.GoodsStatus `json:"goodsStatus" binding:"numeric,gte=0,lte=2"`
 	ReqType     int
+	UserID      string
+	UserRole    model.UserRole
 }
 
 type MyGoodsListReq struct {
@@ -197,26 +204,25 @@ type SpecInfo struct {
 }
 
 type GoodsModifyReq struct {
-	Id                      int32                   `json:"id" binding:"required,gte=1,numeric"`
-	CategoryAID             int32                   `json:"categoryAID"`
-	CategoryBID             int32                   `json:"categoryBID"`
-	CategoryCID             int32                   `json:"categoryCID"`
-	CategoryName            string                  `json:"categoryName"`
-	Name                    string                  `json:"name"`
-	GoodsFrontImage         string                  `json:"goodsFrontImage"`
-	Images                  []string                `json:"images"`
-	Description             string                  `json:"description"`
-	DescImages              []string                `json:"descImages"`
-	WholesaleLogistics      []int                   `json:"wholesaleLogistics"`
-	WholesaleShipping       string                  `json:"wholesaleShipping"`
-	WholesaleAreaCodeA      int                     `json:"wholesaleAreaCodeA" `     // 筛选code省
-	WholesaleAreaCodeB      int                     `json:"wholesaleAreaCodeB" `     // 筛选code区
-	WholesaleAreaCodeC      int                     `json:"wholesaleAreaCodeC"`      // 筛选code县/市
-	RetailShippingTime      enum.RetailDeliveryTime `json:"retailShippingTime"`      // 零售发货时间
-	RetailShippingFee       *float64                `json:"retailShippingFee"`       // 零售运费 8-0/0-8/8-8
-	ChangeRetailShippingFee bool                    `json:"changeRetailShippingFee"` // 是否修改零售运费
-	WholesaleProducts       []*ModifyProduct        `json:"wholesaleProducts"`
-	RetailProducts          []*ModifyProduct        `json:"retailProducts"`
+	Id                 int32                   `json:"id" binding:"required,gte=1,numeric"`
+	CategoryAID        int32                   `json:"categoryAID"`
+	CategoryBID        int32                   `json:"categoryBID"`
+	CategoryCID        int32                   `json:"categoryCID"`
+	CategoryName       string                  `json:"categoryName"`
+	Name               string                  `json:"name"`
+	GoodsFrontImage    string                  `json:"goodsFrontImage"`
+	Images             []string                `json:"images"`
+	Description        string                  `json:"description"`
+	DescImages         []string                `json:"descImages"`
+	WholesaleLogistics []int                   `json:"wholesaleLogistics"`
+	WholesaleShipping  string                  `json:"wholesaleShipping"`
+	WholesaleAreaCodeA int                     `json:"wholesaleAreaCodeA" ` // 筛选code省
+	WholesaleAreaCodeB int                     `json:"wholesaleAreaCodeB" ` // 筛选code区
+	WholesaleAreaCodeC int                     `json:"wholesaleAreaCodeC"`  // 筛选code县/市
+	RetailShippingTime enum.RetailDeliveryTime `json:"retailShippingTime"`  // 零售发货时间
+	RetailShippingFee  *float64                `json:"retailShippingFee"`   // 零售运费 8-0/0-8/8-8
+	WholesaleProducts  []*ModifyProduct        `json:"wholesaleProducts"`
+	RetailProducts     []*ModifyProduct        `json:"retailProducts"`
 }
 
 type ModifyProduct struct {
@@ -225,33 +231,33 @@ type ModifyProduct struct {
 	Price            float64                   `json:"price"`
 	MinOrderQuantity int                       `json:"minOrderQuantity"`
 	Status           enum.ProductVariantStatus `json:"status"`
-	Stock            *int                      `json:"stock" binding:"gte=1,lte=9999999"`
+	Stock            *int                      `json:"stock" binding:"lte=9999999"`
 	ProductAttr      []*model.ProductAttr      `json:"productAttr"`
 }
 
-func (m *ModifyProduct) HandleProductAttr() (map[string]string, map[string]bool, map[string]bool) {
-	valueKeyMap := make(map[string]string)
-	keySet := make(map[string]bool)
-	valueSet := make(map[string]bool)
-	if len(m.ProductAttr) != 0 {
-		for _, attr := range m.ProductAttr {
-			keySet[attr.Key] = true
-			valueSet[attr.Value] = true
-			valueKeyMap[attr.Value] = attr.Key
-		}
-	}
-	return valueKeyMap, keySet, valueSet
-}
-
-func (m *ModifyProduct) CheckParams() error {
-	if m.Stock != nil {
-		if *m.Stock < 1 || *m.Stock > 9999999 {
-			return errors.New("库存数量必须在1-9999999之间")
-		}
-	}
+func (m *ModifyProduct) CheckParams(productType enum.ProductVariantType) error {
 	if m.ID == 0 {
 		if m.Unit == "" || m.Price == 0 || m.Status == 0 || m.ProductAttr == nil {
-			return errors.New("商品规格信息不完整")
+			return fmt.Errorf("unit, price, status, productAttr must be filled")
+		}
+		if productType == enum.ProductWholesale {
+			if m.MinOrderQuantity == 0 {
+				return fmt.Errorf("minOrderQuantity must be filled")
+			}
+		}
+		if productType == enum.ProductRetail {
+			if m.Stock != nil {
+				if *m.Stock < 0 || *m.Stock > 9999999 {
+					return fmt.Errorf("stock must be in range [0, 9999999]")
+				}
+			}
+		}
+	}
+	if len(m.ProductAttr) != 0 {
+		for _, attr := range m.ProductAttr {
+			if attr.CheckProductAttr() != nil {
+				return fmt.Errorf("productAttr check failed, err=%v", attr.CheckProductAttr())
+			}
 		}
 	}
 	return nil
