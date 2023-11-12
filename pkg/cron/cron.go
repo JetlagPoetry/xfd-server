@@ -32,14 +32,14 @@ func StartCron() {
 	})
 
 	c.AddFunc("* * 0 * * ?", func() {
-		log.Println("[Cron] ProcessPointDistribute start")
+		log.Println("[Cron] ProcessPointExpired start")
 		// todo 分布式锁
-		err := service.NewOrgService().ProcessPointDistribute(context.Background())
+		err := service.NewOrgService().ProcessPointExpired(context.Background())
 		if err != nil {
-			log.Println("[Cron] ProcessPointDistribute failed, err=", err)
+			log.Println("[Cron] ProcessPointExpired failed, err=", err)
 			return
 		}
-		log.Println("[Cron] ProcessPointDistribute success")
+		log.Println("[Cron] ProcessPointExpired success")
 	})
 
 	c.AddFunc("*/10 * * * * ?", func() {

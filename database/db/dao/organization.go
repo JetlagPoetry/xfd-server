@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
@@ -22,7 +23,7 @@ func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, nam
 		where := "name LIKE '%" + name + "%'"
 		sql = sql.Where(where)
 	}
-	if err = sql.Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
+	if err = sql.Offset(page.Offset()).Limit(page.Limit()).Order("id DESC").Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -34,6 +35,14 @@ func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, nam
 
 func (d *OrganizationDao) GetByID(ctx context.Context, id int) (org *model.Organization, err error) {
 	err = db.Get().Model(&model.Organization{}).Where("id = ?", id).First(&org).Error
+	if err != nil {
+		return nil, err
+	}
+	return org, nil
+}
+
+func (d *OrganizationDao) GetByIDForUpdate(tx *gorm.DB, id int) (org *model.Organization, err error) {
+	err = tx.Model(&model.Organization{}).Where("id = ?", id).Clauses(clause.Locking{Strength: "UPDATE"}).First(&org).Error
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +71,14 @@ func (d *OrganizationDao) GetByCodeInTx(tx *gorm.DB, code string) (org *model.Or
 func (d *OrganizationDao) Create(ctx context.Context, org *model.Organization) (err error) {
 	err = db.Get().Model(&model.Organization{}).Create(org).Error
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *OrganizationDao) UpdateByIDInTx(tx *gorm.DB, id int, updateValue *model.Organization) (err error) {
+	updateResult := tx.Model(&model.Organization{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
 		return err
 	}
 	return nil

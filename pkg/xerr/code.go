@@ -49,9 +49,11 @@ const (
 	ErrorVerifyEmpty               XCode = 30011
 
 	//数据库错误
-	ErrorDatabase       XCode = 40001
-	ErrorRedis          XCode = 40002
-	ErrorNotExistRecord XCode = 40003
+	ErrorDatabase         XCode = 40001
+	ErrorRedis            XCode = 40002
+	ErrorNotExistRecord   XCode = 40003
+	ErrorInvalidFileExt   XCode = 40004
+	ErrorInvalidCsvFormat XCode = 40005
 
 	//对象存储错误
 	ErrorOss        XCode = 50001

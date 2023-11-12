@@ -2,14 +2,15 @@ package types
 
 import (
 	"mime/multipart"
+	"time"
 	"xfd-backend/database/db/model"
 )
 
 type OrgApplyPointReq struct {
 	File       multipart.File        `json:"file"`
 	FileHeader *multipart.FileHeader `json:"fileHeader"`
-	StartTime  int64                 `json:"startTime"`
-	EndTime    int64                 `json:"endTime"`
+	StartTime  time.Time             `json:"startTime"`
+	EndTime    time.Time             `json:"endTime"`
 	Comment    string                `json:"comment"`
 }
 
@@ -17,9 +18,9 @@ type OrgApplyPointResp struct {
 }
 
 type OrgVerifyPointReq struct {
-	ID      int                          `json:"id"`
-	Status  model.PointApplicationStatus `json:"status"`
-	Comment string                       `json:"comment"`
+	ID            int                          `json:"id"`
+	VerifyStatus  model.PointApplicationStatus `json:"verifyStatus"`
+	VerifyComment string                       `json:"verifyComment"`
 }
 
 type OrgVerifyPointResp struct {
@@ -40,6 +41,7 @@ type OrgGetApplyToVerifyResp struct {
 	UserPhone         string `json:"userPhone"`
 	SubmitTime        int64  `json:"submitTime"`
 	ApplyURL          string `json:"applyURL"`
+	HasNext           bool   `json:"hasNext"`
 }
 
 type OrgGetApplysReq struct {
@@ -97,6 +99,7 @@ type GetAccountToVerifyResp struct {
 	CertificateNo    string         `json:"certificateNo"`
 	Position         string         `json:"position"`
 	Phone            string         `json:"phone"`
+	HasNext          bool           `json:"hasNext"`
 }
 
 type GetAccountVerifyListReq struct {
@@ -138,12 +141,12 @@ type GetOrganizationsResp struct {
 }
 
 type Organization struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Code        string `json:"code"`
-	TotalMember int    `json:"totalMember"`
-	PointMember int    `json:"pointMember"`
-	TotalPoint  int    `json:"totalPoint"`
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	Code        string   `json:"code"`
+	TotalMember int      `json:"totalMember"`
+	PointMember int      `json:"pointMember"`
+	TotalPoint  *float64 `json:"totalPoint"`
 }
 
 type GetOrgMembersReq struct {
@@ -159,12 +162,12 @@ type GetOrgMembersResp struct {
 }
 
 type OrgMember struct {
-	UserID           string `json:"userID"`
-	Name             string `json:"name"`
-	Phone            string `json:"phone"`
-	OrganizationName string `json:"organization_name"`
-	Point            int    `json:"point"`
-	CreateTime       int64  `json:"createTime"`
+	UserID           string  `json:"userID"`
+	Name             string  `json:"name"`
+	Phone            string  `json:"phone"`
+	OrganizationName string  `json:"organization_name"`
+	Point            float64 `json:"point"`
+	CreateTime       int64   `json:"createTime"`
 }
 
 type GetPointRecordsByApplyReq struct {
@@ -175,10 +178,10 @@ type GetPointRecordsByApplyReq struct {
 type GetPointRecordsByApplyResp struct {
 	List           []*PointRecord `json:"list"`
 	TotalNum       int            `json:"totalNum"`
-	PointTotal     int            `json:"pointTotal"`
-	PointExpired   int            `json:"pointExpired"`
-	PointSpend     int            `json:"pointSpend"`
-	PointAvailable int            `json:"pointAvailable"`
+	PointTotal     float64        `json:"pointTotal"`
+	PointExpired   float64        `json:"pointExpired"`
+	PointSpend     float64        `json:"pointSpend"`
+	PointAvailable float64        `json:"pointAvailable"`
 }
 
 type GetPointRecordsByUserReq struct {
@@ -204,8 +207,8 @@ type GetPointRecordsResp struct {
 type PointRecord struct {
 	UserID          string                `json:"userID"`
 	Username        string                `json:"username"`
-	PointTotal      int                   `json:"pointTotal"`
-	PointChange     int                   `json:"pointChange"`
+	PointTotal      float64               `json:"pointTotal"`
+	PointChange     float64               `json:"pointChange"`
 	Type            model.PointRecordType `json:"type"`
 	Comment         string                `json:"comment"`
 	UpdateTime      int64                 `json:"updateTime"`

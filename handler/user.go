@@ -21,7 +21,7 @@ func NewUserHandler() *UserHandler {
 	return &UserHandler{userService: service.NewUserService()}
 }
 
-func (h *UserHandler) Login(c *gin.Context) {
+func (h *UserHandler) SendCode(c *gin.Context) {
 	var (
 		req  types.UserLoginReq
 		resp *types.UserLoginResp
@@ -35,6 +35,33 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	if !utils.Mobile(req.Phone) {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+
+	resp, xErr = h.userService.Login(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] Login failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var (
+		req  types.UserLoginReq
+		resp *types.UserLoginResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	if !utils.Mobile(req.Phone) || req.Source == types.SourceUnknown || len(req.Code) == 0 {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}

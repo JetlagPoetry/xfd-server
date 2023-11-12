@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"gorm.io/gorm"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
@@ -110,10 +111,34 @@ func (d *PointRecordDao) Create(ctx context.Context, record *model.PointRecord) 
 	return nil
 }
 
+func (d *PointRecordDao) CreateInTx(tx *gorm.DB, record *model.PointRecord) (err error) {
+	err = tx.Model(&model.PointRecord{}).Create(record).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointRecordDao) BatchCreateInTx(tx *gorm.DB, list []*model.PointRecord) (err error) {
+	err = tx.Model(&model.PointRecord{}).CreateInBatches(list, 100).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *PointRecordDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointRecord) (err error) {
 	updateResult := db.Get().Model(&model.PointRecord{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}
 	return nil
+}
+
+func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty model.PointRecordType) (sum float64, err error) {
+	err = db.Get().Table("point_record").Select("sum(change_point)").Where("point_application_id = ? AND type = ?", applyID, ty).Row().Scan(&sum)
+	if err != nil {
+		return 0, err
+	}
+	return sum, nil
 }

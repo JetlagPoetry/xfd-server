@@ -31,29 +31,59 @@ func NewUserService() *UserService {
 	}
 }
 
+func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (*types.UserSendCodeResp, xerr.XErr) {
+	// todo 发送验证码
+	return nil, nil
+}
+
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
-	// 开始事务
-	tx := db.Get().Begin()
-	user, err := s.loginOrRegister(tx, req.Phone)
-	if err != nil {
-		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
+	// todo 校验验证码
+	resp := &types.UserLoginResp{}
+	var (
+		user *model.User
+		err  error
+	)
+	if req.Source == types.SourceMiniApp {
+		// 开始事务
+		tx := db.Get().Begin()
+		user, err = s.loginOrRegister(tx, req.Phone)
+		if err != nil {
+			tx.Rollback()
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 
-	// 提交事务
-	if err = tx.Commit().Error; err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
+		// 提交事务
+		if err = tx.Commit().Error; err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 
-	verifyHistory := &model.UserVerify{}
-	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
-		verifyList, err := s.userVerifyDao.ListUserVerifyByUserID(ctx, user.UserID)
+		verifyHistory := &model.UserVerify{}
+		if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
+			verifyList, err := s.userVerifyDao.ListUserVerifyByUserID(ctx, user.UserID)
+			if err != nil {
+				return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+			if len(verifyList) > 0 {
+				verifyHistory = verifyList[0] // 选取最后一次认证
+			}
+		}
+
+		// todo 用verify.id 判断是否首次认证成功
+		resp = &types.UserLoginResp{
+			UserRole:      user.UserRole,
+			VerifyStatus:  verifyHistory.Status,
+			VerifyComment: verifyHistory.Comment,
+			NotifyVerify:  true,
+		}
+	} else if req.Source == types.SourceCMS {
+		user, err = s.userDao.GetByPhone(ctx, req.Phone)
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		if len(verifyList) > 0 {
-			verifyHistory = verifyList[0] // 选取最后一次认证
+		if user == nil {
+			return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
 		}
+		resp = &types.UserLoginResp{UserRole: user.UserRole}
 	}
 
 	// 使用userID+phone+role生成token
@@ -66,17 +96,10 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 		return nil, xerr.WithCode(xerr.ErrorAuthToken, err)
 	}
 
-	// todo 用verify.id 判断是否首次认证成功
-
-	return &types.UserLoginResp{
-		AccessToken:   token.AccessToken,
-		TokenType:     token.TokenType,
-		ExpiresAt:     token.ExpiresAt,
-		UserRole:      user.UserRole,
-		VerifyStatus:  verifyHistory.Status,
-		VerifyComment: verifyHistory.Comment,
-		NotifyVerify:  true, // todo
-	}, nil
+	resp.AccessToken = token.AccessToken
+	resp.TokenType = token.TokenType
+	resp.ExpiresAt = token.ExpiresAt
+	return resp, nil
 }
 
 func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, error) {
@@ -115,10 +138,10 @@ func (s *UserService) SubmitRole(ctx context.Context, req types.UserSubmitRoleRe
 
 	// 开始事务
 	tx := db.Get().Begin()
-	err = s.updateRoleAndVerify(tx, userID, req)
-	if err != nil {
+	xErr := s.updateRoleAndVerify(tx, userID, req)
+	if xErr != nil {
 		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
 	}
 	// 提交事务
 	if err = tx.Commit().Error; err != nil {
@@ -228,7 +251,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: model.UserVerifyStatusUnknown,
-		Point:        user.Point,
+		Point:        *user.Point,
 		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
 	}
 
@@ -278,10 +301,10 @@ func (s *UserService) AssignAdmin(ctx context.Context, req types.UserAssignAdmin
 	}
 
 	tx := db.Get().Begin()
-	_, err = s.assignOrRegisterAdmin(tx, req)
-	if err != nil {
+	_, xErr := s.assignOrRegisterAdmin(tx, req)
+	if xErr != nil {
 		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
 	}
 
 	// 提交事务
@@ -420,10 +443,10 @@ func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressRe
 	userID := common.GetUserID(ctx)
 
 	tx := db.Get().Begin()
-	cErr := s.addAddress(tx, userID, req)
-	if cErr != nil {
+	xErr := s.addAddress(tx, userID, req)
+	if xErr != nil {
 		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, cErr)
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
 	}
 
 	// 提交事务
@@ -473,10 +496,10 @@ func (s *UserService) ModifyAddress(ctx context.Context, req types.UserModifyAdd
 	}
 
 	tx := db.Get().Begin()
-	cErr := s.modifyAddress(tx, userID, req)
-	if cErr != nil {
+	xErr := s.modifyAddress(tx, userID, req)
+	if xErr != nil {
 		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, cErr)
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
 	}
 
 	// 提交事务

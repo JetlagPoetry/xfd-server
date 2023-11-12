@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
+	"time"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/response"
 	"xfd-backend/pkg/types"
@@ -33,6 +34,20 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		return
 	}
 	comment := c.PostForm("comment")
+	startTime, err := time.Parse("2006-01-01 15:04:05", c.PostForm("startTime"))
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	endTime, err := time.Parse("2006-01-01 15:04:05", c.PostForm("endTime"))
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if !startTime.Before(endTime) {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("生效时间异常"))))
+		return
+	}
 	file, header, err := c.Request.FormFile("file")
 	req = types.OrgApplyPointReq{
 		File:       file,
@@ -60,6 +75,16 @@ func (h *OrgHandler) VerifyPoint(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+
+	if req.ID <= 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+	if req.VerifyStatus != model.PointApplicationStatusApproved && req.VerifyStatus != model.PointApplicationStatusRejected {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+
 	resp, xErr = h.orgService.VerifyPoint(c, req)
 	if xErr != nil {
 		log.Println("[OrgHandler] VerifyPoint failed, err=", xErr)

@@ -100,7 +100,7 @@ type PurchaseGetStatisticsResp struct {
 }
 
 type PurchaseAnswerQuoteReq struct {
-	SupplyUserID string `json:"SupplyUserID"`
+	SupplyUserID string `json:"supplyUserID"`
 }
 
 type PurchaseAnswerQuoteResp struct {

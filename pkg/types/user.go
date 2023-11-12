@@ -18,8 +18,18 @@ type UserSendCodeResp struct {
 }
 
 type UserLoginReq struct {
-	Phone string `json:"phone"`
+	Phone  string `json:"phone"`
+	Source Source `json:"source"`
+	Code   string `json:"code"`
 }
+
+type Source int32
+
+const (
+	SourceUnknown Source = 0
+	SourceMiniApp Source = 1
+	SourceCMS     Source = 2
+)
 
 type UserLoginResp struct {
 	AccessToken   string                 `json:"accessToken"`   // 访问令牌
@@ -61,7 +71,7 @@ type GetUserInfoResp struct {
 	VerifyComment  string                 `json:"verifyComment"`
 	Organization   string                 `json:"organization"`
 	OrganizationID int                    `json:"organizationID"`
-	Point          int                    `json:"point"`
+	Point          float64                `json:"point"`
 	NotifyVerify   bool                   `json:"notifyVerify"` // 是否提示认证成功
 }
 

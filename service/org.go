@@ -2,78 +2,589 @@ package service
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"path/filepath"
+	"strconv"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
+	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/types"
+	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 )
 
 type OrgService struct {
-	userDao          *dao.UserDao
-	userVerifyDao    *dao.UserVerifyDao
-	orgDao           *dao.OrganizationDao
-	PointApplication *dao.PointApplicationDao
-	PointRecord      *dao.PointRecordDao
+	userService            *UserService
+	userDao                *dao.UserDao
+	userVerifyDao          *dao.UserVerifyDao
+	orgDao                 *dao.OrganizationDao
+	PointApplicationDao    *dao.PointApplicationDao
+	PointApplicationTmpDao *dao.PointApplicationTmpDao
+	PointRemainDao         *dao.PointRemainDao
+	PointRecordDao         *dao.PointRecordDao
 }
 
 func NewOrgService() *OrgService {
 	return &OrgService{
-		userDao:          dao.NewUserDao(),
-		userVerifyDao:    dao.NewUserVerifyDao(),
-		orgDao:           dao.NewOrganizationDao(),
-		PointApplication: dao.NewPointApplicationDao(),
-		PointRecord:      dao.NewPointRecordDao(),
+		userService:            NewUserService(),
+		userDao:                dao.NewUserDao(),
+		userVerifyDao:          dao.NewUserVerifyDao(),
+		orgDao:                 dao.NewOrganizationDao(),
+		PointApplicationDao:    dao.NewPointApplicationDao(),
+		PointApplicationTmpDao: dao.NewPointApplicationTmpDao(),
+		PointRemainDao:         dao.NewPointRemainDao(),
+		PointRecordDao:         dao.NewPointRecordDao(),
 	}
 }
 
+type OrgMember struct {
+	Phone string
+	Name  string
+	Point float64
+}
+
 func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq) (*types.OrgApplyPointResp, xerr.XErr) {
+	// 校验用户
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+	org, err := s.orgDao.GetByID(ctx, user.OrganizationID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+
 	// 解析csv文件，校验格式
+	members, totalPoint, xErr := s.parseCSV(ctx, req.File, req.FileHeader)
+	if xErr != nil {
+		return nil, xErr
+	}
+
+	// 校验csv文件内容
+	_, xErr = s.verifyCsv(ctx, members)
+	if xErr != nil {
+		return nil, xErr
+	}
 
 	// 上传csv文件
+	link, err := s.uploadCSV(ctx, req.File, req.FileHeader)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
 
 	// 新增积分单申请记录
+	tx := db.Get().Begin()
+	xErr = s.applyPoint(tx, org, userID, totalPoint, link, req)
+	if xErr != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
+	}
 
-	return nil, nil
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.OrgApplyPointResp{}, nil
+}
+
+// csv格式：手机号、姓名、积分数
+func (s *OrgService) parseCSV(ctx context.Context, file multipart.File, header *multipart.FileHeader) ([]*OrgMember, float64, xerr.XErr) {
+	if filepath.Ext(header.Filename) != "xls" && filepath.Ext(header.Filename) != "xlsx" {
+		return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
+	}
+
+	list := make([]*OrgMember, 0)
+	reader := csv.NewReader(file)
+	totalPoint := float64(0)
+	for i := 0; ; i++ {
+		if i >= 1001 {
+			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
+		}
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+		}
+		if i == 0 {
+			continue
+		}
+
+		point, err := strconv.Atoi(record[2])
+		if err != nil {
+			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+		}
+		phone := record[0]
+		if !utils.Mobile(phone) {
+			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
+		}
+		list = append(list, &OrgMember{
+			Phone: record[0],
+			Name:  record[1],
+			Point: float64(point),
+		})
+		totalPoint += float64(point)
+	}
+	return list, totalPoint, nil
+}
+func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[string]*model.User, xerr.XErr) {
+	phoneMap := make(map[string]bool)
+	phoneList := make([]string, 0)
+	for _, member := range members {
+		phoneMap[member.Phone] = true
+		phoneList = append(phoneList, member.Phone)
+	}
+
+	if len(phoneMap) < len(members) {
+		return nil, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("重复手机号"))
+	}
+	list, err := s.userDao.ListByPhoneList(ctx, phoneList)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	userMap := make(map[string]*model.User)
+	for _, user := range list {
+		if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
+			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("已认证过身份"))
+		}
+		userMap[user.Phone] = user
+	}
+
+	return userMap, nil
+}
+
+func (s *OrgService) uploadCSV(ctx context.Context, file multipart.File, header *multipart.FileHeader) (string, error) {
+	fileSize := header.Size
+	maxSize := int64(50 * 1024 * 1024) // 50MB
+	if fileSize > maxSize {
+		return "", errors.New("file size exceed")
+	}
+	link, err := utils.Upload(ctx, "xfd-t", "point"+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), &file)
+	if err != nil {
+		return "", err
+	}
+	return link, nil
+}
+
+func (s *OrgService) downloadCSV(ctx context.Context, url string) ([]*OrgMember, error) {
+	// 发送HTTP请求，获取文件内容
+	response, err := http.Get(url)
+	if err != nil {
+		fmt.Println("请求文件失败:", err)
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	// 读取CSV文件内容
+	reader := csv.NewReader(response.Body)
+	reader.Comma = ',' // 设置CSV文件的分隔符，默认为逗号
+	records, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("读取CSV文件失败:", err)
+		return nil, err
+	}
+
+	list := make([]*OrgMember, 0)
+	for i, record := range records {
+		if i == 0 {
+			continue
+		}
+		point, err := strconv.Atoi(record[2])
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+		}
+		phone := record[0]
+		if !utils.Mobile(phone) {
+			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
+		}
+		list = append(list, &OrgMember{
+			Phone: record[0],
+			Name:  record[1],
+			Point: float64(point),
+		})
+	}
+
+	return list, nil
+
+}
+
+func (s *OrgService) applyPoint(tx *gorm.DB, org *model.Organization, userID string, totalPoint float64, fileURL string, req types.OrgApplyPointReq) xerr.XErr {
+	app := &model.PointApplication{
+		OrganizationID: int(org.ID),
+		TotalPoint:     totalPoint,
+		FileURL:        fileURL,
+		Status:         model.PointApplicationStatusUnknown,
+		ApplyUserID:    userID,
+		Comment:        req.Comment,
+		StartTime:      req.StartTime,
+		EndTime:        req.EndTime,
+	}
+	err := s.PointApplicationDao.CreateInTx(tx, app)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
 }
 
 func (s *OrgService) VerifyPoint(ctx context.Context, req types.OrgVerifyPointReq) (*types.OrgVerifyPointResp, xerr.XErr) {
-	// 修改审核记录表
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	}
+
+	tx := db.Get().Begin()
+	xErr := s.verifyPoint(tx, req, user)
+	if xErr != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
+	}
+
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
 	return nil, nil
 }
 
+func (s *OrgService) verifyPoint(tx *gorm.DB, req types.OrgVerifyPointReq, user *model.User) xerr.XErr {
+	app, err := s.PointApplicationDao.GetByIDForUpdate(tx, req.ID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+
+	if app.Status != model.PointApplicationStatusUnknown {
+		return xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("application has been approved"))
+	}
+
+	// 修改审核记录表
+	update := &model.PointApplication{
+		Status:         req.VerifyStatus,
+		VerifyTime:     time.Now(),
+		VerifyComment:  req.VerifyComment,
+		VerifyUserID:   user.UserID,
+		VerifyUsername: user.Username,
+	}
+	err = s.PointApplicationDao.UpdateByIDInTx(tx, req.ID, update)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	return nil
+}
+
 func (s *OrgService) ProcessPointVerify(ctx context.Context) xerr.XErr {
-	// 定时任务处理审核记录
+	list, err := s.PointApplicationDao.ListByStatus(ctx, model.PointApplicationStatusApproved)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
 
-	// 插入发积分流水
+	for _, apply := range list {
+		members, err := s.downloadCSV(ctx, apply.FileURL)
+		if err != nil {
+			continue
+		}
+		userMap, err := s.verifyCsv(ctx, members)
+		if err != nil {
+			continue
+		}
 
+		tx := db.Get().Begin()
+		xErr := s.processPointVerify(tx, apply, members, userMap)
+		if xErr != nil {
+			tx.Rollback()
+			return xerr.WithCode(xerr.ErrorDatabase, xErr)
+		}
+
+		// 提交事务
+		if err = tx.Commit().Error; err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+	return nil
+}
+
+func (s *OrgService) processPointVerify(tx *gorm.DB, apply *model.PointApplication, members []*OrgMember, userMap map[string]*model.User) xerr.XErr {
+	// 插入发积分列表
+	list := make([]*model.PointApplicationTmp, 0)
+	for _, mem := range members {
+		list = append(list, &model.PointApplicationTmp{
+			OrganizationID: apply.OrganizationID,
+			ApplicationID:  int(apply.ID),
+			Username:       mem.Name,
+			Phone:          mem.Phone,
+			Point:          mem.Point,
+		})
+	}
+	err := s.PointApplicationTmpDao.BatchCreateInTx(tx, list)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	update := &model.PointApplication{
+		Status: model.PointApplicationStatusFinish,
+	}
+	err = s.PointApplicationDao.UpdateByIDInTx(tx, int(apply.ID), update)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	org, err := s.orgDao.GetByIDForUpdate(tx, apply.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	updateOrg := &model.Organization{
+		Point: utils.Float64Ptr(*org.Point + apply.TotalPoint),
+	}
+	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, updateOrg)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 	return nil
 }
 
 func (s *OrgService) ProcessPointDistribute(ctx context.Context) xerr.XErr {
 	// 处理发积分流水
+	list, err := s.PointApplicationTmpDao.ListByStatus(ctx, model.PointApplicationTmpInit)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
-	// for 检查用户是否已经注册
+	orgMap := make(map[int]*model.Organization)
+	applyMap := make(map[int]*model.PointApplication)
+	for _, mem := range list {
+		org, ok := orgMap[mem.OrganizationID]
+		if !ok || org == nil {
+			orgMap[mem.OrganizationID], err = s.orgDao.GetByID(ctx, mem.OrganizationID)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+		}
 
-	// 下发积分、修改流水状态
+		apply, ok := applyMap[mem.ApplicationID]
+		if !ok || apply == nil {
+			applyMap[mem.ApplicationID], err = s.PointApplicationDao.GetByID(ctx, mem.ApplicationID)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+		}
+
+		tx := db.Get().Begin()
+		xErr := s.processPointDistribute(tx, apply, org, mem)
+		if xErr != nil {
+			tx.Rollback()
+			return xerr.WithCode(xerr.ErrorDatabase, xErr)
+		}
+
+		// 提交事务
+		if err = tx.Commit().Error; err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+
+	return nil
+}
+
+// 加锁顺序：org->point_application->user->point_remain->point_record
+func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointApplication, org *model.Organization, member *model.PointApplicationTmp) xerr.XErr {
+	// 检查用户是否已经注册
+	user, err := s.userDao.GetByPhoneForUpdate(tx, member.Phone)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	// 已注册但公司对不上的，触发员工离职，并重新绑定
+	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) {
+		err = s.processUserQuit(tx, user.UserID, user.OrganizationID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+
+	// 未注册的用户注册一下
+	if user == nil {
+		user = &model.User{
+			UserID:           utils.GenUUID(),
+			Phone:            member.Phone,
+			UserRole:         model.UserRoleCustomer,
+			Username:         member.Username,
+			OrganizationID:   int(org.ID),
+			OrganizationName: org.Name,
+		}
+		if err = s.userDao.CreateInTx(tx, user); err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	} else {
+		update := &model.User{
+			Username:         member.Username,
+			OrganizationID:   int(org.ID),
+			OrganizationName: org.Name,
+			Point:            utils.Float64Ptr(*user.Point + member.Point),
+			PointStatus:      model.UserPointStatusOwn,
+		}
+		if err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, update); err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+
+	// 下发积分
+	remain := &model.PointRemain{
+		UserID:             user.UserID,
+		OrganizationID:     user.OrganizationID,
+		PointApplicationID: int(apply.ID),
+		Point:              utils.Float64Ptr(member.Point),
+		PointRemain:        utils.Float64Ptr(member.Point),
+	}
+	err = s.PointRemainDao.CreateInTx(tx, remain)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 设置积分流水
+	record := &model.PointRecord{
+		UserID:             user.UserID,
+		OrganizationID:     user.OrganizationID,
+		ChangePoint:        utils.Float64Ptr(member.Point),
+		PointApplicationID: int(apply.ID),
+		PointID:            int(remain.ID),
+		Type:               model.PointRecordTypeApplication,
+		Status:             model.PointRecordStatusConfirmed,
+		Comment:            consts.PointCommentApplication,
+		OperateUserID:      apply.VerifyUserID,
+		OperateUsername:    apply.VerifyUsername,
+	}
+	err = s.PointRecordDao.CreateInTx(tx, record)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
 	return nil
 }
 
 func (s *OrgService) ProcessPointExpired(ctx context.Context) xerr.XErr {
 	// 定时任务处理过期积分
+	expires, err := s.PointApplicationDao.ListExpired(ctx)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	for _, expire := range expires {
+		tx := db.Get().Begin()
+		xErr := s.processPointExpired(tx, expire)
+		if xErr != nil {
+			tx.Rollback()
+			continue
+		}
+
+		// 提交事务
+		if err = tx.Commit().Error; err != nil {
+			continue
+		}
+	}
 
 	return nil
 }
 
+// 加锁顺序：org->point_application->user->point_remain->point_record
+func (s *OrgService) processPointExpired(tx *gorm.DB, apply *model.PointApplication) xerr.XErr {
+	// 定时任务处理过期积分
+	org, err := s.orgDao.GetByIDForUpdate(tx, apply.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 修改apply状态
+	err = s.PointApplicationDao.UpdateByIDInTx(tx, int(apply.ID), &model.PointApplication{Status: model.PointApplicationStatusExpired})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	remainList, err := s.PointRemainDao.ListByAppIDInTx(tx, int(apply.ID))
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	totalChange := float64(0)
+	recordList := make([]*model.PointRecord, 0)
+	for _, remain := range remainList {
+		user, err := s.userDao.GetByUserIDForUpdate(tx, remain.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		// 修改员工个人积分
+		err = s.userDao.UpdateByUserIDInTx(tx, remain.UserID, &model.User{Point: utils.Float64Ptr(*user.Point - *remain.PointRemain)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		totalChange += *remain.PointRemain
+
+		recordList = append(recordList, &model.PointRecord{
+			UserID:             remain.UserID,
+			OrganizationID:     int(org.ID),
+			ChangePoint:        utils.Float64Ptr(*remain.PointRemain * -1),
+			PointApplicationID: remain.PointApplicationID,
+			PointID:            int(remain.ID),
+			Type:               model.PointRecordTypeExpired,
+			Status:             model.PointRecordStatusConfirmed,
+			Comment:            consts.PointCommentExpire,
+		})
+
+	}
+
+	// 修改该公司积分
+	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, &model.Organization{Point: utils.Float64Ptr(*org.Point - totalChange)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 清空remain
+	err = s.PointRemainDao.UpdateByAppIDInTx(tx, int(apply.ID), &model.PointRemain{PointRemain: utils.Float64Ptr(0)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 添加积分流水
+	err = s.PointRecordDao.BatchCreateInTx(tx, recordList)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+}
+
 func (s *OrgService) GetApplyToVerify(ctx context.Context, req types.OrgGetApplyToVerifyReq) (*types.OrgGetApplyToVerifyResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	}
+
 	// 查找下一个未修改状态的审核单并返回
-	apply, err := s.PointApplication.GetByStatus(ctx, model.PointApplicationStatusUnknown)
+	apply, err := s.PointApplicationDao.GetByStatus(ctx, model.PointApplicationStatusUnknown)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	count, err := s.PointApplicationDao.CountByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -83,12 +594,12 @@ func (s *OrgService) GetApplyToVerify(ctx context.Context, req types.OrgGetApply
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	user, err := s.userDao.GetByUserID(ctx, apply.VerifyUserID)
+	applyUser, err := s.userDao.GetByUserID(ctx, apply.ApplyUserID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	verify, err := s.userVerifyDao.GetByUserID(ctx, apply.VerifyUserID)
+	verify, err := s.userVerifyDao.GetByUserID(ctx, apply.ApplyUserID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -98,25 +609,35 @@ func (s *OrgService) GetApplyToVerify(ctx context.Context, req types.OrgGetApply
 		OrganizationName:  organization.Name,
 		OrganizationCode:  organization.Code,
 		Comment:           apply.Comment,
-		UserID:            user.UserID,
-		Username:          user.Username,
+		UserID:            applyUser.UserID,
+		Username:          applyUser.Username,
 		UserCertificateNo: verify.CertificateNo,
 		UserPosition:      verify.Position,
-		UserPhone:         user.Phone,
+		UserPhone:         applyUser.Phone,
 		SubmitTime:        apply.CreatedAt.Unix(),
 		ApplyURL:          apply.FileURL,
+		HasNext:           count > 1,
 	}, nil
 }
 
 func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (*types.OrgGetApplysResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	}
+
 	// 获取待审核数量
-	needVerify, err := s.PointApplication.CountByStatus(ctx, model.PointApplicationStatusUnknown)
+	needVerify, err := s.PointApplicationDao.CountByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	// 获取积分申请列表
-	applyList, count, err := s.PointApplication.Lists(ctx, req.PageRequest, req.OrgID)
+	applyList, count, err := s.PointApplicationDao.Lists(ctx, req.PageRequest, req.OrgID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -149,18 +670,95 @@ func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (
 }
 
 func (s *OrgService) ClearPoint(ctx context.Context, req types.OrgClearPointReq) (*types.OrgClearPointResp, xerr.XErr) {
-	// todo 异步清除
-	// 修改该公司所有apply状态
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	}
 
-	return nil, nil
+	tx := db.Get().Begin()
+	xErr := s.clearPoint(tx, req, user)
+	if xErr != nil {
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
+	}
+
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.OrgClearPointResp{}, nil
 }
 
-func (s *OrgService) ProcessClearPoint() {
-	// todo 不能一个事务执行完，会导致数据表锁死的
-	// 本公司所有员工积分清零
-	// 本公司所有point_remain清空
-	// 添加point_record清空全部
-	// 本公司积分总额清零
+func (s *OrgService) clearPoint(tx *gorm.DB, req types.OrgClearPointReq, operator *model.User) xerr.XErr {
+	org, err := s.orgDao.GetByIDForUpdate(tx, req.OrgID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	appList, err := s.PointApplicationDao.ListByStatusInTx(tx, model.PointApplicationStatusFinish)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 修改该公司所有apply状态
+	err = s.PointApplicationDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.PointApplication{Status: model.PointApplicationStatusClear})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 修改该公司积分
+	err = s.orgDao.UpdateByIDInTx(tx, req.OrgID, &model.Organization{Point: utils.Float64Ptr(float64(0))})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 修改员工个人积分
+	err = s.userDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.User{Point: utils.Float64Ptr(0)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	appIDs := make([]int, 0)
+	for _, app := range appList {
+		appIDs = append(appIDs, int(app.ID))
+	}
+	remainList, err := s.PointRemainDao.ListByAppIDs(tx, appIDs)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 修改员工积分剩余表
+	err = s.PointRemainDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.PointRemain{PointRemain: utils.Float64Ptr(0)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 添加积分流水
+	recordList := make([]*model.PointRecord, 0)
+	for _, remain := range remainList {
+		recordList = append(recordList, &model.PointRecord{
+			UserID:             remain.UserID,
+			OrganizationID:     int(org.ID),
+			ChangePoint:        utils.Float64Ptr(*remain.PointRemain * -1),
+			PointApplicationID: remain.PointApplicationID,
+			PointID:            int(remain.ID),
+			Type:               model.PointRecordTypeCancel,
+			Status:             model.PointRecordStatusConfirmed,
+			Comment:            consts.PointCommentClear,
+			OperateUserID:      operator.UserID,
+			OperateUsername:    operator.Username,
+		})
+	}
+	err = s.PointRecordDao.BatchCreateInTx(tx, recordList)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
 }
 
 func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountReq) (*types.VerifyAccountResp, xerr.XErr) {
@@ -195,10 +793,10 @@ func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountR
 
 	// 通过用户审核，查看公司是否存在，如果不存在则创建公司
 	tx := db.Get().Begin()
-	err = s.verifyAccount(tx, req, userVerify, newUserVerify)
-	if err != nil {
+	xErr := s.verifyAccount(tx, req, userVerify, newUserVerify)
+	if xErr != nil {
 		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
 	}
 	// 提交事务
 	if err = tx.Commit().Error; err != nil {
@@ -208,7 +806,7 @@ func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountR
 	return nil, nil
 }
 
-func (s *OrgService) verifyAccount(tx *gorm.DB, req types.VerifyAccountReq, userVerify, updateValue *model.UserVerify) error {
+func (s *OrgService) verifyAccount(tx *gorm.DB, req types.VerifyAccountReq, userVerify, updateValue *model.UserVerify) xerr.XErr {
 	user, err := s.userDao.GetByUserIDInTx(tx, userVerify.UserID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -227,9 +825,8 @@ func (s *OrgService) verifyAccount(tx *gorm.DB, req types.VerifyAccountReq, user
 	// 创建公司
 	if org == nil {
 		org = &model.Organization{
-			Name:  userVerify.Organization,
-			Code:  userVerify.OrganizationCode,
-			Point: 0,
+			Name: userVerify.Organization,
+			Code: userVerify.OrganizationCode,
 		}
 		err = s.orgDao.CreateInTx(tx, org)
 		if err != nil {
@@ -239,7 +836,11 @@ func (s *OrgService) verifyAccount(tx *gorm.DB, req types.VerifyAccountReq, user
 
 	// 如果已经有公司，此时认证了新的公司
 	if user.OrganizationID > 0 && user.OrganizationID != int(org.ID) {
-		// todo 触发员工在旧公司离职，清除积分
+		// 触发员工在旧公司离职
+		err = s.processUserQuit(tx, user.UserID, user.OrganizationID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 	}
 
 	// 绑定公司
@@ -251,6 +852,63 @@ func (s *OrgService) verifyAccount(tx *gorm.DB, req types.VerifyAccountReq, user
 	return nil
 }
 
+// org->point_application->user->point_remain->point_record
+func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr.XErr {
+	user, err := s.userDao.GetByUserIDInTx(tx, userID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	org, err := s.orgDao.GetByIDForUpdate(tx, orgID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.orgDao.UpdateByIDInTx(tx, orgID, &model.Organization{Point: utils.Float64Ptr(*org.Point - *user.Point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	user, err = s.userDao.GetByUserIDForUpdate(tx, userID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{Point: utils.Float64Ptr(0)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	remainList, err := s.PointRemainDao.ListByUserID(tx, userID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.PointRemainDao.UpdateByUserIDInTx(tx, userID, &model.PointRemain{PointRemain: utils.Float64Ptr(0)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	recordList := make([]*model.PointRecord, 0)
+	for _, remain := range remainList {
+		recordList = append(recordList, &model.PointRecord{
+			UserID:             userID,
+			OrganizationID:     int(org.ID),
+			ChangePoint:        utils.Float64Ptr(*remain.PointRemain * -1),
+			PointApplicationID: remain.PointApplicationID,
+			PointID:            int(remain.ID),
+			Type:               model.PointRecordTypeQuit,
+			Status:             model.PointRecordStatusConfirmed,
+			Comment:            consts.PointCommentQuit,
+		})
+	}
+	err = s.PointRecordDao.BatchCreateInTx(tx, recordList)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+}
+
 func (s *OrgService) GetAccountToVerify(ctx context.Context, req types.GetAccountToVerifyReq) (*types.GetAccountToVerifyResp, xerr.XErr) {
 	// 获取下一个未审核的用户认证申请
 	userVerify, err := s.userVerifyDao.GetByStatus(ctx, model.UserVerifyStatusSubmitted)
@@ -259,6 +917,11 @@ func (s *OrgService) GetAccountToVerify(ctx context.Context, req types.GetAccoun
 	}
 	if userVerify == nil {
 		return nil, xerr.WithCode(xerr.ErrorVerifyEmpty, err)
+	}
+
+	count, err := s.userVerifyDao.CountByStatus(ctx, model.UserVerifyStatusSubmitted)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	return &types.GetAccountToVerifyResp{
@@ -273,6 +936,7 @@ func (s *OrgService) GetAccountToVerify(ctx context.Context, req types.GetAccoun
 		CertificateNo:    userVerify.CertificateNo,
 		Position:         userVerify.Position,
 		Phone:            userVerify.Phone,
+		HasNext:          count > 1,
 	}, nil
 }
 
@@ -341,7 +1005,7 @@ func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganiza
 			Code:        org.Code,
 			TotalMember: int(totalMember),
 			PointMember: int(pointMember),
-			TotalPoint:  0, // todo use redis
+			TotalPoint:  org.Point,
 		})
 	}
 
@@ -373,7 +1037,7 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 			Name:             user.Username,
 			Phone:            user.Phone,
 			OrganizationName: user.OrganizationName,
-			Point:            user.Point,
+			Point:            *user.Point,
 			CreateTime:       user.CreatedAt.Unix(),
 		})
 	}
@@ -385,11 +1049,17 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 }
 
 func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPointRecordsByApplyReq) (*types.GetPointRecordsByApplyResp, xerr.XErr) {
-	recordList, count, err := s.PointRecord.ListByApplyID(ctx, req.PageRequest, req.ApplyID)
+	apply, err := s.PointApplicationDao.GetByID(ctx, req.ApplyID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	recordList, count, err := s.PointRecordDao.ListByApplyID(ctx, req.PageRequest, req.ApplyID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	list := make([]*types.PointRecord, 0)
+	totalSpend := float64(0)
 	for _, record := range recordList {
 		user, err := s.userDao.GetByUserID(ctx, record.UserID)
 		if err != nil {
@@ -398,24 +1068,34 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      user.Point,
-			PointChange:     record.ChangePoint,
+			PointTotal:      *user.Point,
+			PointChange:     *record.ChangePoint,
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),
 			OperateUserID:   record.OperateUserID,
 			OperateUsername: record.OperateUsername,
 		})
+		totalSpend += *record.ChangePoint
 	}
 
-	// todo 算积分
+	expired, err := s.PointRecordDao.SumByAppIDInTx(ctx, req.ApplyID, model.PointRecordTypeExpired)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	available, err := s.PointRemainDao.SumPointRemainByApplyID(ctx, req.ApplyID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
 	return &types.GetPointRecordsByApplyResp{
 		List:           list,
 		TotalNum:       int(count),
-		PointTotal:     0,
-		PointExpired:   0,
-		PointSpend:     0,
-		PointAvailable: 0,
+		PointTotal:     apply.TotalPoint,
+		PointExpired:   expired * -1,
+		PointSpend:     totalSpend * -1,
+		PointAvailable: available,
 	}, nil
 }
 
@@ -424,7 +1104,7 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	recordList, count, err := s.PointRecord.ListByUserID(ctx, req.PageRequest, req.UserID)
+	recordList, count, err := s.PointRecordDao.ListByUserID(ctx, req.PageRequest, req.UserID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -434,8 +1114,8 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      user.Point,
-			PointChange:     record.ChangePoint,
+			PointTotal:      *user.Point,
+			PointChange:     *record.ChangePoint,
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),
@@ -460,7 +1140,7 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		}
 		req.OrgID = user.OrganizationID
 	}
-	recordList, count, err := s.PointRecord.ListByOrgID(ctx, req.PageRequest, req.OrgID)
+	recordList, count, err := s.PointRecordDao.ListByOrgID(ctx, req.PageRequest, req.OrgID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -473,8 +1153,8 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      user.Point,
-			PointChange:     record.ChangePoint,
+			PointTotal:      *user.Point,
+			PointChange:     *record.ChangePoint,
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),

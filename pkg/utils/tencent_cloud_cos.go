@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/tencentyun/cos-go-sdk-v5"
 	"github.com/tencentyun/cos-go-sdk-v5/debug"
+	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -68,6 +69,17 @@ func Upload(ctx context.Context, bucketName, fileName string, file *multipart.Fi
 	region := os.Getenv("COS_REGION_B")
 	return fmt.Sprintf("https://%v-%v.%v/%v", bucketName, appID, region, fileName), nil
 
+}
+
+func Download(ctx context.Context, bucketName, fileName string) (io.Reader, error) {
+	client := getCos(bucketName)
+	resp, err := client.Object.Get(ctx, fileName, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var reader io.Reader = resp.Body
+	return reader, nil
 }
 
 func Delete(cosUrl string) error {

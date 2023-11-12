@@ -2,6 +2,8 @@ package dao
 
 import (
 	"context"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
@@ -38,8 +40,40 @@ func (d *PointApplicationDao) GetByID(ctx context.Context, id int) (order *model
 	return order, nil
 }
 
+func (d *PointApplicationDao) GetByIDForUpdate(tx *gorm.DB, id int) (order *model.PointApplication, err error) {
+	err = tx.Model(&model.PointApplication{}).Where("id = ?", id).Clauses(clause.Locking{Strength: "UPDATE"}).First(&order).Error
+	if err != nil {
+		return nil, err
+	}
+	return order, nil
+}
+
+func (d *PointApplicationDao) ListByStatus(ctx context.Context, status model.PointApplicationStatus) (apply []*model.PointApplication, err error) {
+	err = db.Get().Model(&model.PointApplication{}).Where("status = ?", status).Find(&apply).Error
+	if err != nil {
+		return nil, err
+	}
+	return apply, nil
+}
+
+func (d *PointApplicationDao) ListExpired(ctx context.Context) (apply []*model.PointApplication, err error) {
+	err = db.Get().Model(&model.PointApplication{}).Where("end_time <= now() AND status = ? ", model.PointApplicationStatusFinish).Find(&apply).Error
+	if err != nil {
+		return nil, err
+	}
+	return apply, nil
+}
+
+func (d *PointApplicationDao) ListByStatusInTx(tx *gorm.DB, status model.PointApplicationStatus) (apply []*model.PointApplication, err error) {
+	err = tx.Model(&model.PointApplication{}).Where("status = ?", status).Find(&apply).Error
+	if err != nil {
+		return nil, err
+	}
+	return apply, nil
+}
+
 func (d *PointApplicationDao) GetByStatus(ctx context.Context, status model.PointApplicationStatus) (apply *model.PointApplication, err error) {
-	err = db.Get().Model(&model.PointApplication{}).Where("id = ?", status).First(&apply).Error
+	err = db.Get().Model(&model.PointApplication{}).Where("status = ?", status).First(&apply).Error
 	if err != nil {
 		return nil, err
 	}
@@ -52,4 +86,36 @@ func (d *PointApplicationDao) CountByStatus(ctx context.Context, status model.Po
 		return 0, err
 	}
 	return count, nil
+}
+
+func (d *PointApplicationDao) CreateInTx(tx *gorm.DB, record *model.PointApplication) (err error) {
+	err = tx.Model(&model.PointApplication{}).Create(record).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointApplicationDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointApplication) (err error) {
+	updateResult := db.Get().Model(&model.PointApplication{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointApplicationDao) UpdateByIDInTx(tx *gorm.DB, id int, updateValue *model.PointApplication) (err error) {
+	updateResult := tx.Model(&model.PointApplication{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointApplicationDao) UpdateByOrgIDInTx(tx *gorm.DB, orgID int, updateValue *model.PointApplication) (err error) {
+	updateResult := tx.Model(&model.PointApplication{}).Where("organization_id =?", orgID).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
 }

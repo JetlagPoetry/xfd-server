@@ -13,7 +13,7 @@ type User struct {
 	AvatarURL        string          `gorm:"column:avatar_url;not null" json:"avatar_url"`
 	OrganizationID   int             `gorm:"column:organization_id;not null" json:"organization_id"`
 	OrganizationName string          `gorm:"column:organization_name;not null" json:"organization_name"`
-	Point            int             `gorm:"column:point;not null" json:"point"`
+	Point            *float64        `gorm:"column:point;not null" json:"point"`
 	PointStatus      UserPointStatus `gorm:"column:point_status;not null" json:"point_status"`
 }
 

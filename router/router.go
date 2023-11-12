@@ -26,6 +26,7 @@ func NewRouter() *gin.Engine {
 	}
 	userGroup := r.Group("/api/v1/user")
 	{
+		userGroup.POST("/sendCode", handler.User.SendCode)     // 发送验证码
 		userGroup.POST("/login", handler.User.Login)           // 登录
 		userGroup.POST("/submitRole", handler.User.SubmitRole) // 选择身份，提交认证信息
 		userGroup.POST("/refreshToken", handler.User.RefreshToken)
@@ -42,9 +43,8 @@ func NewRouter() *gin.Engine {
 	}
 	purchaseGroup := r.Group("/api/v1/purchase")
 	{
-		purchaseGroup.GET("/getPurchases", handler.Purchase.GetPurchases) // 查看本人采购单
-		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)  // 提交采购单
-		//purchaseGroup.POST("/modifyOrder", handler.Purchase.ModifyOrder)
+		purchaseGroup.GET("/getPurchases", handler.Purchase.GetPurchases)            // 查看本人采购单
+		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)             // 提交采购单
 		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus) // 删除或结束采购单
 		purchaseGroup.GET("/getQuotes", handler.Purchase.GetQuotes)                  // 查看采购单的报价列表
 		purchaseGroup.GET("/getStatistics", handler.Purchase.GetStatistics)          // 查看采购商统计数据

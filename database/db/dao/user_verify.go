@@ -54,7 +54,7 @@ func (d *UserVerifyDao) GetByUserID(ctx context.Context, userID string) (verify 
 
 func (d *UserVerifyDao) GetByStatus(ctx context.Context, status model.UserVerifyStatus) (verify *model.UserVerify, err error) {
 	err = db.Get().Model(&model.UserVerify{}).Where("status = ?", status).
-		Order("created_at asc").First(&verify).Error
+		Order("id asc").First(&verify).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	} else if err != nil {
