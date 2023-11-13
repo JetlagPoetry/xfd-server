@@ -58,9 +58,9 @@ func (d *GoodsDao) CreateProductVariant(ctx context.Context, productVariant *mod
 //分页查询商品信息
 
 func (d *GoodsDao) GetGoodsList(ctx context.Context, req types.GoodsListReq) (goodsList []*types.GoodsList, count int64, err error) {
-	result := db.Get().Debug().Model(&model.Goods{}).Where("status = 1")
+	result := db.Get().Debug().Model(&model.Goods{}).Where("status = 1 and retail_status = 1")
 	if req.IsRetail == 1 {
-		result = result.Where("is_retail = 1 and retail_status = 1")
+		result = result.Where("is_retail = 1")
 	}
 	if req.ListType == enum.GoodsListTypeQuery {
 		result = result.Where("name like ?", "%"+req.QueryText+"%")
@@ -105,9 +105,9 @@ func (d *GoodsDao) GetMinPriceList(ctx context.Context, req types.GoodsListReq) 
 	dbQuery := db.Get().Debug().Table("product_variant as pv").
 		Select("pv.goods_id, MIN(pv.price) AS min_price, g.id, g.name, g.goods_front_image, g.images").
 		Joins("INNER JOIN goods g on pv.goods_id = g.id").
-		Where("g.status = 1")
+		Where("g.status = 1 and g.retail_status = 1")
 	if req.IsRetail == 1 {
-		dbQuery = dbQuery.Where("is_retail = 1 and retail_status = 1")
+		dbQuery = dbQuery.Where("is_retail = 1")
 	}
 	dbQuery = dbQuery.Group("pv.goods_id")
 	dbQuery = dbQuery.Count(&count)
@@ -194,7 +194,7 @@ func (d *GoodsDao) GetMyGoodsList(ctx context.Context, req types.MyGoodsListReq)
 
 	result = result.Where(&model.Goods{
 		UserID: req.UserID}).
-		Select("id, name, goods_front_image, images, status, sold_num,spu_code,created_at, updated_at")
+		Select("id, name, goods_front_image, images, status, retail_status,sold_num,spu_code,created_at, updated_at")
 	switch req.QueryGoodsListStatus {
 	case enum.QueryGoodsListStatusOnSale:
 		result = result.Where("status = 1")

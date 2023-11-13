@@ -93,14 +93,14 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		modelGoods.ShipFree = &one
 	}
 	totalStock := 0
+	one := 1
 	for _, v := range req.RetailProducts {
 		if v.Status == enum.ProductVariantEnabled {
-			one := 1
 			modelGoods.IsRetail = &one
 			totalStock += v.Stock
 		}
 	}
-	if totalStock == 0 {
+	if totalStock == 0 && modelGoods.IsRetail == &one {
 		modelGoods.RetailStatus = enum.GoodsRetailSoldOut
 	}
 	transactionHandler := repo.NewTransactionHandler(db.Get())
@@ -454,6 +454,9 @@ func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) 
 	}
 	result := types.GoodsListResp{PageResult: types.PageResult{PageNum: req.PageNum, PageSize: req.PageSize, TotalNum: total}}
 	for i, v := range goods {
+		if v.RetailStatus == enum.GoodsRetailNormal {
+			goods[i].Status = enum.QueryGoodsListStatusSoldOut
+		}
 		productVariants, rr := s.goods.GetProductVariantListByGoodsID(c, v.ID, 0, 0)
 		if rr != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
