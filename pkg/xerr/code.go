@@ -32,8 +32,9 @@ const (
 	ErrorBossProduct               XCode = 20006
 
 	// 购物车
-	ErrorProductExistCart XCode = 20007
-	ErrorProductMoreCart  XCode = 20008
+	ErrorProductExistCart       XCode = 20007
+	ErrorProductMoreCart        XCode = 20008
+	ErrorCartReduceMoreQuantity XCode = 20009
 
 	//管理员错误
 	ErrorAuthCheckTokenFail        XCode = 30001 //token 错误

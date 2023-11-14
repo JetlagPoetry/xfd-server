@@ -24,10 +24,6 @@ type Category struct {
 	Status           int32                   `gorm:"type:tinyint(1);not null;default:1;comment:状态;index:level_status;index:parent_status" json:"-"`
 }
 
-func (u *Category) TableName() string {
-	return "category"
-}
-
 // Goods 商品表
 type Goods struct {
 	ID                 int32                   `gorm:"primary_key;AUTO_INCREMENT;column:id;type:int"`
@@ -104,30 +100,24 @@ type ProductVariant struct {
 // Inventory 商品库存表
 type Inventory struct {
 	BaseModel
-	ProductVariantID int32 `gorm:"type:int;not null;comment:商品编号ID" json:"product_variant_id"`
-	Stocks           int32 `gorm:"type:int;comment:商品库存"`
+	ProductVariantID int32  `gorm:"type:int;not null;comment:商品编号ID;index:product_variant_id_sku_code_goods_id" json:"product_variant_id"`
+	GoodsID          int32  `gorm:"type:int;not null;default:0;comment:商品ID;index:product_variant_id_sku_code_goods_id" json:"goods_id"`
+	SKUCode          string `gorm:"type:varchar(300);not null;default:'';comment:商品SKU编号;index:product_variant_id_sku_code_goods_id" json:"sku_code"`
+	LockStock        int    `gorm:"type:int;not null;default:0;comment:锁定库存" json:"lock_stock"`
+	SoldNum          int    `gorm:"type:int;default:0;not null;column:sold_num;comment:销量"`
 }
 
 // StockSellDetail 库存扣减详情
 type StockSellDetail struct {
 	// 建立索引，值唯一
-	OrderSn string `gorm:"type:varchar(200);index:idx_order_sn,unique;comment:订单编号"`
+	OrderSn string `gorm:"type:varchar(500);index:idx_order_sn,unique;comment:订单编号"`
 	// 订单的库存扣减或者归还后都要更新这个字段，
 	// 执行库存归还前一定要判断这个状态是否为"已扣减"，
 	// 只有"已扣减"状态的订单才可以执行库存归还。
-	Status int `gorm:"type:int;comment:库存扣减状态。1：已扣减。2：已归还"`
+	Status int `gorm:"type:int;comment:库存扣减状态。0:未扣减,1：已扣减,2:已归还"`
 	// 详细记录这个订单下各个商品扣减之前的库存，至于为什么不把这个字段拆解成Goods和Nums，
 	// 是因为拆解后每当对一个订单执行库存扣减时，就需要更新多条记录。
-	Detail GoodsDetailList `gorm:"type:varchar(200);comment:该订单下各个商品执行扣减之前的库存"`
-}
-
-// GoodsApplication 商品申请表
-type GoodsApplication struct {
-	BaseModel
-	VerifierID string `gorm:"type:varchar(100);not null;default:'';comment:审核人ID"`
-	GoodsID    int32  `gorm:"type:bigint;not null;default:0;comment:商品ID"`
-	Status     int    `gorm:"type:tinyint(1);not null;default:0;column:status;comment:状态" json:"status"`
-	Comment    string `gorm:"column:comment;not null" json:"comment"`
+	Detail string `gorm:"type:varchar(1000);comment:该订单下各个商品执行扣减之前的库存"`
 }
 
 type ProductAttr struct {
@@ -137,6 +127,27 @@ type ProductAttr struct {
 	ValueID int32  `json:"valueID"`
 }
 
+type GoodsDetail struct {
+	Goods            int32
+	ProductVariantID int32
+	Num              int32
+}
+
+// GoodsDetailList 自定义gorm类型
+type GoodsDetailList []GoodsDetail
+
+func (s *StockSellDetail) GetGoodsDetail() []GoodsDetail {
+	var goodsDetailList []GoodsDetail
+	if s.Detail == "" {
+		return nil
+	}
+	err := json.Unmarshal([]byte(s.Detail), &goodsDetailList)
+	if err != nil {
+		log.Errorf("GetGoodsDetail json.Unmarshal(%s) error: %v", s.Detail, err)
+		return nil
+	}
+	return goodsDetailList
+}
 func (p *ProductAttr) CheckProductAttr() error {
 	if p.Key == "" || p.Value == "" {
 		return errors.New("key or value is empty")

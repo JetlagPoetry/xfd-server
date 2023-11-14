@@ -32,24 +32,6 @@ type AddProduct struct {
 	Stock            int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
 }
 
-type ProductRetail struct {
-	SpecAName  string                    `json:"specAName" binding:"required,gte=1,lte=2"`
-	SpecBName  string                    `json:"specBName"`
-	SpecAValue string                    `json:"specAValue" binding:"required"`
-	SpecBValue string                    `json:"specBValue"`
-	Unit       string                    `json:"unit" binding:"required,gte=1,lte=10"`
-	Price      float64                   `json:"price" binding:"required"`
-	Stock      int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
-	Status     enum.ProductVariantStatus `json:"status" binding:"required,gte=1,lte=2"`
-}
-
-func (p ProductRetail) CheckParams() error {
-	if (p.SpecBName == "" && p.SpecBValue != "") || (p.SpecBName != "" && p.SpecBValue == "") {
-		return errors.New("specBName and specBValue must be either both filled or both empty")
-	}
-	return nil
-}
-
 type GoodsDetail struct {
 	CategoryAID        int32                   `json:"categoryAID" binding:"required"`
 	CategoryBID        int32                   `json:"categoryBID" binding:"required"`

@@ -21,14 +21,16 @@ import (
 )
 
 type GoodsService struct {
-	goods   *dao.GoodsDao
-	userDao *dao.UserDao
+	goods    *dao.GoodsDao
+	userDao  *dao.UserDao
+	orderDao *dao.OrderDao
 }
 
 func NewGoodsService() *GoodsService {
 	return &GoodsService{
-		goods:   dao.NewGoodsDao(),
-		userDao: dao.NewUserDao(),
+		goods:    dao.NewGoodsDao(),
+		userDao:  dao.NewUserDao(),
+		orderDao: dao.NewOrderDao(),
 	}
 }
 
@@ -400,8 +402,12 @@ func (s *GoodsService) DeleteMyGoods(ctx *gin.Context, req types.GoodsReq) xerr.
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
+	//删除相关商品的购物车
+	err = s.orderDao.DeleteShoppingCartByGoodsID(ctx, req.GoodsID)
+	if err != nil {
+		return nil
+	}
 	return nil
-
 }
 
 func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) xerr.XErr {
@@ -431,6 +437,13 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 	}
 	if rowsAffected == 0 {
 		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.GoodsID))
+	}
+	if req.GoodsStatus == enum.GoodsStatusOffSale {
+		//删除购物车所有相关商品
+		err = s.orderDao.DeleteShoppingCartByGoodsID(c, req.GoodsID)
+		if err != nil {
+			return nil
+		}
 	}
 	return nil
 }
@@ -812,6 +825,13 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 				if rowsAffected == 0 {
 					return 0, false, xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update productVariant failed,productVariantID:%d,wait updateValue %v", products[i].ID, productVariant))
 				}
+				//如果库存=0或者禁用删除购物车
+				if *products[i].Stock == 0 || products[i].Status == enum.ProductVariantDisabled {
+					err = s.orderDao.DeleteShoppingCartByProductVariantID(ctx, products[i].ID)
+					if err != nil {
+						return 0, false, xerr.WithCode(xerr.ErrorDatabase, err)
+					}
+				}
 			}
 		} else {
 			if products[i].ID != 0 {
@@ -822,6 +842,13 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 				}
 				if rowsAffected == 0 {
 					return 0, false, xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update productVariant failed,productVariantID:%d,wait updateValue %v", products[i].ID, productVariant))
+				}
+				//如果库存=0或者禁用删除购物车
+				if *products[i].Stock == 0 || products[i].Status == enum.ProductVariantDisabled {
+					err = s.orderDao.DeleteShoppingCartByProductVariantID(ctx, products[i].ID)
+					if err != nil {
+						return 0, false, xerr.WithCode(xerr.ErrorDatabase, err)
+					}
 				}
 			}
 			return 0, false, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,id is empty,productAttr must all hasValue ", products))

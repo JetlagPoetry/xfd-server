@@ -8,4 +8,5 @@ var (
 	Mall     = NewMallHandler()
 	Common   = NewCommonHandler()
 	Goods    = NewGoodsHandler()
+	Order    = NewOrderHandler()
 )

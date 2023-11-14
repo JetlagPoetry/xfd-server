@@ -29,8 +29,9 @@ var MsgFlags = map[xerr.XCode]string{
 	xerr.ErrorBossInsufficientAuthority: "商家权限不足",
 	xerr.ErrorBossProduct:               "商家读文件错误",
 
-	xerr.ErrorProductExistCart: "商品已经在购物车了，数量+1",
-	xerr.ErrorProductMoreCart:  "超过最大上限",
+	xerr.ErrorProductExistCart:       "商品已经在购物车了，数量+1",
+	xerr.ErrorProductMoreCart:        "超过最大上限",
+	xerr.ErrorCartReduceMoreQuantity: "减少数量超过购物车数量",
 
 	xerr.ErrorAuthCheckTokenFail:        "Token鉴权失败",
 	xerr.ErrorAuthCheckTokenTimeout:     "Token已超时",
