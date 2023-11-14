@@ -428,14 +428,6 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	// 已注册但公司对不上的，触发员工离职，并重新绑定
-	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) {
-		err = s.processUserQuit(tx, user.UserID, user.OrganizationID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-	}
-
 	// 未注册的用户注册一下
 	if user == nil {
 		user = &model.User{
@@ -449,17 +441,25 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-	} else {
-		update := &model.User{
-			Username:         member.Username,
-			OrganizationID:   int(org.ID),
-			OrganizationName: org.Name,
-			Point:            utils.Float64Ptr(*user.Point + member.Point),
-			PointStatus:      model.UserPointStatusOwn,
-		}
-		if err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, update); err != nil {
+	}
+
+	// 已注册但公司对不上的，触发员工离职，并重新绑定
+	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) && *user.Point > 0 {
+		err = s.processUserQuit(tx, user.UserID, user.OrganizationID)
+		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
+	}
+
+	update := &model.User{
+		Username:         member.Username,
+		OrganizationID:   int(org.ID),
+		OrganizationName: org.Name,
+		Point:            utils.Float64Ptr(*user.Point + member.Point),
+		PointStatus:      model.UserPointStatusOwn,
+	}
+	if err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, update); err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	// 下发积分
