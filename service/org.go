@@ -239,6 +239,7 @@ func (s *OrgService) applyPoint(tx *gorm.DB, org *model.Organization, userID str
 		Comment:        req.Comment,
 		StartTime:      req.StartTime,
 		EndTime:        req.EndTime,
+		VerifyTime:     consts.TimeZeroValue,
 	}
 	err := s.PointApplicationDao.CreateInTx(tx, app)
 	if err != nil {
