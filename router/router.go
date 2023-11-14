@@ -92,7 +92,13 @@ func NewRouter() *gin.Engine {
 		goodsGroup.GET("/getMyGoodsDetail", handler.Goods.GetMyGoodsDetail)        //获取商品详情
 		goodsGroup.POST("/modifyMyGoodsStatus", handler.Goods.ModifyMyGoodsStatus) //修改商品状态
 	}
-
+	orderGroup := r.Group("/api/v1/order")
+	{
+		orderGroup.POST("/addShoppingCart", handler.Order.AddShoppingCart)         //加入购物车
+		orderGroup.GET("/getShoppingCart", handler.Order.GetShoppingCartList)      //获取购物车列表
+		orderGroup.DELETE("/deleteShoppingCart", handler.Order.DeleteShoppingCart) //删除购物车商品
+		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
+	}
 	commonGroup := r.Group("/api/v1/common")
 	{
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
