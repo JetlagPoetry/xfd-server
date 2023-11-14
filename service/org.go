@@ -1,11 +1,14 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
+	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -66,8 +69,14 @@ func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq)
 		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
 	}
 
+	fileBytes, err := ioutil.ReadAll(req.File)
+	if err != nil {
+		fmt.Printf("Error reading file: %s\n", err)
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	fileReader := bytes.NewReader(fileBytes)
 	// 解析csv文件，校验格式
-	members, totalPoint, xErr := s.parseCSV(ctx, req.File, req.FileHeader)
+	members, totalPoint, xErr := s.parseCSV(ctx, fileReader, req.FileHeader)
 	if xErr != nil {
 		return nil, xErr
 	}
@@ -79,7 +88,8 @@ func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq)
 	}
 
 	// 上传csv文件
-	link, err := s.uploadCSV(ctx, req.File, req.FileHeader)
+	fileReaderCopy := bytes.NewReader(fileBytes)
+	link, err := s.uploadCSV(ctx, fileReaderCopy, req.FileHeader)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
 	}
@@ -101,7 +111,7 @@ func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq)
 }
 
 // csv格式：手机号、姓名、积分数
-func (s *OrgService) parseCSV(ctx context.Context, file multipart.File, header *multipart.FileHeader) ([]*OrgMember, float64, xerr.XErr) {
+func (s *OrgService) parseCSV(ctx context.Context, file io.Reader, header *multipart.FileHeader) ([]*OrgMember, float64, xerr.XErr) {
 	//if filepath.Ext(header.Filename) != "xls" && filepath.Ext(header.Filename) != "xlsx" {
 	//	return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
 	//}
@@ -171,13 +181,13 @@ func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[s
 	return userMap, nil
 }
 
-func (s *OrgService) uploadCSV(ctx context.Context, file multipart.File, header *multipart.FileHeader) (string, error) {
+func (s *OrgService) uploadCSV(ctx context.Context, file io.Reader, header *multipart.FileHeader) (string, error) {
 	fileSize := header.Size
 	maxSize := int64(50 * 1024 * 1024) // 50MB
 	if fileSize > maxSize {
 		return "", errors.New("file size exceed")
 	}
-	link, err := utils.Upload(ctx, "xfd-t", "point"+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), &file)
+	link, err := utils.Upload(ctx, "xfd-t", "point"+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), file)
 	if err != nil {
 		return "", err
 	}

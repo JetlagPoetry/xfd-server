@@ -7,7 +7,6 @@ import (
 	"github.com/tencentyun/cos-go-sdk-v5/debug"
 	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -59,16 +58,15 @@ func CheckErr(err error) bool {
 	}
 }
 
-func Upload(ctx context.Context, bucketName, fileName string, file *multipart.File) (string, error) {
+func Upload(ctx context.Context, bucketName, fileName string, file io.Reader) (string, error) {
 	client := getCos(bucketName)
-	_, err := client.Object.Put(ctx, fileName, *file, nil)
+	_, err := client.Object.Put(ctx, fileName, file, nil)
 	if err != nil {
 		return "", err
 	}
 	appID := os.Getenv("APP_ID")
 	region := os.Getenv("COS_REGION_B")
 	return fmt.Sprintf("https://%v-%v.%v/%v", bucketName, appID, region, fileName), nil
-
 }
 
 func Download(ctx context.Context, bucketName, fileName string) (io.Reader, error) {

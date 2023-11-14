@@ -63,7 +63,7 @@ func (h *CommonHandler) UploadFile(c *gin.Context) {
 	if folderName == "" {
 		folderName = DefaultFolderName
 	}
-	link, err := utils.Upload(c, BucketNameT, folderName+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), &file)
+	link, err := utils.Upload(c, BucketNameT, folderName+"/"+utils.GenerateFileName()+filepath.Ext(header.Filename), file)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.ErrorUploadFile, err)))
 		return
