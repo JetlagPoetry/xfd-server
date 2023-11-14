@@ -391,18 +391,20 @@ func (s *OrgService) ProcessPointDistribute(ctx context.Context) xerr.XErr {
 	for _, mem := range list {
 		org, ok := orgMap[mem.OrganizationID]
 		if !ok || org == nil {
-			orgMap[mem.OrganizationID], err = s.orgDao.GetByID(ctx, mem.OrganizationID)
+			org, err = s.orgDao.GetByID(ctx, mem.OrganizationID)
 			if err != nil {
 				return xerr.WithCode(xerr.ErrorDatabase, err)
 			}
+			orgMap[mem.OrganizationID] = org
 		}
 
 		apply, ok := applyMap[mem.ApplicationID]
 		if !ok || apply == nil {
-			applyMap[mem.ApplicationID], err = s.PointApplicationDao.GetByID(ctx, mem.ApplicationID)
+			apply, err = s.PointApplicationDao.GetByID(ctx, mem.ApplicationID)
 			if err != nil {
 				return xerr.WithCode(xerr.ErrorDatabase, err)
 			}
+			applyMap[mem.ApplicationID] = apply
 		}
 
 		tx := db.Get().Begin()
