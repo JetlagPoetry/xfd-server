@@ -8,8 +8,8 @@ import (
 )
 
 func StartCron() {
-	c := cron.New()
-	c.AddFunc("* 0 * * * ?", func() {
+	c := cron.New(cron.WithSeconds())
+	c.AddFunc("0 */5 * * * ?", func() {
 		log.Println("[Cron] ProcessPointVerify start")
 		// todo 分布式锁
 		err := service.NewOrgService().ProcessPointVerify(context.Background())
@@ -20,7 +20,7 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointVerify success")
 	})
 
-	c.AddFunc("* 5 * * * ?", func() {
+	c.AddFunc("30 */5 * * * ?", func() {
 		log.Println("[Cron] ProcessPointDistribute start")
 		// todo 分布式锁
 		err := service.NewOrgService().ProcessPointDistribute(context.Background())
@@ -31,7 +31,7 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointDistribute success")
 	})
 
-	c.AddFunc("* * 0 * * ?", func() {
+	c.AddFunc("0 0 * * * ?", func() {
 		log.Println("[Cron] ProcessPointExpired start")
 		// todo 分布式锁
 		err := service.NewOrgService().ProcessPointExpired(context.Background())
@@ -42,7 +42,7 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointExpired success")
 	})
 
-	c.AddFunc("*/10 * * * * ?", func() {
+	c.AddFunc("0 */6 * * * ?", func() {
 		log.Println("[Cron] SetCategoryCache start")
 		err := service.NewMallService().SetCategoryCache(context.Background())
 		if err != nil {
