@@ -439,6 +439,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 			Username:         member.Username,
 			OrganizationID:   int(org.ID),
 			OrganizationName: org.Name,
+			Point:            utils.Float64Ptr(0),
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
