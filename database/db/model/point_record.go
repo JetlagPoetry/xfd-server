@@ -10,7 +10,7 @@ type PointRecord struct {
 	OrganizationID     int               `gorm:"column:organization_id;not null" json:"organization_id"`
 	ChangePoint        *float64          `gorm:"column:change_point;not null" json:"change_point"`
 	PointApplicationID int               `gorm:"column:point_application_id;not null" json:"point_application_id"`
-	PointID            int               `gorm:"column:point;not null" json:"point"`
+	PointID            int               `gorm:"column:point_id;not null" json:"point_id"`
 	OrderID            int               `gorm:"column:order_id;not null" json:"order_id"`
 	Type               PointRecordType   `gorm:"column:type;not null" json:"type"`
 	Status             PointRecordStatus `gorm:"column:status;not null" json:"status"`
