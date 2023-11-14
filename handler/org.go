@@ -28,18 +28,13 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
 	comment := c.PostForm("comment")
-	startTime, err := time.Parse("2006-01-01 15:04:05", c.PostForm("startTime"))
+	startTime, err := time.Parse("2006-01-02 15:04:05", c.PostForm("startTime"))
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	endTime, err := time.Parse("2006-01-01 15:04:05", c.PostForm("endTime"))
+	endTime, err := time.Parse("2006-01-02 15:04:05", c.PostForm("endTime"))
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
@@ -49,10 +44,16 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		return
 	}
 	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
 	req = types.OrgApplyPointReq{
 		File:       file,
 		FileHeader: header,
 		Comment:    comment,
+		StartTime:  startTime,
+		EndTime:    endTime,
 	}
 	resp, xErr = h.orgService.ApplyPoint(c, req)
 	if xErr != nil {

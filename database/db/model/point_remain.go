@@ -10,3 +10,7 @@ type PointRemain struct {
 	Point              *float64 `gorm:"column:point;not null" json:"point"`
 	PointRemain        *float64 `gorm:"column:point_remain;not null" json:"point_remain"`
 }
+
+func (u *PointRemain) TableName() string {
+	return "point_remain"
+}

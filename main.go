@@ -15,7 +15,7 @@ import (
 func main() {
 	Init()
 
-	cron.StartCron()
+	go cron.StartCron()
 
 	r := router.NewRouter()
 	log.Println("==================Server Start===================")
