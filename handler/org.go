@@ -44,6 +44,10 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		return
 	}
 	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
 	req = types.OrgApplyPointReq{
 		File:       file,
 		FileHeader: header,

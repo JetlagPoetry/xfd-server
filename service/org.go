@@ -103,9 +103,9 @@ func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq)
 
 // csv格式：手机号、姓名、积分数
 func (s *OrgService) parseCSV(ctx context.Context, file multipart.File, header *multipart.FileHeader) ([]*OrgMember, float64, xerr.XErr) {
-	if filepath.Ext(header.Filename) != "xls" && filepath.Ext(header.Filename) != "xlsx" {
-		return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
-	}
+	//if filepath.Ext(header.Filename) != "xls" && filepath.Ext(header.Filename) != "xlsx" {
+	//	return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
+	//}
 
 	list := make([]*OrgMember, 0)
 	reader := csv.NewReader(file)
