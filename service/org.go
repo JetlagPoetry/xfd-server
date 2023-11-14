@@ -2,10 +2,9 @@ package service
 
 import (
 	"context"
-	"encoding/csv"
 	"errors"
 	"fmt"
-	"github.com/tealeg/xlsx"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 	"mime/multipart"
 	"net/http"
@@ -107,38 +106,38 @@ func (s *OrgService) parseCSV(ctx context.Context, file multipart.File, header *
 	//	return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
 	//}
 
-	xlFile, err := xlsx.OpenReaderAt(file, 0)
+	xlFile, err := excelize.OpenReader(file)
 	if err != nil {
 		fmt.Printf("Error opening file: %s\n", err)
 		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 	}
-	if len(xlFile.Sheets) == 0 {
+	rows, err := xlFile.GetRows("Sheet1")
+	if err != nil {
 		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 	}
-	sheet := xlFile.Sheets[0]
-	if len(sheet.Rows) > 1001 {
+	if len(rows) > 1001 {
 		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
 	}
 	list := make([]*OrgMember, 0)
 	totalPoint := float64(0)
-	for i, row := range sheet.Rows {
+	for i, row := range rows {
 		if i == 0 {
 			continue
 		}
-		if len(row.Cells) < 3 {
+		if len(row) < 3 {
 			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 		}
-		point, err := strconv.Atoi(row.Cells[2].Value)
+		point, err := strconv.Atoi(row[2])
 		if err != nil {
 			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 		}
-		phone := row.Cells[0].Value
+		phone := row[0]
 		if !utils.Mobile(phone) {
 			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
 		}
 		list = append(list, &OrgMember{
-			Phone: row.Cells[0].Value,
-			Name:  row.Cells[1].Value,
+			Phone: row[0],
+			Name:  row[1],
 			Point: float64(point),
 		})
 		totalPoint += float64(point)
@@ -185,7 +184,7 @@ func (s *OrgService) uploadCSV(ctx context.Context, file multipart.File, header 
 	return link, nil
 }
 
-func (s *OrgService) downloadCSV(ctx context.Context, url string) ([]*OrgMember, error) {
+func (s *OrgService) downloadXLS(ctx context.Context, url string) ([]*OrgMember, error) {
 	// 发送HTTP请求，获取文件内容
 	response, err := http.Get(url)
 	if err != nil {
@@ -194,31 +193,34 @@ func (s *OrgService) downloadCSV(ctx context.Context, url string) ([]*OrgMember,
 	}
 	defer response.Body.Close()
 
-	// 读取CSV文件内容
-	reader := csv.NewReader(response.Body)
-	reader.Comma = ',' // 设置CSV文件的分隔符，默认为逗号
-	records, err := reader.ReadAll()
+	xlFile, err := excelize.OpenReader(response.Body)
 	if err != nil {
-		fmt.Println("读取CSV文件失败:", err)
-		return nil, err
+		fmt.Printf("Error opening file: %s\n", err)
+		return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 	}
-
+	rows, err := xlFile.GetRows("Sheet1")
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+	}
+	if len(rows) > 1001 {
+		return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
+	}
 	list := make([]*OrgMember, 0)
-	for i, record := range records {
+	for i, row := range rows {
 		if i == 0 {
 			continue
 		}
-		point, err := strconv.Atoi(record[2])
+		point, err := strconv.Atoi(row[2])
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 		}
-		phone := record[0]
+		phone := row[0]
 		if !utils.Mobile(phone) {
 			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
 		}
 		list = append(list, &OrgMember{
-			Phone: record[0],
-			Name:  record[1],
+			Phone: row[0],
+			Name:  row[1],
 			Point: float64(point),
 		})
 	}
@@ -302,7 +304,7 @@ func (s *OrgService) ProcessPointVerify(ctx context.Context) xerr.XErr {
 	}
 
 	for _, apply := range list {
-		members, err := s.downloadCSV(ctx, apply.FileURL)
+		members, err := s.downloadXLS(ctx, apply.FileURL)
 		if err != nil {
 			continue
 		}
