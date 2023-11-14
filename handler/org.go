@@ -52,6 +52,8 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		File:       file,
 		FileHeader: header,
 		Comment:    comment,
+		StartTime:  startTime,
+		EndTime:    endTime,
 	}
 	resp, xErr = h.orgService.ApplyPoint(c, req)
 	if xErr != nil {

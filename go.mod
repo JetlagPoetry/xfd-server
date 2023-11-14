@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.9.0
+	github.com/tealeg/xlsx v1.0.5 // indirect
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.45
 	gorm.io/driver/mysql v1.1.2
 	gorm.io/gorm v1.21.16

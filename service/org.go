@@ -5,8 +5,8 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"github.com/tealeg/xlsx"
 	"gorm.io/gorm"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -107,38 +107,43 @@ func (s *OrgService) parseCSV(ctx context.Context, file multipart.File, header *
 	//	return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
 	//}
 
+	xlFile, err := xlsx.OpenReaderAt(file, 0)
+	if err != nil {
+		fmt.Printf("Error opening file: %s\n", err)
+		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+	}
+	if len(xlFile.Sheets) == 0 {
+		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+	}
+	sheet := xlFile.Sheets[0]
+	if len(sheet.Rows) > 1001 {
+		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
+	}
 	list := make([]*OrgMember, 0)
-	reader := csv.NewReader(file)
 	totalPoint := float64(0)
-	for i := 0; ; i++ {
-		if i >= 1001 {
-			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
-		}
-		record, err := reader.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
-		}
+	for i, row := range sheet.Rows {
 		if i == 0 {
 			continue
 		}
-
-		point, err := strconv.Atoi(record[2])
+		if len(row.Cells) < 3 {
+			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+		}
+		point, err := strconv.Atoi(row.Cells[2].Value)
 		if err != nil {
 			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 		}
-		phone := record[0]
+		phone := row.Cells[0].Value
 		if !utils.Mobile(phone) {
 			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
 		}
 		list = append(list, &OrgMember{
-			Phone: record[0],
-			Name:  record[1],
+			Phone: row.Cells[0].Value,
+			Name:  row.Cells[1].Value,
 			Point: float64(point),
 		})
 		totalPoint += float64(point)
 	}
+
 	return list, totalPoint, nil
 }
 func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[string]*model.User, xerr.XErr) {
