@@ -28,11 +28,6 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		xErr xerr.XErr
 	)
 
-	err := c.BindJSON(&req)
-	if err != nil {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
-		return
-	}
 	comment := c.PostForm("comment")
 	startTime, err := time.Parse("2006-01-01 15:04:05", c.PostForm("startTime"))
 	if err != nil {
