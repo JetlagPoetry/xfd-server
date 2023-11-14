@@ -136,7 +136,7 @@ func (d *PointRecordDao) UpdateByID(ctx context.Context, id int, updateValue *mo
 }
 
 func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty model.PointRecordType) (sum float64, err error) {
-	err = db.Get().Table("point_record").Select("sum(change_point)").Where("point_application_id = ? AND type = ?", applyID, ty).Row().Scan(&sum)
+	err = db.Get().Table("point_record").Select("IFNULL(SUM(change_point),0)").Where("point_application_id = ? AND type = ?", applyID, ty).Row().Scan(&sum)
 	if err != nil {
 		return 0, err
 	}
