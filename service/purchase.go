@@ -65,6 +65,7 @@ func (s *PurchaseService) GetPurchases(ctx context.Context, req types.PurchaseGe
 			SubmitTime:   purchase.CreatedAt.Unix(),
 			NewQuote:     int(newQuote),
 			TotalQuote:   int(totalQuote),
+			Status:       purchase.Status,
 		})
 	}
 	// 有新增在无新增前，时间由近到远

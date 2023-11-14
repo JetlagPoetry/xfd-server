@@ -33,7 +33,7 @@ const (
 	OrderPurchaseStatusSubmitted OrderPurchaseStatus = 1 // 已发布
 	OrderPurchaseStatusClosed    OrderPurchaseStatus = 2 // 已结束
 	//OrderPurchaseStatusOngoing   OrderPurchaseStatus = 2 // 审核通过
-	//OrderPurchaseStatusRejected  OrderPurchaseStatus = 4 // 审核失败
+	//	//OrderPurchaseStatusRejected  OrderPurchaseStatus = 4 // 审核失败
 )
 
 func (u *OrderPurchase) TableName() string {
