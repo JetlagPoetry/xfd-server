@@ -77,3 +77,11 @@ func (d *PointApplicationTmpDao) UpdateByIDInTx(tx *gorm.DB, id int, updateValue
 	}
 	return nil
 }
+
+func (d *PointApplicationTmpDao) UpdateByAppIDInTx(tx *gorm.DB, applyID int, updateValue *model.PointApplicationTmp) (err error) {
+	updateResult := tx.Model(&model.PointApplicationTmp{}).Where("application_id =?", applyID).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}

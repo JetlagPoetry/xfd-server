@@ -425,6 +425,11 @@ func (s *OrgService) ProcessPointDistribute(ctx context.Context) xerr.XErr {
 
 // 加锁顺序：org->point_application->user->point_remain->point_record
 func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointApplication, org *model.Organization, member *model.PointApplicationTmp) xerr.XErr {
+	err := s.PointApplicationTmpDao.UpdateByAppIDInTx(tx, int(apply.ID), &model.PointApplicationTmp{Status: model.PointApplicationTmpFinish})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
 	// 检查用户是否已经注册
 	user, err := s.userDao.GetByPhoneForUpdate(tx, member.Phone)
 	if err != nil {

@@ -23,7 +23,7 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointVerify failed, err=", err)
 	}
 
-	_, err = c.AddFunc("30 */1 * * * ?", func() {
+	_, err = c.AddFunc("30 */3 * * * ?", func() {
 		log.Println("[Cron] ProcessPointDistribute start")
 		// todo 分布式锁
 		err := service.NewOrgService().ProcessPointDistribute(context.Background())
