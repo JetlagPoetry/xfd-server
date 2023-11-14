@@ -64,7 +64,7 @@ func (d *PointRecordDao) ListByApplyID(ctx context.Context, page types.PageReque
 }
 
 func (d *PointRecordDao) ListByUserID(ctx context.Context, page types.PageRequest, userID string) (list []*model.PointRecord, count int64, err error) {
-	sql := db.Get().Model(&model.PointRecord{}).Where("userID = ? AND status = ?", userID, model.PointRecordStatusConfirmed)
+	sql := db.Get().Model(&model.PointRecord{}).Where("user_id = ? AND status = ?", userID, model.PointRecordStatusConfirmed)
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}

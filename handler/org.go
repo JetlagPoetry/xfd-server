@@ -132,6 +132,7 @@ func (h *OrgHandler) GetApplys(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+
 	resp, xErr = h.orgService.GetApplys(c, req)
 	if xErr != nil {
 		log.Println("[OrgHandler] GetApplys failed, err=", xErr)
@@ -178,6 +179,10 @@ func (h *OrgHandler) VerifyAccount(c *gin.Context) {
 	err := c.BindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	if req.Status != model.UserVerifyStatusRejected && req.Status != model.UserVerifyStatusSuccess {
@@ -305,6 +310,10 @@ func (h *OrgHandler) GetPointRecordsByApply(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if req.ApplyID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
 	resp, xErr = h.orgService.GetPointRecordsByApply(c, req)
 	if xErr != nil {
 		log.Println("[OrgHandler] GetPointRecordsByApply failed, err=", xErr)
@@ -330,6 +339,10 @@ func (h *OrgHandler) GetPointRecordsByUser(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if len(req.UserID) == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
 	resp, xErr = h.orgService.GetPointRecordsByUser(c, req)
 	if xErr != nil {
 		log.Println("[OrgHandler] GetPointRecordsByUser failed, err=", xErr)
@@ -353,6 +366,10 @@ func (h *OrgHandler) GetPointRecords(c *gin.Context) {
 	}
 	if err = req.CheckParams(); err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if req.OrgID <= 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xErr = h.orgService.GetPointRecords(c, req)

@@ -133,7 +133,7 @@ func (d *PointRemainDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateVa
 }
 
 func (d *PointRemainDao) SumPointRemainByApplyID(ctx context.Context, applyID int) (sum float64, err error) {
-	err = db.Get().Table("point_remain").Select("sum(point_remain)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
+	err = db.Get().Table("point_remain").Select("IFNULL(SUM(point_remain),0)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
 	if err != nil {
 		return 0, err
 	}
@@ -141,7 +141,7 @@ func (d *PointRemainDao) SumPointRemainByApplyID(ctx context.Context, applyID in
 }
 
 func (d *PointRemainDao) SumPointRemainByApplyIDInTx(tx *gorm.DB, applyID int) (sum float64, err error) {
-	err = tx.Table("point_remain").Select("sum(point_remain)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
+	err = tx.Table("point_remain").Select("IFNULL(SUM(point_remain),0)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
 	if err != nil {
 		return 0, err
 	}

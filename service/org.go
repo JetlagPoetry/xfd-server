@@ -1085,7 +1085,6 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	list := make([]*types.PointRecord, 0)
-	totalSpend := float64(0)
 	for _, record := range recordList {
 		user, err := s.userDao.GetByUserID(ctx, record.UserID)
 		if err != nil {
@@ -1102,10 +1101,14 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 			OperateUserID:   record.OperateUserID,
 			OperateUsername: record.OperateUsername,
 		})
-		totalSpend += *record.ChangePoint
 	}
 
-	expired, err := s.PointRecordDao.SumByAppIDInTx(ctx, req.ApplyID, model.PointRecordTypeExpired)
+	expired, err := s.PointRecordDao.SumByAppIDInTx(ctx, req.ApplyID, model.PointRecordTypeSpend)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	spend, err := s.PointRecordDao.SumByAppIDInTx(ctx, req.ApplyID, model.PointRecordTypeExpired)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -1119,8 +1122,8 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		List:           list,
 		TotalNum:       int(count),
 		PointTotal:     apply.TotalPoint,
-		PointExpired:   expired * -1,
-		PointSpend:     totalSpend * -1,
+		PointExpired:   expired,
+		PointSpend:     spend,
 		PointAvailable: available,
 	}, nil
 }
