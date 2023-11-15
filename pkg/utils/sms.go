@@ -14,8 +14,8 @@ var client *sms.Client
 
 func InitSms() {
 	credential := common.NewCredential(
-		"SecretId",
-		"SecretKey",
+		"AKIDZzB91iBSXP5azBC0qWzGKCrLelgQyKUR",
+		"nNkR2OWP4TdYF9o25uX4OWSDl8KK7i7J",
 	)
 	/* 非必要步骤:
 	 * 实例化一个客户端配置对象，可以指定超时时间等配置 */
