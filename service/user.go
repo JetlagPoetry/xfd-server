@@ -32,12 +32,19 @@ func NewUserService() *UserService {
 }
 
 func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (*types.UserSendCodeResp, xerr.XErr) {
-	// todo 发送验证码
-	return nil, nil
+	code := utils.GenSixDigitCode()
+	// todo 存在redis中
+
+	err := utils.SendSms(req.Phone, code, 5)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorCallApi, err)
+	}
+	return &types.UserSendCodeResp{}, nil
 }
 
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
 	// todo 校验验证码
+
 	resp := &types.UserLoginResp{}
 	var (
 		user *model.User
