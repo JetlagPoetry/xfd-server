@@ -42,3 +42,19 @@ type CreateOrderReq struct {
 type CreateOrderResp struct {
 	// todo implement
 }
+
+type ApplyRefundReq struct {
+	// todo implement
+}
+
+type ApplyRefundResp struct {
+	// todo implement
+}
+
+type ApplyExchangeReq struct {
+	// todo implement
+}
+
+type ApplyExchangeResp struct {
+	// todo implement
+}

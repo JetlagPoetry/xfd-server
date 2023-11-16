@@ -102,6 +102,8 @@ func NewRouter() *gin.Engine {
 		orderGroup.DELETE("/deleteShoppingCart", handler.Order.DeleteShoppingCart) //删除购物车商品
 		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
 		orderGroup.POST("/createOrder", handler.Order.CreateOrder)                 //创建订单
+		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退款
+		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
 	}
 
 	commonGroup := r.Group("/api/v1/common")

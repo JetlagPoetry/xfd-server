@@ -115,3 +115,44 @@ func (h *OrderHandler) CreateOrder(context *gin.Context) {
 	}
 	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
 }
+
+func (h *OrderHandler) ApplyRefund(context *gin.Context) {
+	var (
+		req  types.ApplyRefundReq
+		resp *types.ApplyRefundResp
+		xrr  xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.ApplyRefund(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] ApplyRefund failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
+}
+
+func (h *OrderHandler) ApplyExchange(ctx *gin.Context) {
+	var (
+		req  types.ApplyExchangeReq
+		resp *types.ApplyExchangeResp
+		xrr  xerr.XErr
+	)
+	err := ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.ApplyExchange(ctx, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] ApplyExchange failed, err=", xrr)
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xrr))
+		return
+	}
+	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, resp))
+
+}

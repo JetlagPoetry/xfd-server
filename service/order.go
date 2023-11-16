@@ -335,3 +335,11 @@ func (s *OrderService) payWithPoint(tx *gorm.DB, orderID int, user *model.User, 
 func (s *OrderService) payWithWx(tx *gorm.DB, user *model.User, totalPrice float64) xerr.XErr {
 	return nil
 }
+
+func (s *OrderService) ApplyRefund(context *gin.Context, req types.ApplyRefundReq) (*types.ApplyRefundResp, xerr.XErr) {
+	return nil, nil
+}
+
+func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeReq) (*types.ApplyExchangeResp, xerr.XErr) {
+	return nil, nil
+}
