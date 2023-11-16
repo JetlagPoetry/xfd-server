@@ -71,7 +71,7 @@ type GetUserInfoResp struct {
 	VerifyComment  string                 `json:"verifyComment"`
 	Organization   string                 `json:"organization"`
 	OrganizationID int                    `json:"organizationID"`
-	Point          float64                `json:"point"`
+	Point          string                 `json:"point"`
 	NotifyVerify   bool                   `json:"notifyVerify"` // 是否提示认证成功
 }
 

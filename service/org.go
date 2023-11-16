@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 	"io"
@@ -51,7 +52,7 @@ func NewOrgService() *OrgService {
 type OrgMember struct {
 	Phone string
 	Name  string
-	Point float64
+	Point decimal.Decimal
 }
 
 func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq) (*types.OrgApplyPointResp, xerr.XErr) {
@@ -111,7 +112,7 @@ func (s *OrgService) ApplyPoint(ctx context.Context, req types.OrgApplyPointReq)
 }
 
 // csv格式：手机号、姓名、积分数
-func (s *OrgService) parseCSV(ctx context.Context, file io.Reader, header *multipart.FileHeader) ([]*OrgMember, float64, xerr.XErr) {
+func (s *OrgService) parseCSV(ctx context.Context, file io.Reader, header *multipart.FileHeader) ([]*OrgMember, *decimal.Decimal, xerr.XErr) {
 	//if filepath.Ext(header.Filename) != "xls" && filepath.Ext(header.Filename) != "xlsx" {
 	//	return nil, 0, xerr.WithCode(xerr.ErrorInvalidFileExt, errors.New("无效的文件扩展名"))
 	//}
@@ -119,41 +120,41 @@ func (s *OrgService) parseCSV(ctx context.Context, file io.Reader, header *multi
 	xlFile, err := excelize.OpenReader(file)
 	if err != nil {
 		fmt.Printf("Error opening file: %s\n", err)
-		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+		return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 	}
 	rows, err := xlFile.GetRows("Sheet1")
 	if err != nil {
-		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+		return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 	}
 	if len(rows) > 1001 {
-		return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
+		return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("超过1000条"))
 	}
 	list := make([]*OrgMember, 0)
-	totalPoint := float64(0)
+	totalPoint := decimal.Zero
 	for i, row := range rows {
 		if i == 0 {
 			continue
 		}
 		if len(row) < 3 {
-			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+			return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 		}
 		point, err := strconv.Atoi(row[2])
 		if err != nil {
-			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
+			return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("文件格式错误"))
 		}
 		phone := row[0]
 		if !utils.Mobile(phone) {
-			return nil, 0, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
+			return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
 		}
 		list = append(list, &OrgMember{
 			Phone: row[0],
 			Name:  row[1],
-			Point: float64(point),
+			Point: decimal.NewFromInt(int64(point)),
 		})
-		totalPoint += float64(point)
+		totalPoint.Add(decimal.NewFromInt(int64(point)))
 	}
 
-	return list, totalPoint, nil
+	return list, &totalPoint, nil
 }
 func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[string]*model.User, xerr.XErr) {
 	phoneMap := make(map[string]bool)
@@ -231,7 +232,7 @@ func (s *OrgService) downloadXLS(ctx context.Context, url string) ([]*OrgMember,
 		list = append(list, &OrgMember{
 			Phone: row[0],
 			Name:  row[1],
-			Point: float64(point),
+			Point: decimal.NewFromInt(int64(point)),
 		})
 	}
 
@@ -239,10 +240,10 @@ func (s *OrgService) downloadXLS(ctx context.Context, url string) ([]*OrgMember,
 
 }
 
-func (s *OrgService) applyPoint(tx *gorm.DB, org *model.Organization, userID string, totalPoint float64, fileURL string, req types.OrgApplyPointReq) xerr.XErr {
+func (s *OrgService) applyPoint(tx *gorm.DB, org *model.Organization, userID string, totalPoint *decimal.Decimal, fileURL string, req types.OrgApplyPointReq) xerr.XErr {
 	app := &model.PointApplication{
 		OrganizationID: int(org.ID),
-		TotalPoint:     totalPoint,
+		TotalPoint:     *totalPoint,
 		FileURL:        fileURL,
 		Status:         model.PointApplicationStatusUnknown,
 		ApplyUserID:    userID,
@@ -370,7 +371,7 @@ func (s *OrgService) processPointVerify(tx *gorm.DB, apply *model.PointApplicati
 	}
 
 	updateOrg := &model.Organization{
-		Point: utils.Float64Ptr(*org.Point + apply.TotalPoint),
+		Point: org.Point.Add(apply.TotalPoint),
 	}
 	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, updateOrg)
 	if err != nil {
@@ -444,7 +445,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 			Username:         member.Username,
 			OrganizationID:   int(org.ID),
 			OrganizationName: org.Name,
-			Point:            utils.Float64Ptr(0),
+			Point:            decimal.Zero,
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -452,7 +453,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 	}
 
 	// 已注册但公司对不上的，触发员工离职，并重新绑定
-	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) && *user.Point > 0 {
+	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) && user.Point.GreaterThan(decimal.Zero) {
 		err = s.processUserQuit(tx, user.UserID, user.OrganizationID)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -463,7 +464,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 		Username:         member.Username,
 		OrganizationID:   int(org.ID),
 		OrganizationName: org.Name,
-		Point:            utils.Float64Ptr(*user.Point + member.Point),
+		Point:            user.Point.Add(member.Point),
 		PointStatus:      model.UserPointStatusOwn,
 	}
 	if err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, update); err != nil {
@@ -475,8 +476,8 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 		UserID:             user.UserID,
 		OrganizationID:     user.OrganizationID,
 		PointApplicationID: int(apply.ID),
-		Point:              utils.Float64Ptr(member.Point),
-		PointRemain:        utils.Float64Ptr(member.Point),
+		Point:              member.Point,
+		PointRemain:        member.Point,
 	}
 	err = s.PointRemainDao.CreateInTx(tx, remain)
 	if err != nil {
@@ -487,7 +488,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 	record := &model.PointRecord{
 		UserID:             user.UserID,
 		OrganizationID:     user.OrganizationID,
-		ChangePoint:        utils.Float64Ptr(member.Point),
+		ChangePoint:        member.Point,
 		PointApplicationID: int(apply.ID),
 		PointID:            int(remain.ID),
 		Type:               model.PointRecordTypeApplication,
@@ -546,7 +547,7 @@ func (s *OrgService) processPointExpired(tx *gorm.DB, apply *model.PointApplicat
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	totalChange := float64(0)
+	totalChange := decimal.Zero
 	recordList := make([]*model.PointRecord, 0)
 	for _, remain := range remainList {
 		user, err := s.userDao.GetByUserIDForUpdate(tx, remain.UserID)
@@ -555,16 +556,16 @@ func (s *OrgService) processPointExpired(tx *gorm.DB, apply *model.PointApplicat
 		}
 
 		// 修改员工个人积分
-		err = s.userDao.UpdateByUserIDInTx(tx, remain.UserID, &model.User{Point: utils.Float64Ptr(*user.Point - *remain.PointRemain)})
+		err = s.userDao.UpdateByUserIDInTx(tx, remain.UserID, &model.User{Point: user.Point.Sub(remain.PointRemain)})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		totalChange += *remain.PointRemain
+		totalChange = totalChange.Add(remain.PointRemain)
 
 		recordList = append(recordList, &model.PointRecord{
 			UserID:             remain.UserID,
 			OrganizationID:     int(org.ID),
-			ChangePoint:        utils.Float64Ptr(*remain.PointRemain * -1),
+			ChangePoint:        remain.PointRemain.Mul(decimal.NewFromInt(-1)),
 			PointApplicationID: remain.PointApplicationID,
 			PointID:            int(remain.ID),
 			Type:               model.PointRecordTypeExpired,
@@ -575,13 +576,13 @@ func (s *OrgService) processPointExpired(tx *gorm.DB, apply *model.PointApplicat
 	}
 
 	// 修改该公司积分
-	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, &model.Organization{Point: utils.Float64Ptr(*org.Point - totalChange)})
+	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, &model.Organization{Point: org.Point.Sub(totalChange)})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	// 清空remain
-	err = s.PointRemainDao.UpdateByAppIDInTx(tx, int(apply.ID), &model.PointRemain{PointRemain: utils.Float64Ptr(0)})
+	err = s.PointRemainDao.UpdateByAppIDInTx(tx, int(apply.ID), &model.PointRemain{PointRemain: decimal.Zero})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -738,13 +739,13 @@ func (s *OrgService) clearPoint(tx *gorm.DB, req types.OrgClearPointReq, operato
 	}
 
 	// 修改该公司积分
-	err = s.orgDao.UpdateByIDInTx(tx, req.OrgID, &model.Organization{Point: utils.Float64Ptr(float64(0))})
+	err = s.orgDao.UpdateByIDInTx(tx, req.OrgID, &model.Organization{Point: decimal.Zero})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	// 修改员工个人积分
-	err = s.userDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.User{Point: utils.Float64Ptr(0)})
+	err = s.userDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.User{Point: decimal.Zero})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -759,7 +760,7 @@ func (s *OrgService) clearPoint(tx *gorm.DB, req types.OrgClearPointReq, operato
 	}
 
 	// 修改员工积分剩余表
-	err = s.PointRemainDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.PointRemain{PointRemain: utils.Float64Ptr(0)})
+	err = s.PointRemainDao.UpdateByOrgIDInTx(tx, req.OrgID, &model.PointRemain{PointRemain: decimal.Zero})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -770,7 +771,7 @@ func (s *OrgService) clearPoint(tx *gorm.DB, req types.OrgClearPointReq, operato
 		recordList = append(recordList, &model.PointRecord{
 			UserID:             remain.UserID,
 			OrganizationID:     int(org.ID),
-			ChangePoint:        utils.Float64Ptr(*remain.PointRemain * -1),
+			ChangePoint:        remain.PointRemain.Mul(decimal.NewFromInt(-1)),
 			PointApplicationID: remain.PointApplicationID,
 			PointID:            int(remain.ID),
 			Type:               model.PointRecordTypeCancel,
@@ -890,7 +891,7 @@ func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	err = s.orgDao.UpdateByIDInTx(tx, orgID, &model.Organization{Point: utils.Float64Ptr(*org.Point - *user.Point)})
+	err = s.orgDao.UpdateByIDInTx(tx, orgID, &model.Organization{Point: org.Point.Sub(user.Point)})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -900,7 +901,7 @@ func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{Point: utils.Float64Ptr(0)})
+	err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{Point: decimal.Zero})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -910,7 +911,7 @@ func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	err = s.PointRemainDao.UpdateByUserIDInTx(tx, userID, &model.PointRemain{PointRemain: utils.Float64Ptr(0)})
+	err = s.PointRemainDao.UpdateByUserIDInTx(tx, userID, &model.PointRemain{PointRemain: decimal.Zero})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -920,7 +921,7 @@ func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr
 		recordList = append(recordList, &model.PointRecord{
 			UserID:             userID,
 			OrganizationID:     int(org.ID),
-			ChangePoint:        utils.Float64Ptr(*remain.PointRemain * -1),
+			ChangePoint:        remain.PointRemain.Mul(decimal.NewFromInt(-1)),
 			PointApplicationID: remain.PointApplicationID,
 			PointID:            int(remain.ID),
 			Type:               model.PointRecordTypeQuit,
@@ -1031,7 +1032,7 @@ func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganiza
 			Code:        org.Code,
 			TotalMember: int(totalMember),
 			PointMember: int(pointMember),
-			TotalPoint:  org.Point,
+			TotalPoint:  org.Point.String(),
 		})
 	}
 
@@ -1063,7 +1064,7 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 			Name:             user.Username,
 			Phone:            user.Phone,
 			OrganizationName: user.OrganizationName,
-			Point:            *user.Point,
+			Point:            user.Point.String(),
 			CreateTime:       user.CreatedAt.Unix(),
 		})
 	}
@@ -1093,8 +1094,8 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      *user.Point,
-			PointChange:     *record.ChangePoint,
+			PointTotal:      user.Point.String(),
+			PointChange:     record.ChangePoint.String(),
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),
@@ -1121,10 +1122,10 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 	return &types.GetPointRecordsByApplyResp{
 		List:           list,
 		TotalNum:       int(count),
-		PointTotal:     apply.TotalPoint,
-		PointExpired:   expired,
-		PointSpend:     spend,
-		PointAvailable: available,
+		PointTotal:     apply.TotalPoint.String(),
+		PointExpired:   expired.String(),
+		PointSpend:     spend.String(),
+		PointAvailable: available.String(),
 	}, nil
 }
 
@@ -1143,8 +1144,8 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      *user.Point,
-			PointChange:     *record.ChangePoint,
+			PointTotal:      user.Point.String(),
+			PointChange:     record.ChangePoint.String(),
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),
@@ -1182,8 +1183,8 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      *user.Point,
-			PointChange:     *record.ChangePoint,
+			PointTotal:      user.Point.String(),
+			PointChange:     record.ChangePoint.String(),
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),

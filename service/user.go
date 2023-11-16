@@ -258,7 +258,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		AvatarURL:    user.AvatarURL,
 		UserRole:     user.UserRole,
 		VerifyStatus: model.UserVerifyStatusUnknown,
-		Point:        *user.Point,
+		Point:        user.Point.String(),
 		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
 	}
 

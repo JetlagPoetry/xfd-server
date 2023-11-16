@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -8,7 +9,7 @@ type PointRecord struct {
 	gorm.Model
 	UserID             string            `gorm:"column:user_id;not null" json:"user_id"`
 	OrganizationID     int               `gorm:"column:organization_id;not null" json:"organization_id"`
-	ChangePoint        *float64          `gorm:"column:change_point;not null" json:"change_point"`
+	ChangePoint        decimal.Decimal   `gorm:"column:change_point;not null" json:"change_point"`
 	PointApplicationID int               `gorm:"column:point_application_id;not null" json:"point_application_id"`
 	PointID            int               `gorm:"column:point_id;not null" json:"point_id"`
 	OrderID            int               `gorm:"column:order_id;not null" json:"order_id"`

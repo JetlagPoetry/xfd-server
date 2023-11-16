@@ -141,12 +141,12 @@ type GetOrganizationsResp struct {
 }
 
 type Organization struct {
-	ID          int      `json:"id"`
-	Name        string   `json:"name"`
-	Code        string   `json:"code"`
-	TotalMember int      `json:"totalMember"`
-	PointMember int      `json:"pointMember"`
-	TotalPoint  *float64 `json:"totalPoint"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Code        string `json:"code"`
+	TotalMember int    `json:"totalMember"`
+	PointMember int    `json:"pointMember"`
+	TotalPoint  string `json:"totalPoint"`
 }
 
 type GetOrgMembersReq struct {
@@ -162,12 +162,12 @@ type GetOrgMembersResp struct {
 }
 
 type OrgMember struct {
-	UserID           string  `json:"userID"`
-	Name             string  `json:"name"`
-	Phone            string  `json:"phone"`
-	OrganizationName string  `json:"organization_name"`
-	Point            float64 `json:"point"`
-	CreateTime       int64   `json:"createTime"`
+	UserID           string `json:"userID"`
+	Name             string `json:"name"`
+	Phone            string `json:"phone"`
+	OrganizationName string `json:"organization_name"`
+	Point            string `json:"point"`
+	CreateTime       int64  `json:"createTime"`
 }
 
 type GetPointRecordsByApplyReq struct {
@@ -178,10 +178,10 @@ type GetPointRecordsByApplyReq struct {
 type GetPointRecordsByApplyResp struct {
 	List           []*PointRecord `json:"list"`
 	TotalNum       int            `json:"totalNum"`
-	PointTotal     float64        `json:"pointTotal"`
-	PointExpired   float64        `json:"pointExpired"`
-	PointSpend     float64        `json:"pointSpend"`
-	PointAvailable float64        `json:"pointAvailable"`
+	PointTotal     string         `json:"pointTotal"`
+	PointExpired   string         `json:"pointExpired"`
+	PointSpend     string         `json:"pointSpend"`
+	PointAvailable string         `json:"pointAvailable"`
 }
 
 type GetPointRecordsByUserReq struct {
@@ -207,8 +207,8 @@ type GetPointRecordsResp struct {
 type PointRecord struct {
 	UserID          string                `json:"userID"`
 	Username        string                `json:"username"`
-	PointTotal      float64               `json:"pointTotal"`
-	PointChange     float64               `json:"pointChange"`
+	PointTotal      string                `json:"pointTotal"`
+	PointChange     string                `json:"pointChange"`
 	Type            model.PointRecordType `json:"type"`
 	Comment         string                `json:"comment"`
 	UpdateTime      int64                 `json:"updateTime"`

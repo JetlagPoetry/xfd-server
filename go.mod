@@ -8,6 +8,7 @@ require (
 	github.com/google/martian v2.1.0+incompatible
 	github.com/google/uuid v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/viper v1.9.0
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.793 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.793 // indirect
