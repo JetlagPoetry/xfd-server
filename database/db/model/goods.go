@@ -100,12 +100,15 @@ type ProductVariant struct {
 
 // Inventory 商品库存表
 type Inventory struct {
-	BaseModel
-	ProductVariantID int32  `gorm:"type:int;not null;comment:商品编号ID;index:product_variant_id_sku_code_goods_id" json:"product_variant_id"`
-	GoodsID          int32  `gorm:"type:int;not null;default:0;comment:商品ID;index:product_variant_id_sku_code_goods_id" json:"goods_id"`
-	SKUCode          string `gorm:"type:varchar(300);not null;default:'';comment:商品SKU编号;index:product_variant_id_sku_code_goods_id" json:"sku_code"`
-	LockStock        int    `gorm:"type:int;not null;default:0;comment:锁定库存" json:"lock_stock"`
-	SoldNum          int    `gorm:"type:int;default:0;not null;column:sold_num;comment:销量"`
+	ID               int32          `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
+	CreatedAt        time.Time      `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt        time.Time      `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	DeletedAt        gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
+	ProductVariantID int32          `gorm:"type:int;not null;comment:商品编号ID;index:product_variant_id_sku_code_goods_id" json:"product_variant_id"`
+	GoodsID          int32          `gorm:"type:int;not null;default:0;comment:商品ID;index:product_variant_id_sku_code_goods_id" json:"goods_id"`
+	SKUCode          string         `gorm:"type:varchar(300);not null;default:'';comment:商品SKU编号;index:product_variant_id_sku_code_goods_id" json:"sku_code"`
+	LockStock        int            `gorm:"type:int;not null;default:0;comment:锁定库存" json:"lock_stock"`
+	SoldNum          int            `gorm:"type:int;default:0;not null;column:sold_num;comment:销量"`
 }
 
 // StockSellDetail 库存扣减详情

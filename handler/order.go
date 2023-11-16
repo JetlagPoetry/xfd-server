@@ -79,6 +79,25 @@ func (h *OrderHandler) DeleteShoppingCart(context *gin.Context) {
 
 func (h *OrderHandler) ModifyShoppingCart(context *gin.Context) {
 	var (
+		req types.ShoppingCartModifyReq
+		xrr xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.orderService.ModifyShoppingCart(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] ModifyShoppingCart failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
+}
+
+func (h *OrderHandler) CreateOrder(context *gin.Context) {
+	var (
 		req  types.CreateOrderReq
 		resp *types.CreateOrderResp
 		xrr  xerr.XErr
