@@ -22,19 +22,25 @@ type ShoppingCart struct {
 }
 
 type OrderPayInfo struct {
-	gorm.Model
-	User       string     `gorm:"type:varchar(100);index;comment:用户id"`
-	OrderSn    string     `gorm:"type:varchar(100);index;comment:我们平台自己生成的订单号"`
-	PayType    int        `gorm:"type:varchar(20);comment:1:wechat(微信)"`
-	Status     string     `gorm:"type:varchar(20);comment:PAYING(待支付), TRADE_SUCCESS(成功)， TRADE_CLOSED(超时关闭), WAIT_BUYER_PAY(交易创建), TRADE_FINISHED(交易结束)"`
-	TradeNo    string     `gorm:"type:varchar(100);comment:交易号"`
-	OrderMount float32    `gorm:"comment:该订单需支付的总金额"`
-	PayTime    *time.Time `gorm:"comment:用户支付该订单的时间"`
+	ID         int32          `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
+	CreatedAt  time.Time      `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt  time.Time      `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	DeletedAt  gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
+	User       string         `gorm:"type:varchar(100);index;comment:用户id"`
+	OrderSn    string         `gorm:"type:varchar(100);index;comment:我们平台自己生成的订单号"`
+	PayType    int            `gorm:"type:varchar(20);comment:1:wechat(微信)"`
+	Status     string         `gorm:"type:varchar(20);comment:PAYING(待支付), TRADE_SUCCESS(成功)， TRADE_CLOSED(超时关闭), WAIT_BUYER_PAY(交易创建), TRADE_FINISHED(交易结束)"`
+	TradeNo    string         `gorm:"type:varchar(100);comment:交易号"`
+	OrderMount float32        `gorm:"comment:该订单需支付的总金额"`
+	PayTime    *time.Time     `gorm:"comment:用户支付该订单的时间"`
 }
 
 // OrderGoods 订单商品信息表
 type OrderGoods struct {
-	BaseModel
+	ID               int32                 `gorm:"primary_key;AUTO_INCREMENT;type:int" json:"id"`
+	CreatedAt        time.Time             `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt        time.Time             `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	DeletedAt        gorm.DeletedAt        `gorm:"column:deleted_at;index" json:"-"`
 	UserID           string                `gorm:"type:int;not null;comment:用户ID" json:"user_id"`
 	User             *User                 `gorm:"foreignKey:UserID;references:ID" json:"user"`
 	TotalPrice       float64               `gorm:"type:decimal(9,2);not null;comment:总价" json:"total_price"`
@@ -57,7 +63,6 @@ type OrderGoods struct {
 
 // todo:是否要主动查询快递状态，记录信息
 type Logistics struct {
-	BaseModel
 	ShipmentID string    `gorm:"column:shipment_id" json:"shipment_id" comment:"快递单号"`
 	Times      time.Time `gorm:"column:times" json:"times" comment:"时间"`
 	Context    string    `gorm:"column:context" json:"context" comment:"描述信息"`
