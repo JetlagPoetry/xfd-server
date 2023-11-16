@@ -23,8 +23,8 @@ func NewUserHandler() *UserHandler {
 
 func (h *UserHandler) SendCode(c *gin.Context) {
 	var (
-		req  types.UserLoginReq
-		resp *types.UserLoginResp
+		req  types.UserSendCodeReq
+		resp *types.UserSendCodeResp
 		xErr xerr.XErr
 	)
 
@@ -39,7 +39,7 @@ func (h *UserHandler) SendCode(c *gin.Context) {
 		return
 	}
 
-	resp, xErr = h.userService.Login(c, req)
+	resp, xErr = h.userService.SendCode(c, req)
 	if xErr != nil {
 		log.Println("[UserHandler] Login failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))

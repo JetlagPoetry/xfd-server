@@ -34,3 +34,11 @@ type ShoppingCartListReq struct {
 	PageRequest
 	UserID string
 }
+
+type CreateOrderReq struct {
+	// todo implement
+}
+
+type CreateOrderResp struct {
+	// todo implement
+}

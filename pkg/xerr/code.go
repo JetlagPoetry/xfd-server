@@ -22,6 +22,8 @@ const (
 	ErrorUserNotFound       XCode = 10010
 	ErrorTokenExpired       XCode = 10011
 	ErrorOperationForbidden XCode = 10012
+	ErrorUserOrgNotFound    XCode = 10013
+	ErrorUserPointEmpty     XCode = 10014
 
 	//店家错误
 	ErrorBossCheckTokenFail        XCode = 20001

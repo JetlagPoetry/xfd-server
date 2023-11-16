@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
@@ -37,7 +38,7 @@ func (d *PointRemainDao) List(ctx context.Context, page types.PageRequest, categ
 }
 
 func (d *PointRemainDao) ListByUserID(tx *gorm.DB, userID string) (list []*model.PointRemain, err error) {
-	err = tx.Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0", userID).Find(&list).Error
+	err = tx.Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0", userID).Order("id ASC").Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
@@ -132,18 +133,18 @@ func (d *PointRemainDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateVa
 	return nil
 }
 
-func (d *PointRemainDao) SumPointRemainByApplyID(ctx context.Context, applyID int) (sum float64, err error) {
+func (d *PointRemainDao) SumPointRemainByApplyID(ctx context.Context, applyID int) (sum decimal.Decimal, err error) {
 	err = db.Get().Table("point_remain").Select("IFNULL(SUM(point_remain),0)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
 	if err != nil {
-		return 0, err
+		return decimal.Decimal{}, err
 	}
 	return sum, nil
 }
 
-func (d *PointRemainDao) SumPointRemainByApplyIDInTx(tx *gorm.DB, applyID int) (sum float64, err error) {
+func (d *PointRemainDao) SumPointRemainByApplyIDInTx(tx *gorm.DB, applyID int) (sum decimal.Decimal, err error) {
 	err = tx.Table("point_remain").Select("IFNULL(SUM(point_remain),0)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
 	if err != nil {
-		return 0, err
+		return decimal.Decimal{}, err
 	}
 	return sum, nil
 }

@@ -1,28 +1,38 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/martian/log"
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
+	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/xerr"
 )
 
 type OrderService struct {
-	goods    *dao.GoodsDao
-	userDao  *dao.UserDao
-	orderDao *dao.OrderDao
+	goods          *dao.GoodsDao
+	userDao        *dao.UserDao
+	orderDao       *dao.OrderDao
+	orgDao         *dao.OrganizationDao
+	pointRemainDao *dao.PointRemainDao
+	pointRecordDao *dao.PointRecordDao
 }
 
 func NewOrderService() *OrderService {
 	return &OrderService{
-		goods:    dao.NewGoodsDao(),
-		userDao:  dao.NewUserDao(),
-		orderDao: dao.NewOrderDao(),
+		goods:          dao.NewGoodsDao(),
+		userDao:        dao.NewUserDao(),
+		orderDao:       dao.NewOrderDao(),
+		orgDao:         dao.NewOrganizationDao(),
+		pointRemainDao: dao.NewPointRemainDao(),
+		pointRecordDao: dao.NewPointRecordDao(),
 	}
 }
 
@@ -195,4 +205,133 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 	}
 	result.List = shoppingCartListResp
 	return &result, nil
+}
+
+func (s *OrderService) CreateOrder(ctx *gin.Context, req types.CreateOrderReq) (*types.CreateOrderResp, xerr.XErr) {
+	// todo implement
+
+	return &types.CreateOrderResp{}, nil
+}
+
+func (s *OrderService) createOrder(tx *gorm.DB, req types.CreateOrderReq) (*types.CreateOrderResp, xerr.XErr) {
+	// 写订单
+
+	// 扣购物车
+
+	// 扣库存
+
+	// 算价
+
+	// 扣钱
+
+	return &types.CreateOrderResp{}, nil
+}
+
+// org->point_application->user->point_remain->point_record
+func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, totalPrice decimal.Decimal) xerr.XErr {
+	if user.OrganizationID == 0 {
+		return xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
+	}
+	// todo  redis锁用户支付
+
+	org, err := s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user == nil {
+		return xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
+	}
+	if user.Point.Equals(decimal.Zero) {
+		return xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
+	}
+
+	if user.Point.GreaterThanOrEqual(totalPrice) {
+		// 只用积分支付
+		xErr := s.payWithPoint(tx, 0, user, org, totalPrice, false)
+		if xErr != nil {
+			return xErr
+		}
+	} else {
+		// 积分+微信支付
+	}
+	return nil
+}
+
+func (s *OrderService) payWithPoint(tx *gorm.DB, orderID int, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
+	userLeft := user.Point.Sub(point)
+	err := s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: userLeft})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	remainList, err := s.pointRemainDao.ListByUserID(tx, user.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	pointLeft := point.Copy()
+	remainIDs := make([]int, 0)
+	for _, remain := range remainList {
+		if pointLeft == decimal.Zero {
+			break
+		}
+		remainIDs = append(remainIDs, int(remain.ID))
+		var spend decimal.Decimal
+		if remain.PointRemain.LessThan(pointLeft) {
+			// 将pointRemain花费完
+			spend = remain.PointRemain
+			pointLeft.Sub(remain.PointRemain)
+		} else {
+			// 将pointLeft花费完
+			spend = pointLeft
+			pointLeft.Sub(pointLeft)
+		}
+
+		err = s.pointRemainDao.UpdateByIDInTx(tx, int(remain.ID), &model.PointRemain{PointRemain: spend})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		record := &model.PointRecord{
+			UserID:             user.UserID,
+			OrganizationID:     user.OrganizationID,
+			ChangePoint:        spend.Mul(decimal.NewFromInt(-1)),
+			PointApplicationID: remain.PointApplicationID,
+			PointID:            int(remain.ID),
+			OrderID:            orderID,
+			Type:               model.PointRecordTypeSpend,
+			Status: func() model.PointRecordStatus {
+				if payWx {
+					return model.PointRecordStatusInit
+				} else {
+					return model.PointRecordStatusConfirmed
+				}
+			}(),
+			Comment: consts.PointCommentSpend,
+		}
+		err = s.pointRecordDao.CreateInTx(tx, record)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+
+	if pointLeft.GreaterThan(decimal.Zero) {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return nil
+}
+
+func (s *OrderService) payWithWx(tx *gorm.DB, user *model.User, totalPrice float64) xerr.XErr {
+	return nil
 }

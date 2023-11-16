@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
@@ -135,10 +136,10 @@ func (d *PointRecordDao) UpdateByID(ctx context.Context, id int, updateValue *mo
 	return nil
 }
 
-func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty model.PointRecordType) (sum float64, err error) {
+func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty model.PointRecordType) (sum decimal.Decimal, err error) {
 	err = db.Get().Table("point_record").Select("IFNULL(SUM(change_point),0)").Where("point_application_id = ? AND type = ?", applyID, ty).Row().Scan(&sum)
 	if err != nil {
-		return 0, err
+		return decimal.Decimal{}, err
 	}
 	return sum, nil
 }

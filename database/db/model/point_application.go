@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"time"
 )
@@ -8,7 +9,7 @@ import (
 type PointApplication struct {
 	gorm.Model
 	OrganizationID int                    `gorm:"column:organization_id;not null" json:"organization_id"`
-	TotalPoint     float64                `gorm:"column:total_point;not null" json:"total_point"`
+	TotalPoint     decimal.Decimal        `gorm:"column:total_point;not null" json:"total_point"`
 	FileURL        string                 `gorm:"column:file_url;not null" json:"file_url"`
 	Status         PointApplicationStatus `gorm:"column:status;not null" json:"status"`
 	Comment        string                 `gorm:"column:comment;not null" json:"comment"`

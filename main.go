@@ -8,6 +8,7 @@ import (
 	"xfd-backend/database/db"
 	"xfd-backend/pkg/cron"
 	"xfd-backend/pkg/jwt"
+	"xfd-backend/pkg/utils"
 	"xfd-backend/router"
 	"xfd-backend/service"
 )
@@ -27,6 +28,7 @@ func Init() {
 	if err := db.Init(); err != nil {
 		panic(fmt.Sprintf("Mysql init failed with %+v", err))
 	}
+	utils.InitSms()
 	jwt.Init()
 	//config.InitConfig()
 	if err := initCache(); err != nil {
