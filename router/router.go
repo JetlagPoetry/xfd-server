@@ -99,6 +99,7 @@ func NewRouter() *gin.Engine {
 		orderGroup.GET("/getShoppingCart", handler.Order.GetShoppingCartList)      //获取购物车列表
 		orderGroup.DELETE("/deleteShoppingCart", handler.Order.DeleteShoppingCart) //删除购物车商品
 		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
+		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
 	}
 	commonGroup := r.Group("/api/v1/common")
 	{

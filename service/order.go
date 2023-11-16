@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/martian/log"
+	"gorm.io/gorm"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
@@ -195,4 +196,24 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 	}
 	result.List = shoppingCartListResp
 	return &result, nil
+}
+
+func (s *OrderService) CreateOrder(ctx *gin.Context, req types.CreateOrderReq) (*types.CreateOrderResp, xerr.XErr) {
+	// todo implement
+
+	return &types.CreateOrderResp{}, nil
+}
+
+func (s *OrderService) createOrder(tx *gorm.DB, req types.CreateOrderReq) (*types.CreateOrderResp, xerr.XErr) {
+	// 写订单
+
+	// 扣购物车
+
+	// 扣库存
+
+	// 算价
+
+	// 扣钱
+
+	return &types.CreateOrderResp{}, nil
 }
