@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 	"sort"
 	"strings"
 	"time"
@@ -67,6 +68,7 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		wholesaleLogisticsBytes, _ := json.Marshal(req.GoodsDetail.WholesaleLogistics)
 		wholesaleLogistics = string(wholesaleLogisticsBytes)
 	}
+	retailShippingFee := utils.StringToDecimal(req.GoodsDetail.RetailShippingFee)
 	modelGoods := &model.Goods{
 		UserID:             userID,
 		CategoryAID:        req.GoodsDetail.CategoryAID,
@@ -87,10 +89,10 @@ func (s *GoodsService) AddGoods(ctx *gin.Context, req types.GoodsAddReq) xerr.XE
 		WholesaleAreaCodeB: req.GoodsDetail.WholesaleAreaCodeB,
 		WholesaleAreaCodeC: req.GoodsDetail.WholesaleAreaCodeC,
 		RetailShippingTime: req.GoodsDetail.RetailShippingTime,
-		RetailShippingFee:  &req.GoodsDetail.RetailShippingFee,
+		RetailShippingFee:  retailShippingFee,
 	}
 	//全国包邮
-	if req.GoodsDetail.RetailShippingFee == 0 {
+	if retailShippingFee.Equal(decimal.Zero) {
 		one := 1
 		modelGoods.ShipFree = &one
 	}
@@ -202,11 +204,12 @@ func (s *GoodsService) processProducts(ctx context.Context, products []*types.Ad
 		}
 		skuCode := fmt.Sprintf("SK%d%d%s", time.Now().Unix(), goodsID, utils.GenerateRandomNumber(8))
 		productAttrBytes, _ := json.Marshal(products[i].ProductAttr)
+		price := utils.StringToDecimal(*products[i].Price)
 		productVariant := &model.ProductVariant{
 			SKUCode:          skuCode,
 			GoodsID:          goodsID,
 			Unit:             products[i].Unit,
-			Price:            products[i].Price,
+			Price:            price,
 			Stock:            &products[i].Stock,
 			MinOrderQuantity: products[i].MinOrderQuantity,
 			Type:             productType,
@@ -308,33 +311,33 @@ func (s *GoodsService) normalGetGoodsList(ctx *gin.Context, req types.GoodsListR
 	return &result, nil
 }
 
-func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) (float64, float64, float64, float64, string, string) {
-	var wholesalePriceMax, wholesalePriceMin, retailPriceMax, retailPriceMin float64
+func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) (string, string, string, string, string, string) {
+	var wholesalePriceMax, wholesalePriceMin, retailPriceMax, retailPriceMin decimal.Decimal
 	var wholesaleUnit, retailUnit string
 	initW := false
 	initR := false
 	for k := range productVariants {
 		if productVariants[k].Type == enum.ProductWholesale {
 			wholesaleUnit = productVariants[k].Unit
-			if !initW || productVariants[k].Price > wholesalePriceMax {
+			if !initW || productVariants[k].Price.GreaterThan(wholesalePriceMax) {
 				wholesalePriceMax = productVariants[k].Price
 			}
-			if !initW || productVariants[k].Price < wholesalePriceMin {
+			if !initW || productVariants[k].Price.LessThan(wholesalePriceMin) {
 				wholesalePriceMin = productVariants[k].Price
 			}
 			initW = true
 		} else if productVariants[k].Type == enum.ProductRetail {
 			retailUnit = productVariants[k].Unit
-			if !initR || productVariants[k].Price > retailPriceMax {
+			if !initR || productVariants[k].Price.GreaterThan(retailPriceMax) {
 				retailPriceMax = productVariants[k].Price
 			}
-			if !initR || productVariants[k].Price < retailPriceMin {
+			if !initR || productVariants[k].Price.LessThan(retailPriceMin) {
 				retailPriceMin = productVariants[k].Price
 			}
 			initR = true
 		}
 	}
-	return wholesalePriceMax, wholesalePriceMin, retailPriceMax, retailPriceMin, wholesaleUnit, retailUnit
+	return wholesalePriceMax.String(), wholesalePriceMin.String(), retailPriceMax.String(), retailPriceMin.String(), wholesaleUnit, retailUnit
 }
 
 func (s *GoodsService) getGoodsListByPrice(ctx *gin.Context, req types.GoodsListReq) (*types.GoodsListResp, xerr.XErr) {
@@ -545,7 +548,7 @@ func (s *GoodsService) fillWholesaleDetails(c *gin.Context, req types.GoodsReq, 
 
 func (s *GoodsService) fillRetailDetails(c *gin.Context, req types.GoodsReq, goods *model.Goods, goodsDetail *types.GoodsDetailResp, status enum.ProductVariantStatus) xerr.XErr {
 	goodsDetail.RetailShippingTime = goods.RetailShippingTime
-	goodsDetail.RetailShippingFee = *goods.RetailShippingFee
+	goodsDetail.RetailShippingFee = goods.RetailShippingFee.String()
 	specInfo, err := s.getSpecificationByType(c, req, enum.ProductRetail)
 	if err != nil {
 		return err
@@ -616,7 +619,7 @@ func (s *GoodsService) getProductsInfoByTypeAndStatus(c *gin.Context, req types.
 		productVariantInfo := &types.ProductVariantInfo{
 			ID:               vv.ID,
 			Unit:             vv.Unit,
-			Price:            vv.Price,
+			Price:            vv.Price.String(),
 			MinOrderQuantity: vv.MinOrderQuantity,
 			Stock:            *vv.Stock,
 			SKUCode:          vv.SKUCode,
@@ -663,6 +666,7 @@ func (s *GoodsService) ModifyMyGoods(c *gin.Context, req types.GoodsModifyReq) x
 		images = string(imagesBytes)
 		goodsFrontImage = req.Images[0]
 	}
+
 	updateValue := &model.Goods{
 		CategoryAID:        req.CategoryAID,
 		CategoryBID:        req.CategoryBID,
@@ -679,13 +683,15 @@ func (s *GoodsService) ModifyMyGoods(c *gin.Context, req types.GoodsModifyReq) x
 		WholesaleAreaCodeB: req.WholesaleAreaCodeB,
 		WholesaleAreaCodeC: req.WholesaleAreaCodeC,
 		RetailShippingTime: req.RetailShippingTime,
-		RetailShippingFee:  req.RetailShippingFee,
 	}
-	if *goods.ShipFree == 1 && req.RetailShippingFee != nil && *req.RetailShippingFee != 0 {
+	if req.RetailShippingFee != nil {
+		updateValue.RetailShippingFee = utils.StringToDecimal(*req.RetailShippingFee)
+	}
+	if *goods.ShipFree == 1 && updateValue.RetailShippingFee.Equal(decimal.Zero) {
 		zero := 0
 		updateValue.ShipFree = &zero
 	}
-	if *goods.ShipFree == 0 && req.RetailShippingFee != nil && *req.RetailShippingFee == 0 {
+	if *goods.ShipFree == 0 && !updateValue.RetailShippingFee.Equal(decimal.Zero) {
 		one := 1
 		updateValue.ShipFree = &one
 	}
@@ -791,10 +797,12 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 		}
 		productVariant := &model.ProductVariant{
 			Unit:             products[i].Unit,
-			Price:            products[i].Price,
 			MinOrderQuantity: products[i].MinOrderQuantity,
 			Status:           products[i].Status,
 			Stock:            products[i].Stock,
+		}
+		if products[i].Price != nil {
+			productVariant.Price = utils.StringToDecimal(*products[i].Price)
 		}
 		if products[i].CheckParams(productType) != nil {
 			return 0, false, xerr.WithCode(xerr.InvalidParams, products[i].CheckParams(productType))

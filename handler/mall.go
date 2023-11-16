@@ -39,3 +39,30 @@ func (h *MallHandler) GetCategories(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
+
+func (h *MallHandler) DeleteCategory(context *gin.Context) {
+
+}
+
+func (h *MallHandler) ModifyCategory(context *gin.Context) {
+
+}
+
+func (h *MallHandler) AddCategory(context *gin.Context) {
+	var (
+		req types.CategoryAddReq
+		xrr xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.mallService.AddCategory(context, req)
+	if xrr != nil {
+		log.Println("[MallHandler] AddCategory failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
+}

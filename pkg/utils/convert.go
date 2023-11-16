@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"fmt"
+	"github.com/shopspring/decimal"
+)
+
 func IntToBool(i int) bool {
 	if i == 0 {
 		return false
@@ -40,4 +45,17 @@ func StringPtr(s string) *string {
 
 func BoolPtr(i bool) *bool {
 	return &i
+}
+
+func StringToDecimal(i string) decimal.Decimal {
+	if i == "" {
+		return decimal.NewFromFloat(0.0)
+	}
+	dec, err := decimal.NewFromString(i)
+	if err != nil {
+		fmt.Println("无法解析字符串为 decimal.Decimal:", err)
+		return decimal.NewFromFloat(0.0)
+	}
+
+	return dec
 }

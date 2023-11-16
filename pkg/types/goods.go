@@ -18,7 +18,7 @@ type GoodsAddReq struct {
 type ProductWholesale struct {
 	ProductAttr      []*model.ProductAttr      `json:"productAttr" binding:"required"`
 	Unit             string                    `json:"unit" binding:"required,gte=1,lte=10"`
-	Price            float64                   `json:"price" binding:"required"`
+	Price            *string                   `json:"price" binding:"required"`
 	Status           enum.ProductVariantStatus `json:"status" binding:"required,gte=1,lte=2"`
 	MinOrderQuantity int                       `json:"minOrderQuantity" binding:"required"`
 	Stock            int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
@@ -26,7 +26,7 @@ type ProductWholesale struct {
 type AddProduct struct {
 	ProductAttr      []*model.ProductAttr      `json:"productAttr" binding:"required"`
 	Unit             string                    `json:"unit" binding:"required,gte=1,lte=10"`
-	Price            float64                   `json:"price" binding:"required"`
+	Price            *string                   `json:"price" binding:"required"`
 	Status           enum.ProductVariantStatus `json:"status" binding:"required,gte=1,lte=2"`
 	MinOrderQuantity int                       `json:"minOrderQuantity" binding:"required"`
 	Stock            int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
@@ -47,7 +47,7 @@ type GoodsDetail struct {
 	WholesaleAreaCodeB int                     `json:"wholesaleAreaCodeB" binding:"required"`             // 筛选code区
 	WholesaleAreaCodeC int                     `json:"wholesaleAreaCodeC" binding:"required"`             // 筛选code县/市
 	RetailShippingTime enum.RetailDeliveryTime `json:"retailShippingTime" binding:"required,gte=1,lte=3"` // 零售发货时间
-	RetailShippingFee  float64                 `json:"retailShippingFee"`                                 // 零售运费
+	RetailShippingFee  string                  `json:"retailShippingFee"`                                 // 零售运费
 }
 
 func (r GoodsDetail) CheckParams() error {
@@ -93,10 +93,10 @@ type GoodsList struct {
 	GoodsFrontImage   string                    `json:"goodsFrontImage" gorm:"column:goods_front_image"`
 	Images            string                    `json:"-" gorm:"column:images"`
 	RetailStatus      enum.GoodsRetailStatus    `json:"-" gorm:"column:retail_status"`
-	RetailPriceMax    float64                   `json:"retailPriceMax,omitempty"`
-	RetailPriceMin    float64                   `json:"retailPriceMin,omitempty"`
-	WholesalePriceMax float64                   `json:"wholesalePriceMax,omitempty"`
-	WholesalePriceMin float64                   `json:"wholesalePriceMin,omitempty"`
+	RetailPriceMax    string                    `json:"retailPriceMax,omitempty"`
+	RetailPriceMin    string                    `json:"retailPriceMin,omitempty"`
+	WholesalePriceMax string                    `json:"wholesalePriceMax,omitempty"`
+	WholesalePriceMin string                    `json:"wholesalePriceMin,omitempty"`
 	WholeSaleUnit     string                    `json:"wholeSaleUnit,omitempty"`
 	RetailUnit        string                    `json:"retailUnit,omitempty"`
 	CreatedAt         string                    `json:"createdAt,omitempty" gorm:"column:created_at"`
@@ -126,7 +126,7 @@ func (g *GoodsList) GetGoodsFrontImage() string {
 
 type MinPriceResult struct {
 	GoodsID         int32   `gorm:"column:goods_id"`
-	MinPrice        float64 `gorm:"column:min_price"`
+	MinPrice        *string `gorm:"column:min_price"`
 	Name            string  `gorm:"column:name"`
 	GoodsFrontImage string  `gorm:"column:goods_front_image"`
 	Images          string  `gorm:"column:images"`
@@ -157,7 +157,7 @@ type GoodsDetailResp struct {
 	WholesaleLogistics []int                   `json:"wholesaleLogistics,omitempty"` // 批发物流
 	WholesaleShipping  string                  `json:"wholesaleShipping,omitempty"`  // 批发发货地
 	RetailShippingTime enum.RetailDeliveryTime `json:"retailShippingTime,omitempty"`
-	RetailShippingFee  float64                 `json:"retailShippingFee,omitempty"`
+	RetailShippingFee  string                  `json:"retailShippingFee,omitempty"`
 	SpecInfo           []*SpecInfo             `json:"specInfo"`
 	WholesaleProducts  []*ProductVariantInfo   `json:"wholesaleProducts,omitempty"`
 	RetailProducts     []*ProductVariantInfo   `json:"retailProduct,omitempty"`
@@ -166,7 +166,7 @@ type GoodsDetailResp struct {
 type ProductVariantInfo struct {
 	ID               int32                     `json:"id"`
 	Unit             string                    `json:"unit"`
-	Price            float64                   `json:"price"`
+	Price            string                    `json:"price"`
 	MinOrderQuantity int                       `json:"minOrderQuantity,omitempty"`
 	Stock            int                       `json:"stock,omitempty"`
 	SKUCode          string                    `json:"skuCode"`
@@ -203,7 +203,7 @@ type GoodsModifyReq struct {
 	WholesaleAreaCodeB int                     `json:"wholesaleAreaCodeB" ` // 筛选code区
 	WholesaleAreaCodeC int                     `json:"wholesaleAreaCodeC"`  // 筛选code县/市
 	RetailShippingTime enum.RetailDeliveryTime `json:"retailShippingTime"`  // 零售发货时间
-	RetailShippingFee  *float64                `json:"retailShippingFee"`   // 零售运费 8-0/0-8/8-8
+	RetailShippingFee  *string                 `json:"retailShippingFee"`   // 零售运费 8-0/0-8/8-8
 	WholesaleProducts  []*ModifyProduct        `json:"wholesaleProducts"`
 	RetailProducts     []*ModifyProduct        `json:"retailProducts"`
 }
@@ -211,7 +211,7 @@ type GoodsModifyReq struct {
 type ModifyProduct struct {
 	ID               int32                     `json:"id"`
 	Unit             string                    `json:"unit"`
-	Price            float64                   `json:"price"`
+	Price            *string                   `json:"price"`
 	MinOrderQuantity int                       `json:"minOrderQuantity"`
 	Status           enum.ProductVariantStatus `json:"status"`
 	Stock            *int                      `json:"stock" binding:"lte=9999999"`
@@ -220,7 +220,7 @@ type ModifyProduct struct {
 
 func (m *ModifyProduct) CheckParams(productType enum.ProductVariantType) error {
 	if m.ID == 0 {
-		if m.Unit == "" || m.Price == 0 || m.Status == 0 || m.ProductAttr == nil {
+		if m.Unit == "" || m.Price == nil || m.Status == 0 || m.ProductAttr == nil {
 			return fmt.Errorf("unit, price, status, productAttr must be filled")
 		}
 		if productType == enum.ProductWholesale {

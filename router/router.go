@@ -76,10 +76,12 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)   // 查看员工积分明细
 		orgGroup.GET("/getPointRecords", handler.Org.GetPointRecords)               // 查看公司/本公司积分明细
 	}
-	//todo:/api/v1/area  500 而不是404
 	mallGroup := r.Group("/api/v1/mall")
 	{
-		mallGroup.GET("/categories", handler.Mall.GetCategories) //获取商城分类信息
+		mallGroup.GET("/categories", handler.Mall.GetCategories)         //获取商城分类信息
+		mallGroup.POST("/addCategory", handler.Mall.AddCategory)         //添加商城分类信息
+		mallGroup.POST("/modifyCategory", handler.Mall.ModifyCategory)   //修改商城分类信息
+		mallGroup.DELETE("/deleteCategory", handler.Mall.DeleteCategory) //删除商城分类信息
 	}
 	goodsGroup := r.Group("/api/v1/goods")
 	{
@@ -99,12 +101,12 @@ func NewRouter() *gin.Engine {
 		orderGroup.DELETE("/deleteShoppingCart", handler.Order.DeleteShoppingCart) //删除购物车商品
 		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
 	}
+
 	commonGroup := r.Group("/api/v1/common")
 	{
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
 		commonGroup.POST("/uploadFile", handler.Common.UploadFile)         //上传图片
 		commonGroup.DELETE("/uploadFile", handler.Common.DeleteUploadFile) //删除图片
 	}
-
 	return r
 }

@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"log"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
@@ -63,5 +65,35 @@ func (s *MallService) SetCategoryCache(ctx context.Context) xerr.XErr {
 
 	cache.SetCategory(m)
 
+	return nil
+}
+
+func (s *MallService) AddCategory(c *gin.Context, req types.CategoryAddReq) xerr.XErr {
+	if req.CheckParams() != nil {
+		return xerr.WithCode(xerr.InvalidParams, req.CheckParams())
+	}
+	//校验父分类是否存在
+	if req.ParentID != 0 {
+		category, err := s.category.GetCategoryByID(c, req.ParentID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		if category == nil {
+			return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("parent category %d not found", req.ParentID))
+		}
+		if category.Level != req.Level {
+			return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("parent category %d level is %d not equal %d", req.ParentID, category.Level, req.Level))
+		}
+	}
+	category := &model.Category{
+		Name:             req.Name,
+		Level:            req.Level,
+		ParentCategoryID: req.ParentID,
+		Image:            req.Image,
+	}
+	_, err := s.category.CreateCategory(c, category)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/google/martian/log"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"time"
 	"xfd-backend/database/db/enum"
@@ -51,7 +52,7 @@ type Goods struct {
 	WholesaleAreaCodeB int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_b;comment:筛选code区"`
 	WholesaleAreaCodeC int                     `gorm:"type:bigint;not null;default:0;not null;column:wholesale_area_code_c;comment:筛选code县/市"`
 	RetailShippingTime enum.RetailDeliveryTime `gorm:"type:int;not null;default:0;column:retail_shipping_time;comment:零售发货时间"`
-	RetailShippingFee  *float64                `gorm:"type:decimal(9,2);not null;default:0.0;column:retail_shipping_fee;comment:零售运费"`
+	RetailShippingFee  decimal.Decimal         `gorm:"type:decimal(9,2);not null;default:0.0;column:retail_shipping_fee;comment:零售运费"`
 	CreatedAt          time.Time               `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);index:created_at;index:level_status_deleted"`
 	UpdatedAt          time.Time               `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);index:updated_at;index:level_status_deleted"`
 	DeletedAt          gorm.DeletedAt          `gorm:"column:deleted_at;index" json:"-"`
@@ -89,7 +90,7 @@ type ProductVariant struct {
 	SKUCode          string                    `gorm:"type:varchar(300);not null;default:'';column:sku_code;comment:产品SKU编号;index:sku_code" json:"sku_code"`
 	GoodsID          int32                     `gorm:"type:int;not null;default:0;comment:商品ID;index:goods_id_type_status" json:"goods_id"`
 	Unit             string                    `gorm:"type:varchar(100);default:'';not null;column:unit;comment:单位" json:"unit"`
-	Price            float64                   `gorm:"type:decimal(9,2);default:0.0;not null;column:price;comment:价格" json:"price"`
+	Price            decimal.Decimal           `gorm:"type:decimal(9,2);default:0.0;not null;column:price;comment:价格" json:"price"`
 	Stock            *int                      `gorm:"type:int;default:0;column:stock;not null;comment:库存" json:"stock"`
 	MinOrderQuantity int                       `gorm:"type:int;default:0;column:min_order_quantity;comment:起批量" json:"min_order_quantity"`
 	Type             enum.ProductVariantType   `gorm:"type:tinyint(1);default:0;not null;column:type;comment:类型 1-批发 2-零售;index:goods_id_type_status" json:"type"`
