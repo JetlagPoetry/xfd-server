@@ -79,18 +79,18 @@ type PurchaseGetQuotesResp struct {
 }
 
 type PurchaseQuote struct {
-	QuoteID    int     `json:"quoteID"`
-	OrderID    int     `json:"orderID"`
-	GoodsID    int     `json:"goodsID"`
-	GoodsURL   string  `json:"goodsURL"`
-	GoodsName  string  `json:"goodsName"`
-	Price      float64 `json:"price"`
-	Unit       string  `json:"unit"`
-	Time       int64   `json:"time"`
-	UserID     string  `json:"userID"`
-	UserName   string  `json:"userName"`
-	UserAvatar string  `json:"userAvatar"`
-	IsNew      bool    `json:"isNew"`
+	QuoteID    int    `json:"quoteID"`
+	OrderID    int    `json:"orderID"`
+	GoodsID    int    `json:"goodsID"`
+	GoodsURL   string `json:"goodsURL"`
+	GoodsName  string `json:"goodsName"`
+	Price      string `json:"price"`
+	Unit       string `json:"unit"`
+	Time       int64  `json:"time"`
+	UserID     string `json:"userID"`
+	UserName   string `json:"userName"`
+	UserAvatar string `json:"userAvatar"`
+	IsNew      bool   `json:"isNew"`
 }
 
 type PurchaseGetStatisticsReq struct {

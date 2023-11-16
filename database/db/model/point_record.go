@@ -32,6 +32,7 @@ const (
 	PointRecordTypeExpired     PointRecordType = 2 // 过期
 	PointRecordTypeQuit        PointRecordType = 3 // 离职
 	PointRecordTypeCancel      PointRecordType = 4 // 清零
+	PointRecordTypeRefund      PointRecordType = 5 // 退款
 )
 
 type PointRecordStatus int

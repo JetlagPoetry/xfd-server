@@ -337,7 +337,8 @@ func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) 
 			initR = true
 		}
 	}
-	return wholesalePriceMax.String(), wholesalePriceMin.String(), retailPriceMax.String(), retailPriceMin.String(), wholesaleUnit, retailUnit
+	return wholesalePriceMax.Round(2).String(), wholesalePriceMin.Round(2).String(),
+		retailPriceMax.Round(2).String(), retailPriceMin.Round(2).String(), wholesaleUnit, retailUnit
 }
 
 func (s *GoodsService) getGoodsListByPrice(ctx *gin.Context, req types.GoodsListReq) (*types.GoodsListResp, xerr.XErr) {
@@ -548,7 +549,7 @@ func (s *GoodsService) fillWholesaleDetails(c *gin.Context, req types.GoodsReq, 
 
 func (s *GoodsService) fillRetailDetails(c *gin.Context, req types.GoodsReq, goods *model.Goods, goodsDetail *types.GoodsDetailResp, status enum.ProductVariantStatus) xerr.XErr {
 	goodsDetail.RetailShippingTime = goods.RetailShippingTime
-	goodsDetail.RetailShippingFee = goods.RetailShippingFee.String()
+	goodsDetail.RetailShippingFee = goods.RetailShippingFee.Round(2).String()
 	specInfo, err := s.getSpecificationByType(c, req, enum.ProductRetail)
 	if err != nil {
 		return err
@@ -619,7 +620,7 @@ func (s *GoodsService) getProductsInfoByTypeAndStatus(c *gin.Context, req types.
 		productVariantInfo := &types.ProductVariantInfo{
 			ID:               vv.ID,
 			Unit:             vv.Unit,
-			Price:            vv.Price.String(),
+			Price:            vv.Price.Round(2).String(),
 			MinOrderQuantity: vv.MinOrderQuantity,
 			Stock:            *vv.Stock,
 			SKUCode:          vv.SKUCode,

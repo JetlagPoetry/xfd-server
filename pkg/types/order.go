@@ -36,6 +36,7 @@ type ShoppingCartListReq struct {
 }
 
 type CreateOrderReq struct {
+	Code string `json:"code"`
 	// todo implement
 }
 
@@ -44,7 +45,8 @@ type CreateOrderResp struct {
 }
 
 type ApplyRefundReq struct {
-	// todo implement
+	OrderID     int  `json:"orderID"`
+	RefundPoint bool `json:"refundPoint"`
 }
 
 type ApplyRefundResp struct {
@@ -57,4 +59,11 @@ type ApplyExchangeReq struct {
 
 type ApplyExchangeResp struct {
 	// todo implement
+}
+
+type PayOrderReq struct {
+	// todo implement
+}
+
+type PayOrderResp struct {
 }

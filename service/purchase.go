@@ -248,7 +248,7 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQu
 			GoodsID:    quote.GoodsID,
 			GoodsName:  "",
 			GoodsURL:   "",
-			Price:      quote.Price,
+			Price:      quote.Price.Round(2).String(),
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),
 			UserID:     userID,

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"time"
 	"xfd-backend/database/db/enum"
@@ -46,6 +47,8 @@ type OrderGoods struct {
 	TotalPrice       float64               `gorm:"type:decimal(9,2);not null;comment:总价" json:"total_price"`
 	UnitPrice        float64               `gorm:"type:decimal(9,2);not null;comment:单价" json:"unit_price"`
 	PostPrice        float64               `gorm:"type:decimal(9,2);not null;comment:邮费" json:"post_price"`
+	PointPrice       decimal.Decimal       `gorm:"type:decimal(9,2);not null;comment:积分实付" json:"point_price"`
+	WxPrice          decimal.Decimal       `gorm:"type:decimal(9,2);not null;comment:微信实付" json:"wx_price"`
 	Status           enum.OrderGoodsStatus `gorm:"type:varchar(50);not null;comment:订单状态" json:"status"`
 	TradeNo          string                `gorm:"type:varchar(100);comment:交易号"`
 	ProductVariantID int32                 `gorm:"type:int;not null;comment:商品编号ID" json:"product_variant_id"`

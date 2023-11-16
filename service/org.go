@@ -1032,7 +1032,7 @@ func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganiza
 			Code:        org.Code,
 			TotalMember: int(totalMember),
 			PointMember: int(pointMember),
-			TotalPoint:  org.Point.String(),
+			TotalPoint:  org.Point.Round(2).String(),
 		})
 	}
 
@@ -1064,7 +1064,7 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 			Name:             user.Username,
 			Phone:            user.Phone,
 			OrganizationName: user.OrganizationName,
-			Point:            user.Point.String(),
+			Point:            user.Point.Round(2).String(),
 			CreateTime:       user.CreatedAt.Unix(),
 		})
 	}
@@ -1094,8 +1094,8 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      user.Point.String(),
-			PointChange:     record.ChangePoint.String(),
+			PointTotal:      user.Point.Round(2).String(),
+			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),
@@ -1122,10 +1122,10 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 	return &types.GetPointRecordsByApplyResp{
 		List:           list,
 		TotalNum:       int(count),
-		PointTotal:     apply.TotalPoint.String(),
-		PointExpired:   expired.String(),
-		PointSpend:     spend.String(),
-		PointAvailable: available.String(),
+		PointTotal:     apply.TotalPoint.Round(2).String(),
+		PointExpired:   expired.Round(2).String(),
+		PointSpend:     spend.Round(2).String(),
+		PointAvailable: available.Round(2).String(),
 	}, nil
 }
 
@@ -1144,8 +1144,8 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      user.Point.String(),
-			PointChange:     record.ChangePoint.String(),
+			PointTotal:      user.Point.Round(2).String(),
+			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),
@@ -1183,8 +1183,8 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
-			PointTotal:      user.Point.String(),
-			PointChange:     record.ChangePoint.String(),
+			PointTotal:      user.Point.Round(2).String(),
+			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
 			Comment:         record.Comment,
 			UpdateTime:      record.CreatedAt.Unix(),

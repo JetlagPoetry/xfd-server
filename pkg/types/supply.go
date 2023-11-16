@@ -1,6 +1,8 @@
 package types
 
-import "xfd-backend/database/db/model"
+import (
+	"xfd-backend/database/db/model"
+)
 
 type SupplyGetPurchasesReq struct {
 	PageRequest
@@ -24,9 +26,9 @@ type SupplyGetQuotesResp struct {
 }
 
 type SupplySubmitQuoteReq struct {
-	OrderID int     `json:"orderID"`
-	GoodsID int     `json:"goodsID"`
-	Price   float64 `json:"price"`
+	OrderID int    `json:"orderID"`
+	GoodsID int    `json:"goodsID"`
+	Price   string `json:"price"`
 }
 
 type SupplySubmitQuoteResp struct {

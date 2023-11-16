@@ -125,7 +125,7 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotes
 			GoodsID:    quote.GoodsID,
 			GoodsURL:   "", // todo
 			GoodsName:  "",
-			Price:      quote.Price,
+			Price:      quote.Price.Round(2).String(),
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),
 			UserID:     userID,
@@ -156,7 +156,7 @@ func (s *SupplyService) SubmitQuote(ctx context.Context, req types.SupplySubmitQ
 		PurchaseUserID:  purchaseOrder.UserID,
 		QuoteUserID:     userID,
 		GoodsID:         req.GoodsID,
-		Price:           req.Price,
+		Price:           utils.StringToDecimal(req.Price),
 		NotifySupply:    utils.BoolPtr(true),
 		NotifyPurchase:  utils.BoolPtr(true),
 	}

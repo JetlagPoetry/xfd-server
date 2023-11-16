@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
@@ -59,6 +60,14 @@ func (d *PointRemainDao) ListByAppIDInTx(tx *gorm.DB, appID int) (list []*model.
 		return nil, err
 	}
 	return list, nil
+}
+
+func (d *PointRemainDao) GetByIDForUpdate(tx *gorm.DB, id int) (record *model.PointRemain, err error) {
+	err = tx.Model(&model.PointRemain{}).Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).First(&record).Error
+	if err != nil {
+		return nil, err
+	}
+	return record, nil
 }
 
 func (d *PointRemainDao) GetByID(ctx context.Context, id int) (record *model.PointRemain, err error) {

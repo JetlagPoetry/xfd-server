@@ -156,3 +156,23 @@ func (h *OrderHandler) ApplyExchange(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, resp))
 
 }
+
+func (h *OrderHandler) PayOrder(context *gin.Context) {
+	var (
+		req  types.PayOrderReq
+		resp *types.PayOrderResp
+		xrr  xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.PayOrder(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] PayOrder failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
+}
