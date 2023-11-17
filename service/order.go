@@ -201,6 +201,7 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 		}
 		if productVariant != nil {
 			shoppingCartDetail.Stock = productVariant.Stock
+			shoppingCartDetail.Price = productVariant.Price.Round(2).String()
 		}
 		shoppingCartListResp = append(shoppingCartListResp, shoppingCartDetail)
 	}

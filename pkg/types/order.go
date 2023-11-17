@@ -27,7 +27,8 @@ type ShoppingCartListResp struct {
 
 type ShoppingCartDetail struct {
 	*model.ShoppingCart
-	Stock *int `json:"stock"`
+	Stock *int   `json:"stock"`
+	Price string `json:"price"`
 }
 
 type ShoppingCartListReq struct {
