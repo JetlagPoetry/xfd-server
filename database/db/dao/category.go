@@ -63,6 +63,31 @@ func (d *CategoryDao) CreateCategory(ctx context.Context, category *model.Catego
 	return category.ID, nil
 }
 
+// CreateCategories 批量创建分类
+func (d *CategoryDao) CreateCategories(ctx context.Context, categories []*model.Category) ([]int32, error) {
+	ids := make([]int32, len(categories))
+	batchSize := 100 // 每批次插入的最大数据量
+
+	for i := 0; i < len(categories); i += batchSize {
+		end := i + batchSize
+		if end > len(categories) {
+			end = len(categories)
+		}
+
+		batch := categories[i:end]
+		result := db.Get().Model(&model.Category{}).CreateInBatches(batch, len(batch))
+		if result.Error != nil {
+			return nil, result.Error
+		}
+
+		for j, createdCategory := range batch {
+			ids[i+j] = createdCategory.ID
+		}
+	}
+
+	return ids, nil
+}
+
 /*update*/
 
 func (d *CategoryDao) UpdateCategory(ctx context.Context, category *model.Category) error {

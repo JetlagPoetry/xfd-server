@@ -37,10 +37,14 @@ type Area struct {
 }
 
 type CategoryAddReq struct {
-	ParentID int32                   `json:"parentID"`
-	Name     string                  `json:"name" binding:"required"`
-	Image    string                  `json:"image" `
-	Level    enum.GoodsCategoryLevel `json:"level" binding:"required,gte=1,lte=3"`
+	ParentID        int32                   `json:"parentID"`
+	Level           enum.GoodsCategoryLevel `json:"level" binding:"required,gte=1,lte=3"`
+	CategoryDetails []*AddCategoryDetails   `json:"categoryDetails" binding:"required,len=1"`
+}
+
+type AddCategoryDetails struct {
+	Name  string `json:"name" binding:"required"`
+	Image string `json:"image" `
 }
 
 func (r *CategoryAddReq) CheckParams() error {
@@ -48,4 +52,26 @@ func (r *CategoryAddReq) CheckParams() error {
 		return fmt.Errorf("parentID must be filled")
 	}
 	return nil
+}
+
+type CategoryDeleteReq struct {
+	IDs []int32 `json:"ids" binding:"required"`
+}
+
+func (r *CategoryDeleteReq) CheckParams() error {
+	if len(r.IDs) == 0 {
+		return fmt.Errorf("ids must be filled")
+	}
+	for _, id := range r.IDs {
+		if id == 0 {
+			return fmt.Errorf("ids must be filled")
+		}
+	}
+	return nil
+}
+
+type CategoryModifyReq struct {
+	ID    int32  `json:"id" binding:"required"`
+	Name  string `json:"name"`
+	Image string `json:"image"`
 }

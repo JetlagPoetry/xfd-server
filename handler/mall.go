@@ -41,11 +41,41 @@ func (h *MallHandler) GetCategories(c *gin.Context) {
 }
 
 func (h *MallHandler) DeleteCategory(context *gin.Context) {
-
+	var (
+		req types.CategoryDeleteReq
+		xrr xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.mallService.DeleteCategory(context, req)
+	if xrr != nil {
+		log.Println("[MallHandler] DeleteCategory failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
 }
 
 func (h *MallHandler) ModifyCategory(context *gin.Context) {
-
+	var (
+		req types.CategoryModifyReq
+		xrr xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.mallService.ModifyCategory(context, req)
+	if xrr != nil {
+		log.Println("[MallHandler] ModifyCategory failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
 }
 
 func (h *MallHandler) AddCategory(context *gin.Context) {

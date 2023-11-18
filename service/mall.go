@@ -85,13 +85,51 @@ func (s *MallService) AddCategory(c *gin.Context, req types.CategoryAddReq) xerr
 			return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("parent category %d level is %d not equal %d", req.ParentID, category.Level, req.Level))
 		}
 	}
-	category := &model.Category{
-		Name:             req.Name,
-		Level:            req.Level,
-		ParentCategoryID: req.ParentID,
-		Image:            req.Image,
+	categories := make([]*model.Category, 0)
+	for _, categoryDetail := range req.CategoryDetails {
+		categories = append(categories, &model.Category{
+			Name:             categoryDetail.Name,
+			Level:            req.Level,
+			ParentCategoryID: req.ParentID,
+			Image:            categoryDetail.Image,
+		})
 	}
-	_, err := s.category.CreateCategory(c, category)
+	_, err := s.category.CreateCategories(c, categories)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+}
+
+func (s *MallService) DeleteCategory(c *gin.Context, req types.CategoryDeleteReq) xerr.XErr {
+	if req.CheckParams() != nil {
+		return xerr.WithCode(xerr.InvalidParams, req.CheckParams())
+	}
+	for _, id := range req.IDs {
+		err := s.category.DeleteCategory(c, id)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		return nil
+	}
+	return nil
+}
+
+func (s *MallService) ModifyCategory(c *gin.Context, req types.CategoryModifyReq) xerr.XErr {
+	category, err := s.category.GetCategoryByID(c, req.ID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if category == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("category %d not found", req.ID))
+	}
+	updateCategory := &model.Category{
+		ID:    req.ID,
+		Name:  req.Name,
+		Image: req.Image,
+	}
+
+	err = s.category.UpdateCategory(c, updateCategory)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
