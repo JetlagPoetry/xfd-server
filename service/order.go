@@ -83,10 +83,7 @@ func (s *OrderService) AddShoppingCart(ctx *gin.Context, req types.ShoppingCartA
 		ProductVariantID: req.ProductVariantID,
 		GoodsID:          productVariant.GoodsID,
 		SKUCode:          productVariant.SKUCode,
-		Name:             goods.Name,
-		CoverURL:         goods.GoodsFrontImage,
 		Quantity:         req.Quantity,
-		ProductAttr:      productVariant.ProductAttr,
 	}
 	_, rr := s.orderDao.AddShoppingCart(ctx, newShoppingCart)
 	if rr != nil {
@@ -177,6 +174,7 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 		return nil, xrr
 	}
 	req.UserID = user.UserID
+	//todo: 优化不用删除，不满足条件的不查询出来
 	shoppingCartList, total, err := s.orderDao.GetMyShoppingCartList(ctx, req)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -193,7 +191,19 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
 		}
 		if productVariant == nil || *productVariant.Stock == 0 {
-			err = s.orderDao.DeleteShoppingCartByID(ctx, shoppingCart.ID)
+			err = s.orderDao.DeleteShoppingCartByProductVariantID(ctx, shoppingCart.ProductVariantID)
+			if err != nil {
+				log.Errorf(" delete invalid product shopping cart %d failed, err=%v", shoppingCart.ID, err)
+				continue
+			}
+		}
+		goods, _rr := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
+		if _rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, _rr)
+		}
+		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
+			log.Errorf("goods %d not found", productVariant.GoodsID)
+			err = s.orderDao.DeleteShoppingCartByGoodsID(ctx, shoppingCart.GoodsID)
 			if err != nil {
 				log.Errorf(" delete invalid product shopping cart %d failed, err=%v", shoppingCart.ID, err)
 				continue
@@ -202,6 +212,9 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 		if productVariant != nil {
 			shoppingCartDetail.Stock = productVariant.Stock
 			shoppingCartDetail.Price = productVariant.Price.Round(2).String()
+			shoppingCartDetail.Name = goods.Name
+			shoppingCartDetail.CoverURL = goods.GoodsFrontImage
+			shoppingCartDetail.ProductAttr = productVariant.ProductAttr
 		}
 		shoppingCartListResp = append(shoppingCartListResp, shoppingCartDetail)
 	}
@@ -256,7 +269,7 @@ func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types
 }
 
 // org->point_application->user->point_remain->point_record
-func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, order *model.OrderGoods, totalPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, order *model.OrderInfo, totalPrice decimal.Decimal) xerr.XErr {
 	if user.OrganizationID == 0 {
 		return xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
 	}
@@ -307,7 +320,7 @@ func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, order *model.O
 	return nil
 }
 
-func (s *OrderService) payWithPoint(tx *gorm.DB, order *model.OrderGoods, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
+func (s *OrderService) payWithPoint(tx *gorm.DB, order *model.OrderInfo, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
 	userLeft := user.Point.Sub(point)
 	err := s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: userLeft})
 	if err != nil {
@@ -377,7 +390,7 @@ func (s *OrderService) payWithPoint(tx *gorm.DB, order *model.OrderGoods, user *
 	return nil
 }
 
-func (s *OrderService) payWithWx(tx *gorm.DB, order *model.OrderGoods, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payWithWx(tx *gorm.DB, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
 
 	return nil
 }
@@ -424,7 +437,7 @@ func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeRe
 	return nil, nil
 }
 
-func (s *OrderService) refundPoint(tx *gorm.DB, user, operator *model.User, order *model.OrderGoods) xerr.XErr {
+func (s *OrderService) refundPoint(tx *gorm.DB, user, operator *model.User, order *model.OrderInfo) xerr.XErr {
 	point := order.PointPrice
 	// todo redis分布式锁
 
