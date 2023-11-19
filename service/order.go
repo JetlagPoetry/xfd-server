@@ -383,16 +383,14 @@ func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	tx := db.Get().Begin()
-	xErr := s.payForOrder(ctx, "", user, &model.OrderInfo{ID: 123, TotalPrice: decimal.NewFromFloat(9.95)})
-	if xErr != nil {
-		tx.Rollback()
+	transactionHandler := repo.NewTransactionHandler(db.Get())
+	if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+		if xErr := s.payForOrder(ctx, "", user, &model.OrderInfo{ID: 123, TotalPrice: decimal.NewFromFloat(9.95)}); xErr != nil {
+			return xErr
+		}
+		return nil
+	}); xErr != nil {
 		return nil, xErr
-	}
-
-	// 提交事务
-	if err = tx.Commit().Error; err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	return &types.PayOrderResp{}, nil
