@@ -449,7 +449,7 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 		if xErr != nil {
 			return xErr
 		}
-		wechatPay, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
+		_, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
 		if xErr != nil {
 			return xErr
 		}
