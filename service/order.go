@@ -445,7 +445,8 @@ func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model
 	}
 	//此时总订单初始状态 enum.OrderInfoPaidWaiting（待付款） 子订单初始状态 enum.OrderProductVariantDetailPending（待付款）
 	// todo 修改订单，支付金额、微信支付字段
-	//todo 返回订单状态（积分支付成功/微信等待支付）
+	//todo 返回订单状态（积分支付成功/积分支付失败/微信等待支付）
+	//看情况是否需要区分 订单待付款/支付待付款 两种状态 解决方案加一个 订单创建的初始态 enum.OrderInfoCreated enum.OrderProductVariantDetailCreated
 	return nil
 }
 
