@@ -183,7 +183,7 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 		return nil, xrr
 	}
 	req.UserID = user.UserID
-	//todo: 优化不用删除，不满足条件的不查询出来
+	//todo: 优化不用删除，不满足条件的不查询出来，比如SKU下架，Goods库存不足
 	shoppingCartList, total, err := s.orderDao.GetMyShoppingCartList(ctx, req)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -264,7 +264,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 	orderProductVariantDetailList := make([]*model.OrderProductVariantDetail, 0)
 	for _, shoppingCartID := range req.ShoppingCartIDs {
 		//校验购物车是否存在
-		shoppingCart, err := s.orderDao.GetShoppingCartByUserIDAndProductVariantIDForUpdate(ctx, user.UserID, shoppingCartID)
+		shoppingCart, err := s.orderDao.GetShoppingCartByUserIDAndShoppingCartIDForUpdate(ctx, user.UserID, shoppingCartID)
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
@@ -314,7 +314,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 		//创建SKU产品详情
 		orderProductVariantDetail := &model.OrderProductVariantDetail{
 			OrderSn:               orderSn,
-			Status:                enum.OrderProductVariantDetailPending,
+			Status:                enum.OrderProductVariantDetailCreated,
 			UserID:                user.UserID,
 			ShoppingCartID:        shoppingCart.ID,
 			ProductVariantID:      shoppingCart.ProductVariantID,
@@ -329,6 +329,10 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 			ProductAttr:           productVariant.ProductAttr,
 			EstimatedDeliveryTime: s.GetEstimatedDeliveryTime(goods.RetailShippingTime),
 		}
+		if req.Remark == "xfd-success" {
+			orderProductVariantDetail.Status = enum.OrderProductVariantDetailPaid
+			orderProductVariantDetail.Post = "mock测试支付成功"
+		}
 		orderProductVariantDetailList = append(orderProductVariantDetailList, orderProductVariantDetail)
 	}
 	//批量创建订单SKU产品详情
@@ -341,12 +345,18 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 		UserID:       user.UserID,
 		TotalPrice:   totalPrice,
 		PostPrice:    postPrice,
-		Status:       enum.OrderInfoPaidWaiting,
+		Status:       enum.OrderInfoCreated,
 		OrderSn:      orderSn,
 		ExpiredAt:    time.Now().Add(time.Minute * 15),
 		Address:      addr.Province + addr.City + addr.Region + addr.Address,
 		SignerName:   addr.Name,
 		SingerMobile: addr.Phone,
+	}
+	if req.Remark == "xfd-success" {
+		orderInfo.Status = enum.OderInfoPaidSuccess
+		payTime := time.Now().Add(time.Minute * 2)
+		orderInfo.PayedAt = &payTime
+		orderInfo.Message = "mock测试支付成功"
 	}
 	orderID, err := s.orderDao.CreateOrderInfo(ctx, orderInfo)
 	if err != nil {
@@ -354,12 +364,14 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 	}
 	orderInfo.ID = orderID
 	//扣除积分
-	xrr := s.payForOrder(ctx, user, orderInfo)
-	if xrr != nil {
-		return nil, xrr
+	if req.Remark != "xfd-success" {
+		xrr := s.payForOrder(ctx, user, orderInfo)
+		if xrr != nil {
+			return nil, xrr
+		}
 	}
 	//todo 如果微信支付，是否需要返回信息给前端且更新微信订单支付号
-	return &types.CreateOrderResp{}, nil
+	return &types.CreateOrderResp{OrderID: orderInfo.ID, OrderSn: orderInfo.OrderSn, OrderStatus: orderInfo.Status}, nil
 }
 
 func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types.PayOrderResp, xerr.XErr) {
@@ -435,7 +447,7 @@ func (s *OrderService) payForOrder(ctx context.Context, user *model.User, order 
 		}
 	}
 	//此时总订单初始状态 enum.OrderInfoPaidWaiting（待付款） 子订单初始状态 enum.OrderProductVariantDetailPending（待付款）
-	// todo 修改订单，支付金额、微信支付字段
+	// todo 修改订单，支付金额、微信支付字段、订单状态、修改子订单、订单状态、支付时间
 	//todo 返回订单状态（积分支付成功/积分支付失败/微信等待支付）
 	//看情况是否需要区分 订单待付款/支付待付款 两种状态 解决方案加一个 订单创建的初始态 enum.OrderInfoCreated enum.OrderProductVariantDetailCreated
 	return nil
@@ -546,9 +558,29 @@ func (s *OrderService) applyRefund(tx *gorm.DB, req types.ApplyRefundReq, operat
 	}
 	defer redis.Unlock(fmt.Sprintf("lock-order:order_id:%d", req.OrderID))
 
-	// todo 获取order
+	// 获取order信息
+	orderInfo, err := s.orderDao.GetOrderInfoByIDTX(tx, req.OrderID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if orderInfo == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order %d not found", req.OrderID))
+	}
 
-	// todo 修改order状态
+	if orderInfo.Status != enum.OderInfoPaidSuccess {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order %d status is %d, can not apply refund", req.OrderID, orderInfo.Status))
+	}
+
+	// 修改order状态
+	err = s.orderDao.UpdateOrderInfoByIDTX(tx, req.OrderID, &model.OrderInfo{Status: enum.OrderRefundAndReturn})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	// 修改order_product_variant_detail状态
+	err = s.orderDao.UpdateOrderProductVariantDetailByOrderSnTX(tx, orderInfo.OrderSn, &model.OrderProductVariantDetail{Status: enum.OrderProductVariantDetailRefund})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
 	userID := ""
 	user, err := s.userDao.GetByUserIDInTx(tx, userID)
@@ -674,4 +706,92 @@ func (s *OrderService) GetEstimatedDeliveryTime(retailDeliveryTime enum.RetailDe
 	default:
 		return time.Now()
 	}
+}
+
+// CreatePreOrder 用户获取预订单信息
+func (s *OrderService) CreatePreOrder(ctx *gin.Context, req types.CreateOrderReq) (*types.CreatePreOrderResp, xerr.XErr) {
+	//1.校验用户是否是消费者
+	user, xrr := s.CheckUserIsCustomer(ctx)
+	if xrr != nil {
+		return nil, xrr
+	}
+	totalPrice := decimal.Zero
+	if user.Point.IsZero() {
+		return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("user point is zero"))
+	}
+	//2.校验用户地址是否存在
+	userAddress, err := s.userAddressDao.GetByID(ctx, req.UserAddressID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if userAddress == nil {
+		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not found", req.UserAddressID))
+	}
+	orderAddress := &types.PreOrderAddress{
+		Name:    userAddress.Name,
+		Phone:   userAddress.Phone,
+		Address: userAddress.Province + userAddress.City + userAddress.Region + userAddress.Address,
+	}
+	preOrderDetails := make([]*types.PreOrderProductVariantDetail, 0)
+	//3.校验购物车商品是否存在
+	for _, shoppingCartID := range req.ShoppingCartIDs {
+		shoppingCart, rr := s.orderDao.GetShoppingCartByUserIDAndShoppingCartID(ctx, user.UserID, shoppingCartID)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		if shoppingCart == nil {
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("shopping cart %d not found", shoppingCartID))
+		}
+		//校验商品信息
+		goods, rr := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("goods %d not found,please check shopping cart %d,name is %s", shoppingCart.GoodsID, shoppingCart.ID, goods.Name))
+		}
+		//校验产品库存
+		productVariant, rr := s.goods.GetProductVariantByProductVariantID(ctx, shoppingCart.ProductVariantID)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		if productVariant == nil {
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("product %d not found", shoppingCart.ProductVariantID))
+		}
+		if *productVariant.Stock < shoppingCart.Quantity {
+			return nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("product %d stock not enough,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
+		}
+		//计算价格
+		totalPrice = totalPrice.Add(productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity)))).Add(goods.RetailShippingFee)
+		preOrderDetail := &types.PreOrderProductVariantDetail{
+			ShoppingCartID: shoppingCart.ID,
+			SKUCode:        shoppingCart.SKUCode,
+			Price:          productVariant.Price.Round(2).String(),
+			Quantity:       shoppingCart.Quantity,
+			Name:           goods.Name,
+			CoverURL:       goods.GoodsFrontImage,
+			ProductAttr:    productVariant.ProductAttr,
+			PostPrice:      goods.RetailShippingFee.Round(2).String(),
+		}
+		preOrderDetails = append(preOrderDetails, preOrderDetail)
+	}
+	pointPrice, wxPrice := decimal.Zero, decimal.Zero
+	if user.Point.GreaterThanOrEqual(totalPrice) {
+		// 只用积分支付
+		pointPrice = totalPrice
+	} else {
+		// 积分+微信支付
+		pointPrice = user.Point
+		wxPrice = totalPrice.Sub(user.Point)
+	}
+	result := &types.CreatePreOrderResp{
+		PreOrderAddress:               orderAddress,
+		TotalPrice:                    totalPrice.Round(2).String(),
+		PointPrice:                    pointPrice.Round(2).String(),
+		WxPrice:                       wxPrice.Round(2).String(),
+		UserPoint:                     user.Point.Round(2).String(),
+		PreOrderProductVariantDetails: preOrderDetails,
+	}
+
+	return result, nil
 }

@@ -42,10 +42,11 @@ type ShoppingCartListReq struct {
 type CreateOrderReq struct {
 	UserAddressID   int     `json:"userAddressID" binding:"required"`
 	ShoppingCartIDs []int32 `json:"shoppingCartIDs" binding:"required,min=1"`
+	Remark          string  `json:"remark"`
 }
 
 type CreateOrderResp struct {
-	OrderID     int                  `json:"orderID"`
+	OrderID     int32                `json:"orderID"`
 	OrderSn     string               `json:"orderSn"`
 	OrderStatus enum.OrderInfoStatus `json:"orderStatus"`
 }
@@ -73,4 +74,30 @@ type PayOrderReq struct {
 }
 
 type PayOrderResp struct {
+}
+
+type CreatePreOrderResp struct {
+	PreOrderAddress               *PreOrderAddress                `json:"preOrderAddress"`
+	TotalPrice                    string                          `json:"totalPrice"`
+	PointPrice                    string                          `json:"pointPrice"`
+	WxPrice                       string                          `json:"wxPrice"`
+	UserPoint                     string                          `json:"userPoint"`
+	PreOrderProductVariantDetails []*PreOrderProductVariantDetail `json:"details"`
+}
+
+type PreOrderAddress struct {
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
+	Address string `json:"address"`
+}
+
+type PreOrderProductVariantDetail struct {
+	ShoppingCartID int32  `json:"shoppingCartID"`
+	SKUCode        string `json:"skuCode"`
+	Price          string `json:"price"`
+	Quantity       int    `json:"quantity"`
+	Name           string `json:"name"`
+	CoverURL       string `json:"coverURL"`
+	ProductAttr    string `json:"productAttr"`
+	PostPrice      string `json:"postPrice"`
 }

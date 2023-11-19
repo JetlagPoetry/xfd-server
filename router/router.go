@@ -101,6 +101,7 @@ func NewRouter() *gin.Engine {
 		orderGroup.GET("/getShoppingCart", handler.Order.GetShoppingCartList)      //获取购物车列表
 		orderGroup.DELETE("/deleteShoppingCart", handler.Order.DeleteShoppingCart) //删除购物车商品
 		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
+		orderGroup.POST("/createPreOrder", handler.Order.CreatePreOrder)           //获取预订单信息
 		orderGroup.POST("/createOrder", handler.Order.CreateOrder)                 //创建订单，去结算
 		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退款
 		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
