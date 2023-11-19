@@ -234,3 +234,13 @@ func (d *OrderDao) UpdateOrderProductVariantDetailByOrderSnTX(tx *gorm.DB, order
 	updateResult := tx.Model(&model.OrderProductVariantDetail{}).Where("order_sn = ?", orderSn).Updates(m)
 	return updateResult.Error
 }
+
+func (d *OrderDao) UpdateOrderByOrderSn(ctx context.Context, orderSn string, value *model.OrderInfo) error {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("order_sn = ?", orderSn).Updates(value)
+	return updateResult.Error
+}
+
+func (d *OrderDao) UpdateOrderProductVariantDetailByOrderSn(ctx context.Context, orderSn string, value *model.OrderProductVariantDetail) error {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderProductVariantDetail{}).Where("order_sn = ?", orderSn).Updates(value)
+	return updateResult.Error
+}
