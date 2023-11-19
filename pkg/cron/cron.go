@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/robfig/cron/v3"
 	"log"
+	"time"
+	"xfd-backend/database/redis"
 	"xfd-backend/service"
 )
 
@@ -11,7 +13,13 @@ func StartCron() {
 	c := cron.New(cron.WithSeconds())
 	_, err := c.AddFunc("0 */5 * * * ?", func() {
 		log.Println("[Cron] ProcessPointVerify start")
-		// todo 分布式锁
+
+		ok := redis.Lock("cron-process-point-verify", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron-process-point-verify")
+
 		err := service.NewOrgService().ProcessPointVerify(context.Background())
 		if err != nil {
 			log.Println("[Cron] ProcessPointVerify failed, err=", err)
@@ -25,7 +33,13 @@ func StartCron() {
 
 	_, err = c.AddFunc("30 */3 * * * ?", func() {
 		log.Println("[Cron] ProcessPointDistribute start")
-		// todo 分布式锁
+
+		ok := redis.Lock("cron-process-point-distribute", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron-process-point-distribute")
+
 		err := service.NewOrgService().ProcessPointDistribute(context.Background())
 		if err != nil {
 			log.Println("[Cron] ProcessPointDistribute failed, err=", err)
@@ -39,7 +53,13 @@ func StartCron() {
 
 	_, err = c.AddFunc("0 0 * * * ?", func() {
 		log.Println("[Cron] ProcessPointExpired start")
-		// todo 分布式锁
+
+		ok := redis.Lock("cron-process-point-expire", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron-process-point-expire")
+
 		err := service.NewOrgService().ProcessPointExpired(context.Background())
 		if err != nil {
 			log.Println("[Cron] ProcessPointExpired failed, err=", err)
@@ -53,6 +73,13 @@ func StartCron() {
 
 	_, err = c.AddFunc("0 */6 * * * ?", func() {
 		log.Println("[Cron] SetCategoryCache start")
+
+		ok := redis.Lock("cron-set-category-cache", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron-set-category-cache")
+
 		err := service.NewMallService().SetCategoryCache(context.Background())
 		if err != nil {
 			log.Println("[Cron] SetCategoryCache failed, err=", err)

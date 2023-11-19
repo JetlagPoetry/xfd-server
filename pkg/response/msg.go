@@ -47,7 +47,8 @@ var MsgFlags = map[xerr.XCode]string{
 	xerr.ErrorDeleteFile:    "删除失败",
 	xerr.ErrorAdminFindUser: "管理员查询用户失败",
 
-	xerr.ErrorDatabase: "数据库操作出错,请重试",
+	xerr.ErrorDatabase:  "数据库操作出错,请重试",
+	xerr.ErrorRedisLock: "分布式锁获取失败",
 
 	xerr.ErrorOss:            "COS配置错误",
 	xerr.ErrorNotExistRecord: "记录不存在",

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"xfd-backend/database/db"
+	"xfd-backend/database/redis"
 	"xfd-backend/pkg/cron"
 	"xfd-backend/pkg/jwt"
 	"xfd-backend/pkg/utils"
@@ -30,7 +31,7 @@ func Init() {
 	}
 	utils.InitSms()
 	jwt.Init()
-	//config.InitConfig()
+	redis.Init()
 	if err := initCache(); err != nil {
 		panic(fmt.Sprintf("Local cache init failed with %+v", err))
 	}

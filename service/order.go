@@ -14,6 +14,7 @@ import (
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
+	"xfd-backend/database/redis"
 	"xfd-backend/database/repo"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/consts"
@@ -353,7 +354,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 	}
 	orderInfo.ID = orderID
 	//扣除积分
-	xrr := s.payForOrder(ctx, nil, user, orderInfo, totalPrice)
+	xrr := s.payForOrder(ctx, user, orderInfo)
 	if xrr != nil {
 		return nil, xrr
 	}
@@ -362,29 +363,29 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 }
 
 func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types.PayOrderResp, xerr.XErr) {
-	userID := common.GetUserID(ctx)
-	user, err := s.userDao.GetByUserID(ctx, userID)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	tx := db.Get().Begin()
-	xErr := s.payForOrder(ctx, tx, user, nil, decimal.NewFromFloat(9.95))
-	if xErr != nil {
-		tx.Rollback()
-		return nil, xErr
-	}
-
-	// 提交事务
-	if err = tx.Commit().Error; err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
+	//userID := common.GetUserID(ctx)
+	//user, err := s.userDao.GetByUserID(ctx, userID)
+	//if err != nil {
+	//	return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
+	//
+	//tx := db.Get().Begin()
+	//xErr := s.payForOrder(ctx, user, decimal.NewFromFloat(9.95))
+	//if xErr != nil {
+	//	tx.Rollback()
+	//	return nil, xErr
+	//}
+	//
+	//// 提交事务
+	//if err = tx.Commit().Error; err != nil {
+	//	return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
 
 	return &types.PayOrderResp{}, nil
 }
 
 // org->point_application->user->point_remain->point_record
-func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model.User, order *model.OrderInfo, totalPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payForOrder(ctx context.Context, user *model.User, order *model.OrderInfo) xerr.XErr {
 
 	if user.OrganizationID == 0 {
 		return xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
@@ -395,24 +396,13 @@ func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model
 		org *model.Organization
 		err error
 	)
-	if tx != nil {
-		org, err = s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-	} else {
-		org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
+	org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if user == nil {
 		return xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
@@ -421,11 +411,12 @@ func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model
 		return xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
 	}
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
+	totalPrice := order.TotalPrice
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
 		pointPrice = totalPrice
 		wxPrice = decimal.Zero
-		xErr := s.payWithPoint(ctx, tx, order, user, org, pointPrice, false)
+		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, false)
 		if xErr != nil {
 			return xErr
 		}
@@ -434,11 +425,11 @@ func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model
 		pointPrice = user.Point
 		wxPrice = totalPrice.Sub(user.Point)
 
-		xErr := s.payWithPoint(ctx, tx, order, user, org, pointPrice, true)
+		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, true)
 		if xErr != nil {
 			return xErr
 		}
-		xErr = s.payWithWx(ctx, tx, order, user, wxPrice)
+		xErr = s.payWithWx(ctx, order, user, wxPrice)
 		if xErr != nil {
 			return xErr
 		}
@@ -450,40 +441,23 @@ func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model
 	return nil
 }
 
-func (s *OrderService) payWithPoint(ctx context.Context, tx *gorm.DB, order *model.OrderInfo, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
+func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
 	userLeft := user.Point.Sub(point)
 	var (
 		remainList []*model.PointRemain
 		err        error
 	)
-	if tx != nil {
-		err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: userLeft})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-		err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		remainList, err = s.pointRemainDao.ListByUserID(tx, user.UserID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-	} else {
-		err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: userLeft})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		remainList, err = s.pointRemainDao.ListByUserIDCTX(ctx, user.UserID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
+	err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: userLeft})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	remainList, err = s.pointRemainDao.ListByUserIDCTX(ctx, user.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	pointLeft := point.Copy()
@@ -520,26 +494,14 @@ func (s *OrderService) payWithPoint(ctx context.Context, tx *gorm.DB, order *mod
 			}(),
 			Comment: consts.PointCommentSpend,
 		}
-		if tx != nil {
-			err = s.pointRemainDao.UpdateByIDInTx(tx, int(remain.ID), &model.PointRemain{PointRemain: spend})
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
+		err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, int(remain.ID), &model.PointRemain{PointRemain: spend})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 
-			err = s.pointRecordDao.CreateInTx(tx, record)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-		} else {
-			err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, int(remain.ID), &model.PointRemain{PointRemain: spend})
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-
-			err = s.pointRecordDao.CreateInTxCTX(ctx, record)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
+		err = s.pointRecordDao.CreateInTxCTX(ctx, record)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 	}
 	if pointLeft.GreaterThan(decimal.Zero) {
@@ -548,7 +510,7 @@ func (s *OrderService) payWithPoint(ctx context.Context, tx *gorm.DB, order *mod
 	return nil
 }
 
-func (s *OrderService) payWithWx(ctx context.Context, tx *gorm.DB, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payWithWx(ctx context.Context, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
 
 	return nil
 }
@@ -578,16 +540,29 @@ func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) (
 }
 
 func (s *OrderService) applyRefund(tx *gorm.DB, req types.ApplyRefundReq, operator *model.User) xerr.XErr {
+	ok := redis.Lock(fmt.Sprintf("lock-order:order_id:%d", req.OrderID), time.Minute*5)
+	if !ok {
+		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("redis lock"))
+	}
+	defer redis.Unlock(fmt.Sprintf("lock-order:order_id:%d", req.OrderID))
+
 	// todo 获取order
 
 	// todo 修改order状态
 
-	// todo 获取用户
-
-	xErr := s.refundPoint(tx, nil, operator, nil)
-	if xErr != nil {
-		return xErr
+	userID := ""
+	user, err := s.userDao.GetByUserIDInTx(tx, userID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
+
+	if req.RefundPoint {
+		xErr := s.refundPoint(tx, user, operator, nil)
+		if xErr != nil {
+			return xErr
+		}
+	}
+
 	return nil
 }
 
@@ -597,8 +572,6 @@ func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeRe
 
 func (s *OrderService) refundPoint(tx *gorm.DB, user, operator *model.User, order *model.OrderInfo) xerr.XErr {
 	point := order.PointPrice
-	// todo redis分布式锁
-
 	// 加公司积分
 	org, err := s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
 	if err != nil {

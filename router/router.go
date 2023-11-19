@@ -105,6 +105,8 @@ func NewRouter() *gin.Engine {
 		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退款
 		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
 		orderGroup.POST("/payOrder", handler.Order.PayOrder)                       //【测试用】花费积分
+		//orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
+		//orderGroup.POST("/paymentCancel", handler.Order.PaymentCancel)
 	}
 
 	commonGroup := r.Group("/api/v1/common")

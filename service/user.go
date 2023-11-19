@@ -3,10 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	goredis "github.com/go-redis/redis"
 	"gorm.io/gorm"
+	"log"
+	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
+	"xfd-backend/database/redis"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/jwt"
@@ -33,9 +38,13 @@ func NewUserService() *UserService {
 
 func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (*types.UserSendCodeResp, xerr.XErr) {
 	code := utils.GenSixDigitCode()
-	// todo 存在redis中
 
-	err := utils.SendSms(req.Phone, code, 5)
+	err := redis.RedisClient.Set(fmt.Sprintf("user-login-code:phone:%s", req.Phone), code, 5*time.Minute).Err()
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+
+	err = utils.SendSms(req.Phone, code, 5)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorCallApi, err)
 	}
@@ -43,12 +52,20 @@ func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (
 }
 
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
-	// todo 校验验证码
+	code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+	defer redis.RedisClient.Del(fmt.Sprintf("user-login-code:phone:%s", req.Phone))
+
+	if req.Code != code {
+		log.Println("[UserService] Login failed, code=", code, ", req.Code=", req.Code)
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
 
 	resp := &types.UserLoginResp{}
 	var (
 		user *model.User
-		err  error
 	)
 	if req.Source == types.SourceMiniApp {
 		// 开始事务
@@ -65,6 +82,7 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 		}
 
 		verifyHistory := &model.UserVerify{}
+		notify := false
 		if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
 			verifyList, err := s.userVerifyDao.ListUserVerifyByUserID(ctx, user.UserID)
 			if err != nil {
@@ -72,15 +90,20 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			}
 			if len(verifyList) > 0 {
 				verifyHistory = verifyList[0] // 选取最后一次认证
+
+				_, err := redis.RedisClient.Get(fmt.Sprintf("user-verify-notify:verify_id:%d", verifyHistory.ID)).Result()
+				if err == goredis.Nil {
+					notify = true
+					redis.RedisClient.Set(fmt.Sprintf("user-verify-notify:verify_id:%d", verifyHistory.ID), 1, 0)
+				}
 			}
 		}
 
-		// todo 用verify.id 判断是否首次认证成功
 		resp = &types.UserLoginResp{
 			UserRole:      user.UserRole,
 			VerifyStatus:  verifyHistory.Status,
 			VerifyComment: verifyHistory.Comment,
-			NotifyVerify:  true,
+			NotifyVerify:  notify,
 		}
 	} else if req.Source == types.SourceCMS {
 		user, err = s.userDao.GetByPhone(ctx, req.Phone)

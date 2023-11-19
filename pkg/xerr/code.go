@@ -57,6 +57,7 @@ const (
 	ErrorNotExistRecord   XCode = 40003
 	ErrorInvalidFileExt   XCode = 40004
 	ErrorInvalidCsvFormat XCode = 40005
+	ErrorRedisLock        XCode = 40006
 
 	//对象存储错误
 	ErrorOss        XCode = 50001

@@ -50,6 +50,14 @@ func (d *OrganizationDao) GetByIDForUpdateCTX(ctx context.Context, id int) (org 
 	return org, nil
 }
 
+func (d *OrganizationDao) GetByIDForUpdateInTx(tx *gorm.DB, id int) (org *model.Organization, err error) {
+	err = tx.Model(&model.Organization{}).Where("id = ?", id).Clauses(clause.Locking{Strength: "UPDATE"}).First(&org).Error
+	if err != nil {
+		return nil, err
+	}
+	return org, nil
+}
+
 func (d *OrganizationDao) GetByIDForUpdate(tx *gorm.DB, id int) (org *model.Organization, err error) {
 	err = tx.Model(&model.Organization{}).Where("id = ?", id).Clauses(clause.Locking{Strength: "UPDATE"}).First(&org).Error
 	if err != nil {

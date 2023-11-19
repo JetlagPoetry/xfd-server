@@ -53,6 +53,7 @@ type CreateOrderResp struct {
 type ApplyRefundReq struct {
 	OrderID     int  `json:"orderID"`
 	RefundPoint bool `json:"refundPoint"`
+	// todo RefundType
 }
 
 type ApplyRefundResp struct {
