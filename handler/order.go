@@ -177,3 +177,23 @@ func (h *OrderHandler) PayOrder(context *gin.Context) {
 	}
 	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
 }
+
+func (h *OrderHandler) CreatePreOrder(context *gin.Context) {
+	var (
+		req  types.CreateOrderReq
+		resp *types.CreatePreOrderResp
+		xrr  xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.CreatePreOrder(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] CreatePreOrder failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
+}

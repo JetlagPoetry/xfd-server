@@ -49,7 +49,6 @@ type OrderInfo struct {
 	TradeNo      string               `gorm:"column:trade_no;type:varchar(300);default:'';not null;comment:交易号"`
 	PayedAt      *time.Time           `gorm:"column:payed_at;comment:用户支付该订单的时间"`
 	ExpiredAt    time.Time            `gorm:"column:expired_at;comment:订单过期时间"`
-	PaymentTime  time.Time            `gorm:"column:payment_time" json:"payment_time"`
 	Address      string               `gorm:"column:address;type:varchar(300);comment:收件人的地址"`
 	SignerName   string               `gorm:"column:signer_name;type:varchar(300);comment:收件人的名称"`
 	SingerMobile string               `gorm:"column:singer_mobile;type:varchar(300);comment:收件人的手机号"`

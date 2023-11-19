@@ -78,12 +78,26 @@ func (d *OrderDao) GetShoppingCartByUserIDAndProductVariantID(ctx context.Contex
 	return shoppingCartList[0], nil
 }
 
-// GetShoppingCartByUserIDAndProductVariantIDForUpdate 根据用户ID和产品ID获取购物车
-func (d *OrderDao) GetShoppingCartByUserIDAndProductVariantIDForUpdate(ctx context.Context, userID string, productVariantID int32) (shoppingCart *model.ShoppingCart, err error) {
+// GetShoppingCartByUserIDAndShoppingCartIDForUpdate 根据用户ID和购物车ID获取购物车
+func (d *OrderDao) GetShoppingCartByUserIDAndShoppingCartIDForUpdate(ctx context.Context, userID string, shoppingCartID int32) (shoppingCart *model.ShoppingCart, err error) {
 	var shoppingCartList []*model.ShoppingCart
 	err = db.GetRepo().GetDB(ctx).Model(&model.ShoppingCart{}).
-		Where("user_id = ? and product_variant_id = ?", userID, productVariantID).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("user_id = ? and id = ?", userID, shoppingCartID).Clauses(clause.Locking{Strength: "UPDATE"}).
 		Find(&shoppingCartList).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(shoppingCartList) == 0 {
+		return nil, nil
+	}
+	return shoppingCartList[0], nil
+}
+
+// GetShoppingCartByUserIDAndShoppingCartID 根据用户ID和购物车ID获取购物车
+func (d *OrderDao) GetShoppingCartByUserIDAndShoppingCartID(ctx context.Context, userID string, shoppingCartID int32) (shoppingCart *model.ShoppingCart, err error) {
+	var shoppingCartList []*model.ShoppingCart
+	err = db.GetRepo().GetDB(ctx).Model(&model.ShoppingCart{}).
+		Where("user_id = ? and id = ?", userID, shoppingCartID).Find(&shoppingCartList).Error
 	if err != nil {
 		return nil, err
 	}
