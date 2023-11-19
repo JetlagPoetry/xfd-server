@@ -459,14 +459,14 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	//todo 返回订单状态（积分支付成功/积分支付失败/微信等待支付）
 	//看情况是否需要区分 订单待付款/支付待付款 两种状态 解决方案加一个 订单创建的初始态 enum.OrderInfoCreated enum.OrderProductVariantDetailCreated
 
-	if !payWx {
-		err = s.orderDao.UpdateOrderInfoByID(ctx, int(order.ID), &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-	} else {
-		fmt.Sprintf(wechatPay.PaySign)
-	}
+	//if !payWx {
+	//	err = s.orderDao.UpdateOrderInfoByID(ctx, int(order.ID), &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
+	//	if err != nil {
+	//		return xerr.WithCode(xerr.ErrorDatabase, err)
+	//	}
+	//} else {
+	fmt.Sprintf(wechatPay.PaySign)
+	//}
 
 	return nil
 }
