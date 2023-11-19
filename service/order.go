@@ -431,6 +431,7 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	totalPrice := order.TotalPrice
 	payWx := false
 	//var wechatPay *types.WechatPay
+	payedAt := time.Now()
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
 		pointPrice = totalPrice
@@ -438,6 +439,15 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
 		if xErr != nil {
 			return xErr
+		}
+		updateValue := &model.OrderInfo{
+			PostPrice: totalPrice,
+			PayedAt:   &payedAt,
+			Status:    enum.OderInfoPaidSuccess,
+		}
+		xrr := s.UpdateOrderStatus(ctx, order.OrderSn, updateValue)
+		if xrr != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, xrr)
 		}
 	} else {
 		// 积分+微信支付
@@ -452,6 +462,16 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 		_, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
 		if xErr != nil {
 			return xErr
+		}
+		updateValue := &model.OrderInfo{
+			PostPrice: pointPrice,
+			WxPrice:   wxPrice,
+			Status:    enum.OrderInfoPaidWaiting,
+			TradeNo:   "wexin",
+		}
+		xrr := s.UpdateOrderStatus(ctx, order.OrderSn, updateValue)
+		if xrr != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, xrr)
 		}
 	}
 	//此时总订单初始状态 enum.OrderInfoPaidWaiting（待付款） 子订单初始状态 enum.OrderProductVariantDetailPending（待付款）
@@ -845,6 +865,29 @@ func (s *OrderService) CreatePreOrder(ctx *gin.Context, req types.CreateOrderReq
 		UserPoint:                     user.Point.Round(2).String(),
 		PreOrderProductVariantDetails: preOrderDetails,
 	}
-
 	return result, nil
+}
+
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderSn string, value *model.OrderInfo) xerr.XErr {
+	err := s.orderDao.UpdateOrderByOrderSn(ctx, orderSn, value)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	var updateDetailValue *model.OrderProductVariantDetail
+	if value.Status == enum.OrderInfoPaidWaiting {
+		updateDetailValue = &model.OrderProductVariantDetail{
+			Status: enum.OrderProductVariantDetailPaid,
+		}
+	}
+	if value.Status == enum.OderInfoPaidSuccess {
+		updateDetailValue = &model.OrderProductVariantDetail{
+			Status: enum.OrderProductVariantDetailPaid,
+		}
+	}
+	err = s.orderDao.UpdateOrderProductVariantDetailByOrderSn(ctx, orderSn, updateDetailValue)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+
 }
