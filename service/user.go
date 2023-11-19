@@ -56,11 +56,10 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorRedis, err)
 	}
-	defer redis.RedisClient.Del(fmt.Sprintf("user-login-code:phone:%s", req.Phone))
 
 	if req.Code != code {
 		log.Println("[UserService] Login failed, code=", code, ", req.Code=", req.Code)
-		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+		return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
 	}
 
 	resp := &types.UserLoginResp{}
@@ -125,6 +124,8 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorAuthToken, err)
 	}
+
+	redis.RedisClient.Del(fmt.Sprintf("user-login-code:phone:%s", req.Phone))
 
 	resp.AccessToken = token.AccessToken
 	resp.TokenType = token.TokenType
