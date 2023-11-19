@@ -83,11 +83,12 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 	resp := &types.UserLoginResp{}
 	var (
 		user *model.User
+		err  error
 	)
 	if req.Source == types.SourceMiniApp {
 		// 开始事务
 		tx := db.Get().Begin()
-		user, err := s.loginOrRegister(tx, req.Phone)
+		user, err = s.loginOrRegister(tx, req.Phone)
 		if err != nil {
 			tx.Rollback()
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -123,7 +124,7 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			NotifyVerify:  notify,
 		}
 	} else if req.Source == types.SourceCMS {
-		user, err := s.userDao.GetByPhone(ctx, req.Phone)
+		user, err = s.userDao.GetByPhone(ctx, req.Phone)
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
