@@ -59,7 +59,7 @@ func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (
 	if err = tx.Commit().Error; err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-
+	return nil, nil
 }
 
 func (s *UserService) test(tx *gorm.DB, req types.UserSendCodeReq) error {
