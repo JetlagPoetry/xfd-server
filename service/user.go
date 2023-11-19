@@ -6,7 +6,6 @@ import (
 	"fmt"
 	goredis "github.com/go-redis/redis"
 	"gorm.io/gorm"
-	"log"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
@@ -68,15 +67,18 @@ func (s *UserService) test(tx *gorm.DB, req types.UserSendCodeReq) error {
 }
 
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
-	code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorRedis, err)
-	}
-
-	if req.Code != code {
-		log.Println("[UserService] Login failed, code=", code, ", req.Code=", req.Code)
-		return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
-	}
+	// todo
+	//code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
+	//if err == goredis.Nil {
+	//	return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
+	//} else if err != nil {
+	//	return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	//}
+	//
+	//if req.Code != code {
+	//	log.Println("[UserService] Login failed, code=", code, ", req.Code=", req.Code)
+	//	return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
+	//}
 
 	resp := &types.UserLoginResp{}
 	var (
