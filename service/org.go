@@ -151,7 +151,7 @@ func (s *OrgService) parseCSV(ctx context.Context, file io.Reader, header *multi
 			Name:  row[1],
 			Point: decimal.NewFromInt(int64(point)),
 		})
-		totalPoint.Add(decimal.NewFromInt(int64(point)))
+		totalPoint = totalPoint.Add(decimal.NewFromInt(int64(point)))
 	}
 
 	return list, &totalPoint, nil
@@ -341,6 +341,19 @@ func (s *OrgService) ProcessPointVerify(ctx context.Context) xerr.XErr {
 }
 
 func (s *OrgService) processPointVerify(tx *gorm.DB, apply *model.PointApplication, members []*OrgMember, userMap map[string]*model.User) xerr.XErr {
+	org, err := s.orgDao.GetByIDForUpdate(tx, apply.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	updateOrg := &model.Organization{
+		Point: org.Point.Add(apply.TotalPoint),
+	}
+	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, updateOrg)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
 	// 插入发积分列表
 	list := make([]*model.PointApplicationTmp, 0)
 	for _, mem := range members {
@@ -352,7 +365,7 @@ func (s *OrgService) processPointVerify(tx *gorm.DB, apply *model.PointApplicati
 			Point:          mem.Point,
 		})
 	}
-	err := s.PointApplicationTmpDao.BatchCreateInTx(tx, list)
+	err = s.PointApplicationTmpDao.BatchCreateInTx(tx, list)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -361,19 +374,6 @@ func (s *OrgService) processPointVerify(tx *gorm.DB, apply *model.PointApplicati
 		Status: model.PointApplicationStatusFinish,
 	}
 	err = s.PointApplicationDao.UpdateByIDInTx(tx, int(apply.ID), update)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	org, err := s.orgDao.GetByIDForUpdate(tx, apply.OrganizationID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	updateOrg := &model.Organization{
-		Point: org.Point.Add(apply.TotalPoint),
-	}
-	err = s.orgDao.UpdateByIDInTx(tx, apply.OrganizationID, updateOrg)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}

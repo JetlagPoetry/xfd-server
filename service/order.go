@@ -490,22 +490,22 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	pointLeft := point.Copy()
+	pointNeed := point.Copy()
 	remainIDs := make([]int, 0)
 	for _, remain := range remainList {
-		if pointLeft == decimal.Zero {
+		if pointNeed == decimal.Zero {
 			break
 		}
 		remainIDs = append(remainIDs, int(remain.ID))
 		var spend decimal.Decimal
-		if remain.PointRemain.LessThan(pointLeft) {
+		if remain.PointRemain.LessThan(pointNeed) {
 			// 将pointRemain花费完
 			spend = remain.PointRemain
-			pointLeft.Sub(remain.PointRemain)
+			pointNeed = pointNeed.Sub(remain.PointRemain)
 		} else {
 			// 将pointLeft花费完
-			spend = pointLeft
-			pointLeft.Sub(pointLeft)
+			spend = pointNeed
+			pointNeed = pointNeed.Sub(pointNeed)
 		}
 		record := &model.PointRecord{
 			UserID:             user.UserID,
@@ -524,7 +524,7 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 			}(),
 			Comment: consts.PointCommentSpend,
 		}
-		err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, int(remain.ID), &model.PointRemain{PointRemain: spend})
+		err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, int(remain.ID), &model.PointRemain{PointRemain: remain.PointRemain.Sub(spend)})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
@@ -534,7 +534,7 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 	}
-	if pointLeft.GreaterThan(decimal.Zero) {
+	if pointNeed.GreaterThan(decimal.Zero) {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	return nil
