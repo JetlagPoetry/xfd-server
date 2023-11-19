@@ -313,7 +313,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 		//创建SKU产品详情
 		orderProductVariantDetail := &model.OrderProductVariantDetail{
 			OrderSn:               orderSn,
-			Status:                enum.OrderProductVariantDetailPending,
+			Status:                enum.OrderProductVariantDetailCreated,
 			UserID:                user.UserID,
 			ShoppingCartID:        shoppingCart.ID,
 			ProductVariantID:      shoppingCart.ProductVariantID,
@@ -344,7 +344,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 		UserID:       user.UserID,
 		TotalPrice:   totalPrice,
 		PostPrice:    postPrice,
-		Status:       enum.OrderInfoPaidWaiting,
+		Status:       enum.OrderInfoCreated,
 		OrderSn:      orderSn,
 		ExpiredAt:    time.Now().Add(time.Minute * 15),
 		Address:      addr.Province + addr.City + addr.Region + addr.Address,
@@ -352,7 +352,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 		SingerMobile: addr.Phone,
 	}
 	if req.Remark == "xfd-success" {
-		orderInfo.Status = enum.OrderInfoPaid
+		orderInfo.Status = enum.OderInfoPaidSuccess
 		payTime := time.Now().Add(time.Minute * 2)
 		orderInfo.PayedAt = &payTime
 		orderInfo.Message = "mock测试支付成功"
@@ -590,9 +590,29 @@ func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) (
 }
 
 func (s *OrderService) applyRefund(tx *gorm.DB, req types.ApplyRefundReq, operator *model.User) xerr.XErr {
-	// todo 获取order
+	// 获取order信息
+	orderInfo, err := s.orderDao.GetOrderInfoByIDTX(tx, req.OrderID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if orderInfo == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order %d not found", req.OrderID))
+	}
 
-	// todo 修改order状态
+	if orderInfo.Status != enum.OderInfoPaidSuccess {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order %d status is %d, can not apply refund", req.OrderID, orderInfo.Status))
+	}
+
+	// 修改order状态
+	err = s.orderDao.UpdateOrderInfoByIDTX(tx, req.OrderID, &model.OrderInfo{Status: enum.OrderRefundAndReturn})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	// 修改order_product_variant_detail状态
+	err = s.orderDao.UpdateOrderProductVariantDetailByOrderSnTX(tx, orderInfo.OrderSn, &model.OrderProductVariantDetail{Status: enum.OrderProductVariantDetailRefund})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
 	// todo 获取用户
 
