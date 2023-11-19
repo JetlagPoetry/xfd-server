@@ -430,7 +430,7 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	totalPrice := order.TotalPrice
 	payWx := false
-	var wechatPay *types.WechatPay
+	//var wechatPay *types.WechatPay
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
 		pointPrice = totalPrice
@@ -465,7 +465,7 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	//		return xerr.WithCode(xerr.ErrorDatabase, err)
 	//	}
 	//} else {
-	fmt.Sprintf(wechatPay.PaySign)
+	//fmt.Sprintf(wechatPay)
 	//}
 
 	return nil
