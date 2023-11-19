@@ -43,12 +43,24 @@ type CreateOrderReq struct {
 	UserAddressID   int     `json:"userAddressID" binding:"required"`
 	ShoppingCartIDs []int32 `json:"shoppingCartIDs" binding:"required,min=1"`
 	Remark          string  `json:"remark"`
+	Code            string  `json:"code"` // 获取openid
 }
 
 type CreateOrderResp struct {
 	OrderID     int32                `json:"orderID"`
 	OrderSn     string               `json:"orderSn"`
 	OrderStatus enum.OrderInfoStatus `json:"orderStatus"`
+	PayWx       bool                 `json:"payWx"`
+	PayData     WechatPay            `json:"payData"`
+}
+
+type WechatPay struct {
+	AppID     string `json:"appId"`
+	Timestamp int64  `json:"timeStamp"`
+	NonceStr  string `json:"nonceStr"`
+	Package   string `json:"package"`
+	SignType  string `json:"signType"`
+	PaySign   string `json:"paySign"`
 }
 
 type ApplyRefundReq struct {

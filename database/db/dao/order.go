@@ -225,6 +225,11 @@ func (d *OrderDao) UpdateOrderInfoByIDTX(tx *gorm.DB, id int, update *model.Orde
 	return updateResult.Error
 }
 
+func (d *OrderDao) UpdateOrderInfoByID(ctx context.Context, id int, update *model.OrderInfo) error {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("id = ?", id).Updates(update)
+	return updateResult.Error
+}
+
 func (d *OrderDao) UpdateOrderProductVariantDetailByOrderSnTX(tx *gorm.DB, orderSn string, m *model.OrderProductVariantDetail) error {
 	updateResult := tx.Model(&model.OrderProductVariantDetail{}).Where("order_sn = ?", orderSn).Updates(m)
 	return updateResult.Error

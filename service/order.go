@@ -8,6 +8,7 @@ import (
 	"github.com/google/martian/log"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"os"
 	"sync"
 	"time"
 	"xfd-backend/database/db"
@@ -20,6 +21,7 @@ import (
 	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
+	"xfd-backend/pkg/wechatpay"
 	"xfd-backend/pkg/xerr"
 )
 
@@ -365,7 +367,7 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 	orderInfo.ID = orderID
 	//扣除积分
 	if req.Remark != "xfd-success" {
-		xrr := s.payForOrder(ctx, user, orderInfo)
+		xrr := s.payForOrder(ctx, req.Code, user, orderInfo)
 		if xrr != nil {
 			return nil, xrr
 		}
@@ -376,34 +378,39 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 
 func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types.PayOrderResp, xerr.XErr) {
 	//userID := common.GetUserID(ctx)
-	//user, err := s.userDao.GetByUserID(ctx, userID)
-	//if err != nil {
-	//	return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	//}
-	//
-	//tx := db.Get().Begin()
-	//xErr := s.payForOrder(ctx, user, decimal.NewFromFloat(9.95))
-	//if xErr != nil {
-	//	tx.Rollback()
-	//	return nil, xErr
-	//}
-	//
-	//// 提交事务
-	//if err = tx.Commit().Error; err != nil {
-	//	return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	//}
+	user, err := s.userDao.GetByPhone(ctx, "13300000000")
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	tx := db.Get().Begin()
+	xErr := s.payForOrder(ctx, "", user, &model.OrderInfo{ID: 123, TotalPrice: decimal.NewFromFloat(9.95)})
+	if xErr != nil {
+		tx.Rollback()
+		return nil, xErr
+	}
+
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 
 	return &types.PayOrderResp{}, nil
 }
 
 // org->point_application->user->point_remain->point_record
-func (s *OrderService) payForOrder(ctx context.Context, user *model.User, order *model.OrderInfo) xerr.XErr {
+func (s *OrderService) payForOrder(ctx context.Context, code string, user *model.User, order *model.OrderInfo) xerr.XErr {
 
 	if user.OrganizationID == 0 {
 		return xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
 	}
 
-	// todo  redis锁用户积分变动
+	ok := redis.Lock(fmt.Sprintf("user-point:user_id:%s", user.UserID), time.Minute*5)
+	if !ok {
+		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("get lock failed"))
+	}
+	defer redis.Unlock(fmt.Sprintf("user-point:user_id:%s", user.UserID))
+
 	var (
 		org *model.Organization
 		err error
@@ -424,24 +431,27 @@ func (s *OrderService) payForOrder(ctx context.Context, user *model.User, order 
 	}
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	totalPrice := order.TotalPrice
+	payWx := false
+	var wechatPay *types.WechatPay
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
 		pointPrice = totalPrice
 		wxPrice = decimal.Zero
-		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, false)
+		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
 		if xErr != nil {
 			return xErr
 		}
 	} else {
 		// 积分+微信支付
+		payWx = true
 		pointPrice = user.Point
 		wxPrice = totalPrice.Sub(user.Point)
 
-		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, true)
+		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
 		if xErr != nil {
 			return xErr
 		}
-		xErr = s.payWithWx(ctx, order, user, wxPrice)
+		wechatPay, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
 		if xErr != nil {
 			return xErr
 		}
@@ -450,6 +460,16 @@ func (s *OrderService) payForOrder(ctx context.Context, user *model.User, order 
 	// todo 修改订单，支付金额、微信支付字段、订单状态、修改子订单、订单状态、支付时间
 	//todo 返回订单状态（积分支付成功/积分支付失败/微信等待支付）
 	//看情况是否需要区分 订单待付款/支付待付款 两种状态 解决方案加一个 订单创建的初始态 enum.OrderInfoCreated enum.OrderProductVariantDetailCreated
+
+	if !payWx {
+		err = s.orderDao.UpdateOrderInfoByID(ctx, int(order.ID), &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	} else {
+		fmt.Sprintf(wechatPay.PaySign)
+	}
+
 	return nil
 }
 
@@ -522,9 +542,44 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 	return nil
 }
 
-func (s *OrderService) payWithWx(ctx context.Context, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) (*types.WechatPay, xerr.XErr) {
+	// 请求wx预付单，保存
+	openResp, xErr := wechatpay.GetWxOpenID(ctx, code)
+	if xErr != nil {
+		return nil, xErr
+	}
 
-	return nil
+	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "新发地小程序商城", openResp.OpenID, wxPrice.Mul(decimal.NewFromInt(100)).Floor().IntPart())
+	if xErr != nil {
+		return nil, xErr
+	}
+
+	// 更新订单信息
+	err := s.orderDao.UpdateOrderInfoByID(ctx, int(order.ID), &model.OrderInfo{
+		// todo
+	})
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	appID := os.Getenv("WC_ID")
+	timestamp := time.Now().Unix()
+	nonce := utils.RandStr(32)
+	pack := fmt.Sprintf("prepay_id=%s", orderResp.PrepayID)
+	data := fmt.Sprintf("%s\n%d\n%s\n%s\n", appID, timestamp, nonce, pack)
+	sign, err := wechatpay.WechatPayClient.Sign(ctx, data)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+	}
+
+	return &types.WechatPay{
+		AppID:     appID,
+		Timestamp: timestamp,
+		NonceStr:  nonce,
+		Package:   pack,
+		SignType:  "RSA",
+		PaySign:   sign.Signature,
+	}, nil
 }
 
 func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) (*types.ApplyRefundResp, xerr.XErr) {
