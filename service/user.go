@@ -7,7 +7,6 @@ import (
 	goredis "github.com/go-redis/redis"
 	"gorm.io/gorm"
 	"log"
-	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
@@ -37,18 +36,46 @@ func NewUserService() *UserService {
 }
 
 func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (*types.UserSendCodeResp, xerr.XErr) {
-	code := utils.GenSixDigitCode()
-
-	err := redis.RedisClient.Set(fmt.Sprintf("user-login-code:phone:%s", req.Phone), code, 5*time.Minute).Err()
+	//code := utils.GenSixDigitCode()
+	//
+	//err := redis.RedisClient.Set(fmt.Sprintf("user-login-code:phone:%s", req.Phone), code, 5*time.Minute).Err()
+	//if err != nil {
+	//	return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	//}
+	//
+	//err = utils.SendSms(req.Phone, code, 5)
+	//if err != nil {
+	//	return nil, xerr.WithCode(xerr.ErrorCallApi, err)
+	//}
+	//return &types.UserSendCodeResp{}, nil
+	tx := db.Get().Begin()
+	err := s.test(tx, req)
 	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+		tx.Rollback()
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	err = utils.SendSms(req.Phone, code, 5)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorCallApi, err)
+	// 提交事务
+	if err = tx.Commit().Error; err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	return &types.UserSendCodeResp{}, nil
+
+}
+
+func (s *UserService) test(tx *gorm.DB, req types.UserSendCodeReq) error {
+	s.userDao.CreateInTx(tx, &model.User{
+		UserID:   "testtesttesttransaction",
+		Phone:    "10000000000",
+		UserRole: 1,
+		Username: "123",
+	})
+
+	if req.Phone == "13204026660" {
+		return errors.New("123")
+	}
+
+	s.userDao.UpdateByUserIDInTx(tx, "testtesttesttransaction", &model.User{OrganizationID: 3})
+	return nil
 }
 
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
