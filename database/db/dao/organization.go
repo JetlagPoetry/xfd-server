@@ -41,6 +41,15 @@ func (d *OrganizationDao) GetByID(ctx context.Context, id int) (org *model.Organ
 	return org, nil
 }
 
+// GetByIDForUpdateCTX 通过ID获取用户信息
+func (d *OrganizationDao) GetByIDForUpdateCTX(ctx context.Context, id int) (org *model.Organization, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.Organization{}).Where("id = ?", id).Clauses(clause.Locking{Strength: "UPDATE"}).First(&org).Error
+	if err != nil {
+		return nil, err
+	}
+	return org, nil
+}
+
 func (d *OrganizationDao) GetByIDForUpdate(tx *gorm.DB, id int) (org *model.Organization, err error) {
 	err = tx.Model(&model.Organization{}).Where("id = ?", id).Clauses(clause.Locking{Strength: "UPDATE"}).First(&org).Error
 	if err != nil {
@@ -87,6 +96,14 @@ func (d *OrganizationDao) UpdateByIDInTx(tx *gorm.DB, id int, updateValue *model
 func (d *OrganizationDao) CreateInTx(tx *gorm.DB, org *model.Organization) (err error) {
 	err = tx.Model(&model.Organization{}).Create(org).Error
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *OrganizationDao) UpdateByIDInTxCTX(ctx context.Context, id int, updateValue *model.Organization) error {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.Organization{}).Where("id =?", id).Updates(updateValue)
+	if err := updateResult.Error; err != nil {
 		return err
 	}
 	return nil

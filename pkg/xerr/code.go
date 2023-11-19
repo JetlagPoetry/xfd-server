@@ -62,4 +62,10 @@ const (
 	ErrorOss        XCode = 50001
 	ErrorUploadFile XCode = 50002
 	ErrorDeleteFile XCode = 50003
+
+	//订单错误
+	ErrorOrderNotFound  XCode = 60000
+	ErrorOrderCreate    XCode = 60001
+	ErrorStockNotEnough XCode = 60002
+	ErrorSomeoneNotPaid XCode = 60003
 )

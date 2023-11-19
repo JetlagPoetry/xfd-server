@@ -152,3 +152,11 @@ func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty mod
 	}
 	return sum, nil
 }
+
+func (d *PointRecordDao) CreateInTxCTX(ctx context.Context, record *model.PointRecord) error {
+	err := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Create(record).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

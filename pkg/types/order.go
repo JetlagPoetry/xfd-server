@@ -40,12 +40,14 @@ type ShoppingCartListReq struct {
 }
 
 type CreateOrderReq struct {
-	Code string `json:"code"`
-	// todo implement
+	UserAddressID   int     `json:"userAddressID" binding:"required"`
+	ShoppingCartIDs []int32 `json:"shoppingCartIDs" binding:"required,min=1"`
 }
 
 type CreateOrderResp struct {
-	// todo implement
+	OrderID     int                  `json:"orderID"`
+	OrderSn     string               `json:"orderSn"`
+	OrderStatus enum.OrderInfoStatus `json:"orderStatus"`
 }
 
 type ApplyRefundReq struct {

@@ -105,8 +105,8 @@ type Inventory struct {
 	UpdatedAt        time.Time      `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
 	DeletedAt        gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
 	ProductVariantID int32          `gorm:"type:int;not null;comment:商品编号ID;index:product_variant_id_sku_code_goods_id" json:"product_variant_id"`
-	GoodsID          int32          `gorm:"type:int;not null;default:0;comment:商品ID;index:product_variant_id_sku_code_goods_id" json:"goods_id"`
 	SKUCode          string         `gorm:"type:varchar(300);not null;default:'';comment:商品SKU编号;index:product_variant_id_sku_code_goods_id" json:"sku_code"`
+	GoodsID          int32          `gorm:"type:int;not null;default:0;comment:商品ID;index:product_variant_id_sku_code_goods_id" json:"goods_id"`
 	LockStock        int            `gorm:"type:int;not null;default:0;comment:锁定库存" json:"lock_stock"`
 	SoldNum          int            `gorm:"type:int;default:0;not null;column:sold_num;comment:销量"`
 }
@@ -114,7 +114,10 @@ type Inventory struct {
 // StockSellDetail 库存扣减详情
 type StockSellDetail struct {
 	// 建立索引，值唯一
-	OrderSn string `gorm:"type:varchar(500);index:idx_order_sn,unique;comment:订单编号"`
+	CreatedAt time.Time      `gorm:"comment:创建时间;not null;column:created_at;default:CURRENT_TIMESTAMP(3);" json:"-"`
+	UpdatedAt time.Time      `gorm:"comment:更新时间;not null;column:updated_at;default:CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3);" json:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
+	OrderSn   string         `gorm:"type:varchar(500);index:idx_order_sn,unique;comment:订单编号"`
 	// 订单的库存扣减或者归还后都要更新这个字段，
 	// 执行库存归还前一定要判断这个状态是否为"已扣减"，
 	// 只有"已扣减"状态的订单才可以执行库存归还。
@@ -131,26 +134,28 @@ type ProductAttr struct {
 	ValueID int32  `json:"valueID"`
 }
 
-type GoodsDetail struct {
-	Goods            int32
+type StockDetail struct {
+	GoodsID          int32
 	ProductVariantID int32
-	Num              int32
+	SKUCode          string
+	Stock            int
+	Quantity         int
 }
 
-// GoodsDetailList 自定义gorm类型
-type GoodsDetailList []GoodsDetail
+// StockDetailList 库存详情列表
+type StockDetailList []StockDetail
 
-func (s *StockSellDetail) GetGoodsDetail() []GoodsDetail {
-	var goodsDetailList []GoodsDetail
+func (s *StockSellDetail) GetGoodsDetail() []StockDetail {
+	var stockDetailList []StockDetail
 	if s.Detail == "" {
 		return nil
 	}
-	err := json.Unmarshal([]byte(s.Detail), &goodsDetailList)
+	err := json.Unmarshal([]byte(s.Detail), &stockDetailList)
 	if err != nil {
 		log.Errorf("GetGoodsDetail json.Unmarshal(%s) error: %v", s.Detail, err)
 		return nil
 	}
-	return goodsDetailList
+	return stockDetailList
 }
 func (p *ProductAttr) CheckProductAttr() error {
 	if p.Key == "" || p.Value == "" {

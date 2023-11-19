@@ -3,57 +3,32 @@ package enum
 type OrderInfoStatus int
 
 const (
-	OrderInfoPendingCreated OrderInfoStatus = iota + 1 //创建订单
-	OrderInfoPaidCreated                               //创建交易
-	OrderInfoPaidWaiting                               //等待付款
-	OrderInfoPaid                                      //交易成功
-	OrderInfoSuccess                                   //订单成功
-	OrderInfoPaidCancelled                             //取消付款
-	OrderInfoPaidFailed                                //交易失败
-	OrderInfoClosed                                    //订单关闭
+	OrderInfoPaidWaiting OrderInfoStatus = iota + 1 //等待付款
+	OrderInfoPaid                                   //交易成功
+	OrderInfoClosed                                 //订单关闭
 )
 
 func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 	switch status {
 	case 1:
-		return OrderInfoPendingCreated, "创建订单"
-	case 2:
-		return OrderInfoPaidCreated, "创建交易"
-	case 3:
 		return OrderInfoPaidWaiting, "等待付款"
-	case 4:
+	case 2:
 		return OrderInfoPaid, "交易成功"
-	case 5:
-		return OrderInfoSuccess, "订单成功"
-	case 6:
-		return OrderInfoPaidCancelled, "取消付款"
-	case 7:
-		return OrderInfoPaidFailed, "交易失败"
-	case 8:
+	case 3:
 		return OrderInfoClosed, "订单关闭"
 	default:
-		return 0, ""
+		return 0, "error"
 	}
 }
 
 func (g OrderInfoStatus) Code() int {
 	switch g {
-	case OrderInfoPendingCreated:
-		return 1
-	case OrderInfoPaidCreated:
-		return 2
 	case OrderInfoPaidWaiting:
-		return 3
+		return 1
 	case OrderInfoPaid:
-		return 4
-	case OrderInfoSuccess:
-		return 5
-	case OrderInfoPaidCancelled:
-		return 6
-	case OrderInfoPaidFailed:
-		return 7
+		return 2
 	case OrderInfoClosed:
-		return 8
+		return 3
 	default:
 		return 0
 	}
@@ -62,56 +37,56 @@ func (g OrderInfoStatus) Code() int {
 type OrderProductVariantDetail int
 
 const (
-	OrderGoodsPending   OrderProductVariantDetail = iota + 1 //待付款
-	OrderGoodsPaid                                           //已付款，待发货
-	OrderGoodsShipped                                        //待收货
-	OrderGoodsDelivered                                      //确认收货
-	OrderGoodsCancelled                                      //取消订单 //
-	OrderGoodsRefunded                                       //已退款
-	OrderGoodsReturned                                       //已退货
-	OrderGoodsCompleted                                      //订单完成
+	OrderProductVariantDetailPending   OrderProductVariantDetail = iota + 1 //待付款
+	OrderProductVariantDetailPaid                                           //已付款
+	OrderProductVariantDetailShipped                                        //待收货
+	OrderProductVariantDetailDelivered                                      //确认收货
+	OrderProductVariantDetailClosed                                         //订单关闭
+	OrderProductVariantDetailRefunded                                       //已退款
+	OrderProductVariantDetailReturned                                       //已退货
+	OrderProductVariantDetailCompleted                                      //订单完成
 )
 
 func GetOrderProductVariantDetailEnumByStatus(status int) (OrderProductVariantDetail, string) {
 	switch status {
 	case 1:
-		return OrderGoodsPending, "待付款"
+		return OrderProductVariantDetailPending, "待付款"
 	case 2:
-		return OrderGoodsPaid, "待发货"
+		return OrderProductVariantDetailPaid, "已付款"
 	case 3:
-		return OrderGoodsShipped, "待收货"
+		return OrderProductVariantDetailShipped, "待收货"
 	case 4:
-		return OrderGoodsDelivered, "确认收货"
+		return OrderProductVariantDetailDelivered, "确认收货"
 	case 5:
-		return OrderGoodsCancelled, "取消订单"
+		return OrderProductVariantDetailClosed, "订单关闭"
 	case 6:
-		return OrderGoodsRefunded, "已退款"
+		return OrderProductVariantDetailRefunded, "已退款"
 	case 7:
-		return OrderGoodsReturned, "已退货"
+		return OrderProductVariantDetailReturned, "已退货"
 	case 8:
-		return OrderGoodsCompleted, "订单完成"
+		return OrderProductVariantDetailCompleted, "订单完成"
 	default:
-		return 0, "未知状态"
+		return 0, "error"
 	}
 }
 
 func (g OrderProductVariantDetail) Code() int {
 	switch g {
-	case OrderGoodsPending:
+	case OrderProductVariantDetailPending:
 		return 1
-	case OrderGoodsPaid:
+	case OrderProductVariantDetailPaid:
 		return 2
-	case OrderGoodsShipped:
+	case OrderProductVariantDetailShipped:
 		return 3
-	case OrderGoodsDelivered:
+	case OrderProductVariantDetailDelivered:
 		return 4
-	case OrderGoodsCancelled:
+	case OrderProductVariantDetailClosed:
 		return 5
-	case OrderGoodsRefunded:
+	case OrderProductVariantDetailRefunded:
 		return 6
-	case OrderGoodsReturned:
+	case OrderProductVariantDetailReturned:
 		return 7
-	case OrderGoodsCompleted:
+	case OrderProductVariantDetailCompleted:
 		return 8
 	default:
 		return 0

@@ -1,19 +1,24 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/martian/log"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"sync"
+	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
+	"xfd-backend/database/repo"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/types"
+	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 )
 
@@ -21,9 +26,11 @@ type OrderService struct {
 	goods          *dao.GoodsDao
 	userDao        *dao.UserDao
 	orderDao       *dao.OrderDao
+	userAddressDao *dao.UserAddressDao
 	orgDao         *dao.OrganizationDao
 	pointRemainDao *dao.PointRemainDao
 	pointRecordDao *dao.PointRecordDao
+	inventoryLock  sync.Mutex
 }
 
 func NewOrderService() *OrderService {
@@ -34,6 +41,7 @@ func NewOrderService() *OrderService {
 		orgDao:         dao.NewOrganizationDao(),
 		pointRemainDao: dao.NewPointRemainDao(),
 		pointRecordDao: dao.NewPointRecordDao(),
+		userAddressDao: dao.NewUserAddressDao(),
 	}
 }
 
@@ -222,27 +230,134 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 	return &result, nil
 }
 
-func (s *OrderService) CreateOrder(ctx *gin.Context, req types.CreateOrderReq) (*types.CreateOrderResp, xerr.XErr) {
-	// todo implement
-
-	return &types.CreateOrderResp{}, nil
-}
-
-func (s *OrderService) createOrder(tx *gorm.DB, req types.CreateOrderReq) (*types.CreateOrderResp, xerr.XErr) {
-	// 写订单
-
-	// 扣购物车
-
-	// 扣库存
-
-	// 算价
-
-	// 扣钱
-	xErr := s.payForOrder(tx, nil, nil, decimal.Zero)
-	if xErr != nil {
+func (s *OrderService) CreateOrder(ctx *gin.Context, req types.CreateOrderReq) (result *types.CreateOrderResp, xErr xerr.XErr) {
+	//1.校验用户是否是消费者
+	user, xrr := s.CheckUserIsCustomer(ctx)
+	if xrr != nil {
+		return nil, xrr
+	}
+	//2.校验用户地址是否存在
+	userAddress, err := s.userAddressDao.GetByID(ctx, req.UserAddressID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if userAddress == nil {
+		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not found", req.UserAddressID))
+	}
+	transactionHandler := repo.NewTransactionHandler(db.Get())
+	if xErr = transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+		if result, xErr = s.createOrderWithTX(ctx, req, user, userAddress); xErr != nil {
+			return xErr
+		}
+		return nil
+	}); xErr != nil {
 		return nil, xErr
 	}
+	return result, nil
+}
 
+func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOrderReq, user *model.User, addr *model.UserAddress) (*types.CreateOrderResp, xerr.XErr) {
+	orderSn := utils.GenerateOrder()
+	totalPrice := decimal.Zero
+	postPrice := decimal.Zero
+	orderProductVariantDetailList := make([]*model.OrderProductVariantDetail, 0)
+	for _, shoppingCartID := range req.ShoppingCartIDs {
+		//校验购物车是否存在
+		shoppingCart, err := s.orderDao.GetShoppingCartByUserIDAndProductVariantIDForUpdate(ctx, user.UserID, shoppingCartID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		if shoppingCart == nil {
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("shopping cart %d not found", shoppingCartID))
+		}
+		//校验商品信息
+		goods, err := s.goods.GetGoodsByGoodsIDForUpdate(ctx, shoppingCart.GoodsID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("goods %d not found,please check shopping cart %d,name is %s", shoppingCart.GoodsID, shoppingCart.ID, goods.Name))
+		}
+
+		//校验产品库存
+		productVariant, err := s.goods.GetProductVariantByProductVariantIDForUpdate(ctx, shoppingCart.ProductVariantID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		if productVariant == nil {
+			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("product %d not found", shoppingCart.ProductVariantID))
+		}
+		if *productVariant.Stock < shoppingCart.Quantity {
+			return nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("product %d stock not enough,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
+		}
+
+		//扣除库存
+		leftStock := *productVariant.Stock - shoppingCart.Quantity
+		rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, productVariant.ID, &model.ProductVariant{Stock: &leftStock})
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		if rowsAffected == 0 {
+			return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("reduce stock failed,please check shopping cart %d,name is %s,product variant id is %d", shoppingCart.ID, goods.Name, productVariant.ID))
+		}
+		//删除购物车
+		err = s.orderDao.DeleteShoppingCartByID(ctx, shoppingCart.ID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		//计算价格
+		totalPrice = totalPrice.Add(productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity)))).Add(goods.RetailShippingFee)
+		postPrice = postPrice.Add(goods.RetailShippingFee)
+
+		//创建SKU产品详情
+		orderProductVariantDetail := &model.OrderProductVariantDetail{
+			OrderSn:               orderSn,
+			Status:                enum.OrderProductVariantDetailPending,
+			UserID:                user.UserID,
+			ShoppingCartID:        shoppingCart.ID,
+			ProductVariantID:      shoppingCart.ProductVariantID,
+			GoodsID:               shoppingCart.GoodsID,
+			SKUCode:               shoppingCart.SKUCode,
+			Quantity:              shoppingCart.Quantity,
+			TotalPrice:            productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity))),
+			Price:                 productVariant.Price,
+			PostPrice:             goods.RetailShippingFee,
+			Name:                  goods.Name,
+			Image:                 goods.GoodsFrontImage,
+			ProductAttr:           productVariant.ProductAttr,
+			EstimatedDeliveryTime: s.GetEstimatedDeliveryTime(goods.RetailShippingTime),
+		}
+		orderProductVariantDetailList = append(orderProductVariantDetailList, orderProductVariantDetail)
+	}
+	//批量创建订单SKU产品详情
+	_, err := s.orderDao.CreateOrderProductVariantDetails(ctx, orderProductVariantDetailList)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	//创建订单
+	orderInfo := &model.OrderInfo{
+		UserID:       user.UserID,
+		TotalPrice:   totalPrice,
+		PostPrice:    postPrice,
+		Status:       enum.OrderInfoPaidWaiting,
+		OrderSn:      orderSn,
+		ExpiredAt:    time.Now().Add(time.Minute * 15),
+		Address:      addr.Province + addr.City + addr.Region + addr.Address,
+		SignerName:   addr.Name,
+		SingerMobile: addr.Phone,
+	}
+	orderID, err := s.orderDao.CreateOrderInfo(ctx, orderInfo)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	orderInfo.ID = orderID
+	//扣除积分
+	xrr := s.payForOrder(ctx, nil, user, orderInfo, totalPrice)
+	if xrr != nil {
+		return nil, xrr
+	}
+	//todo 如果微信支付，是否需要返回信息给前端且更新微信订单支付号
 	return &types.CreateOrderResp{}, nil
 }
 
@@ -254,7 +369,7 @@ func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types
 	}
 
 	tx := db.Get().Begin()
-	xErr := s.payForOrder(tx, user, nil, decimal.NewFromFloat(9.95))
+	xErr := s.payForOrder(ctx, tx, user, nil, decimal.NewFromFloat(9.95))
 	if xErr != nil {
 		tx.Rollback()
 		return nil, xErr
@@ -269,20 +384,35 @@ func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types
 }
 
 // org->point_application->user->point_remain->point_record
-func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, order *model.OrderInfo, totalPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payForOrder(ctx context.Context, tx *gorm.DB, user *model.User, order *model.OrderInfo, totalPrice decimal.Decimal) xerr.XErr {
+
 	if user.OrganizationID == 0 {
 		return xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
 	}
+
 	// todo  redis锁用户积分变动
-
-	org, err := s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+	var (
+		org *model.Organization
+		err error
+	)
+	if tx != nil {
+		org, err = s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	} else {
+		org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 	}
 	if user == nil {
 		return xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
@@ -290,13 +420,12 @@ func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, order *model.O
 	if user.Point.Equals(decimal.Zero) {
 		return xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
 	}
-
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
 		pointPrice = totalPrice
 		wxPrice = decimal.Zero
-		xErr := s.payWithPoint(tx, order, user, org, pointPrice, false)
+		xErr := s.payWithPoint(ctx, tx, order, user, org, pointPrice, false)
 		if xErr != nil {
 			return xErr
 		}
@@ -305,36 +434,55 @@ func (s *OrderService) payForOrder(tx *gorm.DB, user *model.User, order *model.O
 		pointPrice = user.Point
 		wxPrice = totalPrice.Sub(user.Point)
 
-		xErr := s.payWithPoint(tx, order, user, org, pointPrice, true)
+		xErr := s.payWithPoint(ctx, tx, order, user, org, pointPrice, true)
 		if xErr != nil {
 			return xErr
 		}
-		xErr = s.payWithWx(tx, order, user, wxPrice)
+		xErr = s.payWithWx(ctx, tx, order, user, wxPrice)
 		if xErr != nil {
 			return xErr
 		}
 	}
-
+	//此时总订单初始状态 enum.OrderInfoPaidWaiting（待付款） 子订单初始状态 enum.OrderProductVariantDetailPending（待付款）
 	// todo 修改订单，支付金额、微信支付字段
-
+	//todo 返回订单状态（积分支付成功/微信等待支付）
 	return nil
 }
 
-func (s *OrderService) payWithPoint(tx *gorm.DB, order *model.OrderInfo, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
+func (s *OrderService) payWithPoint(ctx context.Context, tx *gorm.DB, order *model.OrderInfo, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
 	userLeft := user.Point.Sub(point)
-	err := s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: userLeft})
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
+	var (
+		remainList []*model.PointRemain
+		err        error
+	)
+	if tx != nil {
+		err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: userLeft})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 
-	err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
+		err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		remainList, err = s.pointRemainDao.ListByUserID(tx, user.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 
-	remainList, err := s.pointRemainDao.ListByUserID(tx, user.UserID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+	} else {
+		err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: userLeft})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Sub(point)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		remainList, err = s.pointRemainDao.ListByUserIDCTX(ctx, user.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
 	}
 
 	pointLeft := point.Copy()
@@ -354,12 +502,6 @@ func (s *OrderService) payWithPoint(tx *gorm.DB, order *model.OrderInfo, user *m
 			spend = pointLeft
 			pointLeft.Sub(pointLeft)
 		}
-
-		err = s.pointRemainDao.UpdateByIDInTx(tx, int(remain.ID), &model.PointRemain{PointRemain: spend})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
 		record := &model.PointRecord{
 			UserID:             user.UserID,
 			OrganizationID:     user.OrganizationID,
@@ -377,20 +519,35 @@ func (s *OrderService) payWithPoint(tx *gorm.DB, order *model.OrderInfo, user *m
 			}(),
 			Comment: consts.PointCommentSpend,
 		}
-		err = s.pointRecordDao.CreateInTx(tx, record)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
+		if tx != nil {
+			err = s.pointRemainDao.UpdateByIDInTx(tx, int(remain.ID), &model.PointRemain{PointRemain: spend})
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+
+			err = s.pointRecordDao.CreateInTx(tx, record)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+		} else {
+			err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, int(remain.ID), &model.PointRemain{PointRemain: spend})
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+
+			err = s.pointRecordDao.CreateInTxCTX(ctx, record)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
 		}
 	}
-
 	if pointLeft.GreaterThan(decimal.Zero) {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-
 	return nil
 }
 
-func (s *OrderService) payWithWx(tx *gorm.DB, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
+func (s *OrderService) payWithWx(ctx context.Context, tx *gorm.DB, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) xerr.XErr {
 
 	return nil
 }
@@ -499,4 +656,48 @@ func (s *OrderService) refundPoint(tx *gorm.DB, user, operator *model.User, orde
 	}
 
 	return nil
+}
+
+func (s *OrderService) inventoryLockProcess(ctx context.Context, shoppingCart *model.ShoppingCart, goods *model.Goods, productVariant *model.ProductVariant) xerr.XErr {
+	inventoryLock, err := s.goods.GetInventoryByProductVariantID(ctx, shoppingCart.ProductVariantID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if inventoryLock == nil {
+		//生成锁定库存
+		inventoryLock = &model.Inventory{
+			ProductVariantID: shoppingCart.ProductVariantID,
+			SKUCode:          shoppingCart.SKUCode,
+			GoodsID:          shoppingCart.GoodsID,
+			LockStock:        shoppingCart.Quantity,
+		}
+		err = s.goods.CreateInventory(ctx, inventoryLock)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+	if inventoryLock != nil {
+		if *productVariant.Stock < shoppingCart.Quantity+inventoryLock.LockStock {
+			return xerr.WithCode(xerr.ErrorSomeoneNotPaid, fmt.Errorf(" you can not create order,product %d stock not enough,but someone not paid,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
+		}
+		updateInventory := &model.Inventory{LockStock: shoppingCart.Quantity + inventoryLock.LockStock}
+		_, err = s.goods.UpdateInventoryByID(ctx, productVariant.ID, updateInventory)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	}
+	return nil
+}
+
+func (s *OrderService) GetEstimatedDeliveryTime(retailDeliveryTime enum.RetailDeliveryTime) time.Time {
+	switch retailDeliveryTime {
+	case enum.RetailDeliveryTimeWithin24Hours:
+		return time.Now().Add(time.Hour * 24)
+	case enum.RetailDeliveryTimeWithin48Hours:
+		return time.Now().Add(time.Hour * 48)
+	case enum.RetailDeliveryTimeWithin7Days:
+		return time.Now().Add(time.Hour * 24 * 7)
+	default:
+		return time.Now()
+	}
 }

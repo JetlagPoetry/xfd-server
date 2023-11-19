@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/enum"
@@ -55,6 +56,24 @@ func (d *GoodsDao) CreateProductVariant(ctx context.Context, productVariant *mod
 		return 0, err
 	}
 	return productVariant.ID, nil
+}
+
+// CreateStockSellDetail 创建库存销售明细
+func (d *GoodsDao) CreateStockSellDetail(ctx context.Context, stockSellDetail *model.StockSellDetail) (err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.StockSellDetail{}).Create(stockSellDetail).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateInventory 创建库存
+func (d *GoodsDao) CreateInventory(ctx context.Context, inventory *model.Inventory) (err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.Inventory{}).Create(inventory).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /*get*/
@@ -141,6 +160,21 @@ func (d *GoodsDao) GetGoodsByGoodsID(ctx context.Context, id int32) (goods *mode
 	return goodsList[0], nil
 }
 
+// GetGoodsByGoodsIDForUpdate 通过商品ID获取商品信息
+func (d *GoodsDao) GetGoodsByGoodsIDForUpdate(ctx context.Context, id int32) (goods *model.Goods, err error) {
+	var goodsList []*model.Goods
+	err = db.Get().Debug().Model(&model.Goods{}).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", id).
+		Find(&goodsList).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(goodsList) == 0 {
+		return nil, nil
+	}
+	return goodsList[0], nil
+}
+
 // GetProductVariantListByGoodsID 通过商品ID获取产品信息
 func (d *GoodsDao) GetProductVariantListByGoodsID(ctx context.Context, goodsID int32, productVariantType enum.ProductVariantType, status enum.ProductVariantStatus) (productVariants []*model.ProductVariant, err error) {
 	err = db.Get().Debug().Model(&model.ProductVariant{}).
@@ -162,6 +196,21 @@ func (d *GoodsDao) GetProductVariantByProductVariantID(ctx context.Context, id i
 		Where(&model.ProductVariant{
 			ID: id,
 		}).Find(&productVariants).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(productVariants) == 0 {
+		return nil, nil
+	}
+	return productVariants[0], nil
+}
+
+func (d *GoodsDao) GetProductVariantByProductVariantIDForUpdate(ctx context.Context, id int32) (productVariant *model.ProductVariant, err error) {
+	var productVariants []*model.ProductVariant
+	err = db.Get().Debug().Model(&model.ProductVariant{}).
+		Where(&model.ProductVariant{
+			ID: id,
+		}).Clauses(clause.Locking{Strength: "UPDATE"}).Find(&productVariants).Error
 	if err != nil {
 		return nil, err
 	}
@@ -255,6 +304,22 @@ func (d *GoodsDao) GetSpecificationValueByGoodID(ctx context.Context, goodsID in
 	return specificationValues, nil
 }
 
+// GetInventoryByProductVariantID 通过产品ID获取库存信息
+func (d *GoodsDao) GetInventoryByProductVariantID(ctx context.Context, productVariantID int32) (inventory *model.Inventory, err error) {
+	var inventories []*model.Inventory
+	err = db.Get().Model(&model.Inventory{}).
+		Where(&model.Inventory{
+			ProductVariantID: productVariantID,
+		}).Find(&inventories).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(inventories) == 0 {
+		return nil, nil
+	}
+	return inventories[0], nil
+}
+
 /*update*/
 
 // UpdateGoodsByID 通过商品ID更新商品信息
@@ -288,6 +353,15 @@ func (d *GoodsDao) UpdateSpecificationValueByID(ctx context.Context, id int32, u
 func (d *GoodsDao) UpdateProductVariantByID(ctx context.Context, id int32, updateValue *model.ProductVariant) (int64, error) {
 	updateResult := db.GetRepo().GetDB(ctx).
 		Debug().Model(&model.ProductVariant{}).
+		Where("id =?", id).
+		Updates(updateValue)
+	return updateResult.RowsAffected, updateResult.Error
+}
+
+// UpdateInventoryByID 增加锁定库存
+func (d *GoodsDao) UpdateInventoryByID(ctx context.Context, id int32, updateValue *model.Inventory) (int64, error) {
+	updateResult := db.GetRepo().GetDB(ctx).
+		Debug().Model(&model.Inventory{}).
 		Where("id =?", id).
 		Updates(updateValue)
 	return updateResult.RowsAffected, updateResult.Error

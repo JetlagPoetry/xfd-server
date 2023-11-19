@@ -107,6 +107,7 @@ func (h *OrderHandler) CreateOrder(context *gin.Context) {
 		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+
 	resp, xrr = h.orderService.CreateOrder(context, req)
 	if xrr != nil {
 		log.Println("[OrderHandler] CreateOrder failed, err=", xrr)

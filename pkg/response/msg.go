@@ -51,6 +51,10 @@ var MsgFlags = map[xerr.XCode]string{
 
 	xerr.ErrorOss:            "COS配置错误",
 	xerr.ErrorNotExistRecord: "记录不存在",
+	xerr.ErrorOrderNotFound:  "订单不存在",
+	xerr.ErrorOrderCreate:    "订单创建失败",
+	xerr.ErrorStockNotEnough: "商品库存不足",
+	xerr.ErrorSomeoneNotPaid: "库存被锁定，有人未支付，请等待",
 }
 
 // GetMsg 获取状态码对应信息

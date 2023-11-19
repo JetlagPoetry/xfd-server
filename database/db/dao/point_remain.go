@@ -157,3 +157,21 @@ func (d *PointRemainDao) SumPointRemainByApplyIDInTx(tx *gorm.DB, applyID int) (
 	}
 	return sum, nil
 }
+
+func (d *PointRemainDao) ListByUserIDCTX(ctx context.Context, userID string) (list []*model.PointRemain, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0", userID).Order("id ASC").Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+
+}
+
+func (d *PointRemainDao) UpdateByIDInTxCTX(ctx context.Context, id int, updateValue *model.PointRemain) error {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("id =?", id).Updates(updateValue)
+	if err := updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+
+}

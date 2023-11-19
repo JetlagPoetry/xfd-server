@@ -124,6 +124,16 @@ func (d *UserDao) GetByPhoneForUpdate(tx *gorm.DB, phone string) (User *model.Us
 	return User, nil
 }
 
+func (d *UserDao) GetByUserIDForUpdateCTX(ctx context.Context, userID string) (User *model.User, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.User{}).Where("user_id = ?", userID).Clauses(clause.Locking{Strength: "UPDATE"}).First(&User).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return User, nil
+}
+
 func (d *UserDao) GetByUserIDForUpdate(tx *gorm.DB, userID string) (User *model.User, err error) {
 	err = tx.Model(&model.User{}).Where("user_id = ?", userID).Clauses(clause.Locking{Strength: "UPDATE"}).First(&User).Error
 	if err == gorm.ErrRecordNotFound {
@@ -227,6 +237,14 @@ func (d *UserDao) CountByOrganizationAndStatus(ctx context.Context, orgID int, s
 
 func (d *UserDao) DeleteByUserID(ctx context.Context, userID string) (err error) {
 	if err = db.Get().Model(&model.User{}).Where("user_id = ?", userID).Delete(&model.User{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *UserDao) UpdateByUserIDInTxCTX(ctx context.Context, userID string, updateValue *model.User) error {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.User{}).Where("user_id =?", userID).Updates(updateValue)
+	if err := updateResult.Error; err != nil {
 		return err
 	}
 	return nil

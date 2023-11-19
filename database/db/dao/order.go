@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
@@ -26,13 +27,62 @@ func (d *OrderDao) AddShoppingCart(ctx *gin.Context, shoppingCart *model.Shoppin
 	return shoppingCart.ID, nil
 }
 
+// CreateOrderProductVariantDetails 创建订单产品详情
+func (d *OrderDao) CreateOrderProductVariantDetails(ctx context.Context, orderProductVariantDetails []*model.OrderProductVariantDetail) ([]int32, error) {
+	ids := make([]int32, len(orderProductVariantDetails))
+	batchSize := 100 // 每批次插入的最大数据量
+
+	for i := 0; i < len(orderProductVariantDetails); i += batchSize {
+		end := i + batchSize
+		if end > len(orderProductVariantDetails) {
+			end = len(orderProductVariantDetails)
+		}
+
+		batch := orderProductVariantDetails[i:end]
+		result := db.GetRepo().GetDB(ctx).Model(&model.OrderProductVariantDetail{}).CreateInBatches(batch, len(batch))
+		if result.Error != nil {
+			return nil, result.Error
+		}
+
+		for j, createdOrderProductVariantDetail := range batch {
+			ids[i+j] = createdOrderProductVariantDetail.ID
+		}
+	}
+	return ids, nil
+
+}
+
+// CreateOrderInfo 创建订单信息
+func (d *OrderDao) CreateOrderInfo(ctx context.Context, orderInfo *model.OrderInfo) (id int32, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Create(orderInfo).Error
+	if err != nil {
+		return 0, err
+	}
+	return orderInfo.ID, nil
+}
+
 /*get*/
 
 // GetShoppingCartByUserIDAndProductVariantID 根据用户ID和产品ID获取购物车
-func (d *OrderDao) GetShoppingCartByUserIDAndProductVariantID(ctx *gin.Context, userID string, productVariantID int32) (shoppingCart *model.ShoppingCart, err error) {
+func (d *OrderDao) GetShoppingCartByUserIDAndProductVariantID(ctx context.Context, userID string, productVariantID int32) (shoppingCart *model.ShoppingCart, err error) {
 	var shoppingCartList []*model.ShoppingCart
 	err = db.GetRepo().GetDB(ctx).Model(&model.ShoppingCart{}).
 		Where("user_id = ? and product_variant_id = ?", userID, productVariantID).
+		Find(&shoppingCartList).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(shoppingCartList) == 0 {
+		return nil, nil
+	}
+	return shoppingCartList[0], nil
+}
+
+// GetShoppingCartByUserIDAndProductVariantIDForUpdate 根据用户ID和产品ID获取购物车
+func (d *OrderDao) GetShoppingCartByUserIDAndProductVariantIDForUpdate(ctx context.Context, userID string, productVariantID int32) (shoppingCart *model.ShoppingCart, err error) {
+	var shoppingCartList []*model.ShoppingCart
+	err = db.GetRepo().GetDB(ctx).Model(&model.ShoppingCart{}).
+		Where("user_id = ? and product_variant_id = ?", userID, productVariantID).Clauses(clause.Locking{Strength: "UPDATE"}).
 		Find(&shoppingCartList).Error
 	if err != nil {
 		return nil, err
@@ -85,7 +135,7 @@ func (d *OrderDao) UpdateShoppingCartByID(ctx context.Context, id int32, updateV
 /*delete*/
 
 // DeleteShoppingCartByID 根据购物车ID删除购物车
-func (d *OrderDao) DeleteShoppingCartByID(ctx *gin.Context, id int32) error {
+func (d *OrderDao) DeleteShoppingCartByID(ctx context.Context, id int32) error {
 	err := db.Get().Model(&model.ShoppingCart{}).
 		Where("id = ?", id).
 		Delete(&model.ShoppingCart{}).Error
