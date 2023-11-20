@@ -19,7 +19,7 @@ func NewRouter() *gin.Engine {
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
-			c.JSON(http.StatusOK, response.RespSuccess(c, "hello world"))
+			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test\"}"))
 		})
 		testGroup.GET("/error", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
@@ -112,9 +112,9 @@ func NewRouter() *gin.Engine {
 
 	commonGroup := r.Group("/api/v1/common")
 	{
-		commonGroup.GET("/area", handler.Common.GetArea)           //获取区域地址代码
-		commonGroup.POST("/uploadFile", handler.Common.UploadFile) //上传图片
-		//commonGroup.DELETE("/uploadFile", handler.Common.DeleteUploadFile) //删除图片
+		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
+		commonGroup.POST("/uploadFile", handler.Common.UploadFile)         //上传图片
+		commonGroup.DELETE("/uploadFile", handler.Common.DeleteUploadFile) //删除图片
 	}
 	return r
 }
