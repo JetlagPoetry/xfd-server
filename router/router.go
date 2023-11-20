@@ -12,6 +12,7 @@ import (
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
+	r.Use(middleware.Cors())
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
 	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/user/sendCode")) // 登录校验, 参数为跳过登录的路由
@@ -19,7 +20,7 @@ func NewRouter() *gin.Engine {
 	testGroup := r.Group("/api/v1/test")
 	{
 		testGroup.GET("/hello", func(c *gin.Context) {
-			c.JSON(http.StatusOK, response.RespSuccess(c, "hello world"))
+			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test\"}"))
 		})
 		testGroup.GET("/error", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
@@ -116,6 +117,7 @@ func NewRouter() *gin.Engine {
 	{
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
 		commonGroup.POST("/uploadFile", handler.Common.UploadFile)         //上传图片
+		commonGroup.POST("/upload", handler.Common.UploadFile)             //上传图片
 		commonGroup.DELETE("/uploadFile", handler.Common.DeleteUploadFile) //删除图片
 	}
 	return r

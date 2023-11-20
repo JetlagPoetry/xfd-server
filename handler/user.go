@@ -61,10 +61,16 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	if !utils.Mobile(req.Phone) || req.Source == types.SourceUnknown || len(req.Code) == 0 {
+	if !utils.Mobile(req.Phone) || req.Source == types.SourceUnknown {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
+
+	// todo
+	//if  len(req.Code) == 0{
+	//	c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+	//	return
+	//}
 
 	resp, xErr = h.userService.Login(c, req)
 	if xErr != nil {
@@ -95,7 +101,7 @@ func (h *UserHandler) SubmitRole(c *gin.Context) {
 
 	if (req.Role == model.UserRoleSupplier || req.Role == model.UserRoleBuyer) && (len(req.Organization) == 0 || len(req.OrganizationCode) == 0 ||
 		len(req.OrganizationURL) == 0 || len(req.IdentityURLA) == 0 || len(req.IdentityURLB) == 0 ||
-		len(req.RealName) == 0 || len(req.CertificateNo) == 0 || len(req.Position) == 0 || !utils.Mobile(req.Phone)) {
+		len(req.RealName) == 0 || len(req.Position) == 0 || !utils.Mobile(req.Phone)) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
