@@ -197,3 +197,46 @@ func (h *OrderHandler) CreatePreOrder(context *gin.Context) {
 	}
 	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
 }
+
+// GetOrderList 获取订单列表
+func (h *OrderHandler) GetOrderList(context *gin.Context) {
+	//消费者 待发货，已发货，全部
+	//供应商 待发货，已发货，全部
+	//官方 待发货，待收货，已签收，售后/结束  全部
+	var (
+		req  types.OrderListReq
+		resp *types.OrderListResp
+		xrr  xerr.XErr
+	)
+	err := context.ShouldBindQuery(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.GetOrderList(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] GetOrderList failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
+}
+
+func (h *OrderHandler) FillShipmentInfo(context *gin.Context) {
+	var (
+		req types.FillShipmentInfoReq
+		xrr xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.orderService.FillShipmentInfo(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] FillShipmentInfo failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
+}

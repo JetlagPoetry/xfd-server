@@ -1,6 +1,7 @@
 package types
 
 import (
+	"time"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
 )
@@ -51,7 +52,7 @@ type CreateOrderResp struct {
 	OrderSn     string               `json:"orderSn"`
 	OrderStatus enum.OrderInfoStatus `json:"orderStatus"`
 	PayWx       bool                 `json:"payWx"`
-	PayData     WechatPay            `json:"payData"`
+	PayData     *WechatPay           `json:"payData,omitempty"`
 }
 
 type WechatPay struct {
@@ -66,7 +67,6 @@ type WechatPay struct {
 type ApplyRefundReq struct {
 	OrderID     int  `json:"orderID"`
 	RefundPoint bool `json:"refundPoint"`
-	// todo RefundType
 }
 
 type ApplyRefundResp struct {
@@ -112,4 +112,44 @@ type PreOrderProductVariantDetail struct {
 	CoverURL       string `json:"coverURL"`
 	ProductAttr    string `json:"productAttr"`
 	PostPrice      string `json:"postPrice"`
+}
+
+type OrderListReq struct {
+	PageRequest
+	QueryOrderStatus enum.QueryOrderStatus `form:"queryOrderStatus"`
+	UserID           string                `form:"userID"`
+}
+type OrderListResp struct {
+	PageResult
+	List []*QueryOrder `json:"list,omitempty"`
+}
+
+type QueryOrder struct {
+	QueryOrderID                 int32                          `gorm:"column:id" json:"queryOrderID"`
+	OrderSn                      string                         `gorm:"column:order_sn" json:"orderSn,omitempty"`
+	Status                       enum.OrderProductVariantDetail `gorm:"column:status" json:"status"`
+	Name                         string                         `gorm:"column:name" json:"name"`
+	Quantity                     int                            `gorm:"column:quantity" json:"quantity"`
+	Price                        float64                        `gorm:"column:price" json:"price"`
+	TotalPrice                   float64                        `gorm:"column:total_price" json:"totalPrice"`
+	PostPrice                    float64                        `gorm:"column:post_price" json:"postPrice,omitempty"`
+	Image                        string                         `gorm:"column:image" json:"image"`
+	ProductAttr                  string                         `gorm:"column:product_attr" json:"productAttr"`
+	EstimatedDelivery            time.Time                      `gorm:"column:estimated_delivery_time" json:"estimatedDelivery,omitempty"`
+	ShipmentCompany              string                         `gorm:"column:shipment_company" json:"shipmentCompany,omitempty"`
+	ShipmentSn                   string                         `gorm:"column:shipment_sn" json:"shipmentSn,omitempty"`
+	SignerName                   string                         `gorm:"column:signer_name" json:"signerName,omitempty"`
+	SignerPhone                  string                         `gorm:"column:singer_mobile" json:"signerPhone,omitempty"`
+	SignerAddr                   string                         `gorm:"column:address" json:"signerAddr,omitempty"`
+	SupplierUserID               string                         `gorm:"column:goods_supplier_user_id" json:"supplierUserID,omitempty"`
+	SupplierOrganizationName     string                         `gorm:"column:organization_name" json:"supplierOrganizationName,omitempty"`
+	TotalOrderPrice              string                         `gorm:"column:total_order_price" json:"totalOrderPrice,omitempty"`
+	ConsumerUserPhone            string                         `gorm:"column:consumer_user_phone" json:"consumerUserPhone,omitempty"`
+	ConsumerUserOrganizationName string                         `gorm:"column:consumer_organization_name" json:"consumerOrganizationName,omitempty"`
+}
+
+type FillShipmentInfoReq struct {
+	QueryOrderID    int32  `json:"queryOrderID" binding:"required"`
+	ShipmentCompany string `json:"shipmentCompany" binding:"required"`
+	ShipmentSn      string `gorm:"column:shipment_sn" json:"shipmentSn,omitempty"`
 }

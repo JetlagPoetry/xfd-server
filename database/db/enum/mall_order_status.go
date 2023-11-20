@@ -4,12 +4,9 @@ type OrderInfoStatus int
 
 const (
 	OrderInfoCreated     OrderInfoStatus = iota + 1 //订单创建
-	OrderInfoPaidWaiting                            //交易创建 todo 待补充
+	OrderInfoPaidWaiting                            //交易创建
 	OderInfoPaidSuccess                             //交易成功
-	OrderRefundAndReturn                            //退货退款
-	OrderRefund                                     //退款
-	OrderReturn                                     //退货
-	OrderInfoClosed                                 //订单关闭
+	OderInfoAfterSale                               //售后/结束
 )
 
 func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
@@ -21,13 +18,7 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 	case 3:
 		return OderInfoPaidSuccess, "交易成功"
 	case 4:
-		return OrderRefundAndReturn, "退货退款"
-	case 5:
-		return OrderRefund, "退款"
-	case 6:
-		return OrderReturn, "退货"
-	case 7:
-		return OrderInfoClosed, "订单关闭"
+		return OderInfoAfterSale, "售后/结束"
 	default:
 		return OrderInfoCreated, "订单创建"
 	}
@@ -36,19 +27,13 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 func (g OrderInfoStatus) Code() int {
 	switch g {
 	case OrderInfoCreated:
-		return 1
+		return 0
 	case OrderInfoPaidWaiting:
-		return 2
+		return 1
 	case OderInfoPaidSuccess:
+		return 2
+	case OderInfoAfterSale:
 		return 3
-	case OrderRefundAndReturn:
-		return 4
-	case OrderRefund:
-		return 5
-	case OrderReturn:
-		return 6
-	case OrderInfoClosed:
-		return 7
 	default:
 		return 0
 	}
@@ -57,16 +42,12 @@ func (g OrderInfoStatus) Code() int {
 type OrderProductVariantDetail int
 
 const (
-	OrderProductVariantDetailCreated         OrderProductVariantDetail = iota + 1 //订单创建
-	OrderProductVariantDetailPending                                              //待付款
-	OrderProductVariantDetailPaid                                                 //已付款
-	OrderProductVariantDetailShipped                                              //待收货
-	OrderProductVariantDetailDelivered                                            //确认收货
-	OrderProductVariantDetailClosed                                               //订单关闭
-	OrderProductVariantDetailRefund                                               //退款
-	OrderProductVariantDetailReturn                                               //退货
-	OrderProductVariantDetailRefundAndReturn                                      //退货退款
-	OrderProductVariantDetailCompleted                                            //订单完成
+	OrderProductVariantDetailCreated   OrderProductVariantDetail = iota + 1 //订单创建
+	OrderProductVariantDetailPending                                        //待付款
+	OrderProductVariantDetailPaid                                           //已付款
+	OrderProductVariantDetailShipped                                        //待收货
+	OrderProductVariantDetailDelivered                                      //已签收
+	OrderProductVariantDetailAfterSale                                      //售后/结束
 )
 
 func GetOrderProductVariantDetailEnumByStatus(status int) (OrderProductVariantDetail, string) {
@@ -82,15 +63,7 @@ func GetOrderProductVariantDetailEnumByStatus(status int) (OrderProductVariantDe
 	case 5:
 		return OrderProductVariantDetailDelivered, "确认收货"
 	case 6:
-		return OrderProductVariantDetailClosed, "订单关闭"
-	case 7:
-		return OrderProductVariantDetailRefund, "退款"
-	case 8:
-		return OrderProductVariantDetailReturn, "退货"
-	case 9:
-		return OrderProductVariantDetailRefundAndReturn, "退货退款"
-	case 10:
-		return OrderProductVariantDetailCompleted, "订单完成"
+		return OrderProductVariantDetailAfterSale, "售后/结束"
 	default:
 		return OrderProductVariantDetailCreated, "订单创建"
 	}
@@ -108,17 +81,71 @@ func (g OrderProductVariantDetail) Code() int {
 		return 4
 	case OrderProductVariantDetailDelivered:
 		return 5
-	case OrderProductVariantDetailClosed:
+	case OrderProductVariantDetailAfterSale:
 		return 6
-	case OrderProductVariantDetailRefund:
-		return 7
-	case OrderProductVariantDetailReturn:
-		return 8
-	case OrderProductVariantDetailRefundAndReturn:
-		return 9
-	case OrderProductVariantDetailCompleted:
-		return 10
 	default:
 		return 0
 	}
 }
+
+type QueryOrderStatus int
+
+const (
+	QueryOrderStatusWaitingShipped QueryOrderStatus = iota + 1 //待发货
+	QueryOrderStatusShipped                                    //待收货
+	QueryOrderStatusDelivered                                  //已签收
+	QueryOrderStatusAfterSale                                  //售后/结束
+)
+
+func GetQueryOrderStatusEnumByStatus(status int) (QueryOrderStatus, string) {
+	switch status {
+	case 1:
+		return QueryOrderStatusWaitingShipped, "待发货"
+	case 2:
+		return QueryOrderStatusShipped, "待收货"
+	case 3:
+		return QueryOrderStatusDelivered, "已签收"
+	case 4:
+		return QueryOrderStatusAfterSale, "售后/结束"
+	default:
+		return QueryOrderStatusWaitingShipped, "待发货"
+	}
+}
+
+func (g QueryOrderStatus) Code() int {
+	switch g {
+	case QueryOrderStatusWaitingShipped:
+		return 1
+	case QueryOrderStatusShipped:
+		return 2
+	case QueryOrderStatusDelivered:
+		return 3
+	case QueryOrderStatusAfterSale:
+		return 4
+	default:
+		return 0
+	}
+}
+
+type AfterSaleType int
+
+const (
+	AfterSaleTypeExchange        AfterSaleType = iota + 1
+	AfterSaleTypeReturnAndRefund AfterSaleType = iota + 1
+)
+
+type ReturnPointType int
+
+const (
+	ReturnPointTypeNoReturn ReturnPointType = iota + 1
+	ReturnPointTypeReturn
+)
+
+type ReturnPointStatus int
+
+// 不需要返回积分/待返回积分/已返回积分
+const (
+	ReturnPointStatusNoReturn ReturnPointStatus = iota
+	ReturnPointStatusWaitReturn
+	ReturnPointStatusReturned
+)
