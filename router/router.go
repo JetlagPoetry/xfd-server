@@ -12,6 +12,7 @@ import (
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
+	r.Use(middleware.Cors())
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
 	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/user/sendCode")) // 登录校验, 参数为跳过登录的路由
