@@ -114,6 +114,7 @@ func NewRouter() *gin.Engine {
 	{
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
 		commonGroup.POST("/uploadFile", handler.Common.UploadFile)         //上传图片
+		commonGroup.POST("/upload", handler.Common.UploadFile)             //上传图片
 		commonGroup.DELETE("/uploadFile", handler.Common.DeleteUploadFile) //删除图片
 	}
 	return r
