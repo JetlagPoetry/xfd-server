@@ -912,8 +912,15 @@ func (s *OrderService) ConfirmReceipt(ctx *gin.Context, req types.ConfirmReceipt
 	if orderInfo.UserID != user.UserID {
 		return xerr.WithCode(xerr.ErrorOperationForbidden, fmt.Errorf("user %s is not order owner,cannot confirm receipt", user.UserID))
 	}
-	if orderInfo.Status == enum.OderInfoShipped || orderInfo.Status == enum.OderInfoPaidSuccess {
+	if orderInfo.Status != enum.OderInfoShipped && orderInfo.Status != enum.OderInfoPaidSuccess {
 		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order status is %d,not allow confirm receipt", orderInfo.Status))
+	}
+	rowsAffected, er := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoReceived})
+	if er != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, er)
+	}
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorOperationForbidden, fmt.Errorf("order status is %d,not allow confirm receipt", orderInfo.Status))
 	}
 	return nil
 }
