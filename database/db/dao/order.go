@@ -70,8 +70,11 @@ func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartL
 
 func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
 	query := db.Get().Debug().Model(&model.OrderProductVariantDetail{}).
-		Select("id,status,name, quantity, price, total_price, image, product_attr, shipment_sn,estimated_delivery_time,goods_supplier_user_id").
+		Select("id,status,name, quantity, price, total_price, image, product_attr, shipment_company,shipment_sn,estimated_delivery_time,goods_supplier_user_id").
 		Where("user_id = ?", req.UserID)
+	if req.Status != 0 {
+		query = query.Where("status = ?", req.Status)
+	}
 	// 获取订单列表总数
 	query.Count(&count)
 
@@ -94,6 +97,9 @@ func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderLi
 		Select("order_product_variant_detail.id,order_product_variant_detail.status, order_product_variant_detail.name,order_product_variant_detail.product_attr, order_product_variant_detail.quantity, order_product_variant_detail.price, order_product_variant_detail.total_price, order_product_variant_detail.image, order_product_variant_detail.estimated_delivery_time, "+
 			"i.signer_name, i.singer_mobile, i.address").
 		Where("goods_supplier_user_id = ?", req.UserID)
+	if req.Status != 0 {
+		query = query.Where("status = ?", req.Status)
+	}
 	// 获取订单列表总数
 	query.Count(&count)
 

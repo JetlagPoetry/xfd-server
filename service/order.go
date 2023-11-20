@@ -906,14 +906,6 @@ func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*
 		}
 		return &types.OrderListResp{PageResult: types.PageResult{TotalNum: total, PageNum: req.PageNum, PageSize: req.PageSize}, List: orderList}, nil
 
-	case model.UserRoleAdmin:
-		req.UserID = user.UserID
-		orderList, total, err := s.orderDao.CustomerGetQueryOrderList(ctx, req)
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		return &types.OrderListResp{PageResult: types.PageResult{TotalNum: total, PageNum: req.PageNum, PageSize: req.PageSize}, List: orderList}, nil
-
 	case model.UserRoleSupplier:
 		req.UserID = user.UserID
 		orderList, total, err := s.orderDao.SupplierGetQueryOrderList(ctx, req)

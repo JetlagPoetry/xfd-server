@@ -116,9 +116,10 @@ type PreOrderProductVariantDetail struct {
 
 type OrderListReq struct {
 	PageRequest
-	QueryOrderStatus enum.QueryOrderStatus `form:"queryOrderStatus"`
-	UserID           string                `form:"userID"`
+	Status int    `form:"status" binding:"oneof=0 3 4"`
+	UserID string `form:"userID"`
 }
+
 type OrderListResp struct {
 	PageResult
 	List []*QueryOrder `json:"list,omitempty"`
@@ -151,5 +152,5 @@ type QueryOrder struct {
 type FillShipmentInfoReq struct {
 	QueryOrderID    int32  `json:"queryOrderID" binding:"required"`
 	ShipmentCompany string `json:"shipmentCompany" binding:"required"`
-	ShipmentSn      string `gorm:"column:shipment_sn" json:"shipmentSn,omitempty"`
+	ShipmentSn      string `json:"shipmentSn" binding:"required"`
 }
