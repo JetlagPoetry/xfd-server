@@ -28,31 +28,6 @@ func (d *OrderDao) AddShoppingCart(ctx *gin.Context, shoppingCart *model.Shoppin
 	return shoppingCart.ID, nil
 }
 
-// CreateOrderProductVariantDetails 创建订单产品详情
-func (d *OrderDao) CreateOrderProductVariantDetails(ctx context.Context, orderProductVariantDetails []*model.OrderProductVariantDetail) ([]int32, error) {
-	ids := make([]int32, len(orderProductVariantDetails))
-	batchSize := 100 // 每批次插入的最大数据量
-
-	for i := 0; i < len(orderProductVariantDetails); i += batchSize {
-		end := i + batchSize
-		if end > len(orderProductVariantDetails) {
-			end = len(orderProductVariantDetails)
-		}
-
-		batch := orderProductVariantDetails[i:end]
-		result := db.GetRepo().GetDB(ctx).Model(&model.OrderProductVariantDetail{}).CreateInBatches(batch, len(batch))
-		if result.Error != nil {
-			return nil, result.Error
-		}
-
-		for j, createdOrderProductVariantDetail := range batch {
-			ids[i+j] = createdOrderProductVariantDetail.ID
-		}
-	}
-	return ids, nil
-
-}
-
 func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartListReq) (shoppingCartList []*model.ShoppingCart, count int64, err error) {
 	result := db.Get().Debug().Model(&model.ShoppingCart{}).Where("user_id = ?", req.UserID)
 	result = result.Count(&count)
@@ -69,9 +44,9 @@ func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartL
 }
 
 func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
-	query := db.Get().Debug().Model(&model.OrderProductVariantDetail{}).
-		Select("id,status,name, quantity, price, total_price, image, product_attr, shipment_company,shipment_sn,estimated_delivery_time,goods_supplier_user_id").
-		Where("user_id = ?", req.UserID)
+	query := db.Get().Debug().Model(&model.OrderInfo{}).
+		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image,product_attr, shipment_company,shipment_sn,estimated_delivery_time,goods_supplier_user_id,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
+		Where("user_id = ? and status in (3,4,5,6)", req.UserID)
 	if req.Status != 0 {
 		query = query.Where("status = ?", req.Status)
 	}
@@ -91,12 +66,9 @@ func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderLi
 }
 
 func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
-	query := db.Get().Debug().Model(&model.OrderProductVariantDetail{})
-	// 添加查询条件和参数
-	query = query.Joins("JOIN order_info i ON i.order_sn = order_product_variant_detail.order_sn").
-		Select("order_product_variant_detail.id,order_product_variant_detail.status, order_product_variant_detail.name,order_product_variant_detail.product_attr, order_product_variant_detail.quantity, order_product_variant_detail.price, order_product_variant_detail.total_price, order_product_variant_detail.image, order_product_variant_detail.estimated_delivery_time, "+
-			"i.signer_name, i.singer_mobile, i.address").
-		Where("goods_supplier_user_id = ?", req.UserID)
+	query := db.Get().Debug().Model(&model.OrderInfo{}).
+		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image, product_attr, shipment_company,shipment_sn,estimated_delivery_time,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
+		Where("goods_supplier_user_id= ? and status in (3,4,5,6)", req.UserID)
 	if req.Status != 0 {
 		query = query.Where("status = ?", req.Status)
 	}
@@ -104,7 +76,7 @@ func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderLi
 	query.Count(&count)
 
 	// 添加排序、分页等操作
-	query = query.Order("i.payed_at desc").
+	query = query.Order("created_at desc,goods_id").
 		Offset(req.Offset()).
 		Limit(req.Limit())
 
@@ -159,7 +131,7 @@ func (d *OrderDao) GetShoppingCartByUserIDAndShoppingCartIDForUpdate(ctx context
 // GetShoppingCartByUserIDAndShoppingCartID 根据用户ID和购物车ID获取购物车
 func (d *OrderDao) GetShoppingCartByUserIDAndShoppingCartID(ctx context.Context, userID string, shoppingCartID int32) (shoppingCart *model.ShoppingCart, err error) {
 	var shoppingCartList []*model.ShoppingCart
-	err = db.GetRepo().GetDB(ctx).Model(&model.ShoppingCart{}).
+	err = db.Get().Model(&model.ShoppingCart{}).
 		Where("user_id = ? and id = ?", userID, shoppingCartID).Find(&shoppingCartList).Error
 	if err != nil {
 		return nil, err
@@ -245,6 +217,14 @@ func (d *OrderDao) DeleteShoppingCartByID(ctx context.Context, id int32) error {
 	return err
 }
 
+// DeleteShoppingCartByIDCTX 根据购物车ID删除购物车
+func (d *OrderDao) DeleteShoppingCartByIDCTX(ctx context.Context, id int32) error {
+	err := db.GetRepo().GetDB(ctx).Model(&model.ShoppingCart{}).
+		Where("id = ?", id).
+		Delete(&model.ShoppingCart{}).Error
+	return err
+}
+
 // DeleteShoppingCartByIDsAndUserID 根据购物车IDs和用户ID删除购物车
 func (d *OrderDao) DeleteShoppingCartByIDsAndUserID(ctx *gin.Context, ids []int32, userID string) error {
 	err := db.Get().Model(&model.ShoppingCart{}).
@@ -272,13 +252,8 @@ func (d *OrderDao) UpdateOrderInfoByIDTX(tx *gorm.DB, id int, update *model.Orde
 	return updateResult.Error
 }
 
-func (d *OrderDao) UpdateOrderInfoByID(ctx context.Context, id int, update *model.OrderInfo) error {
+func (d *OrderDao) UpdateOrderInfoByID(ctx context.Context, id int32, update *model.OrderInfo) error {
 	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("id = ?", id).Updates(update)
-	return updateResult.Error
-}
-
-func (d *OrderDao) UpdateOrderProductVariantDetailByOrderSnTX(tx *gorm.DB, orderSn string, m *model.OrderProductVariantDetail) error {
-	updateResult := tx.Model(&model.OrderProductVariantDetail{}).Where("order_sn = ?", orderSn).Updates(m)
 	return updateResult.Error
 }
 
@@ -287,18 +262,7 @@ func (d *OrderDao) UpdateOrderByOrderSn(ctx context.Context, orderSn string, val
 	return updateResult.Error
 }
 
-func (d *OrderDao) UpdateOrderProductVariantDetailByOrderSn(ctx context.Context, orderSn string, value *model.OrderProductVariantDetail) error {
-	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderProductVariantDetail{}).Where("order_sn = ?", orderSn).Updates(value)
-	return updateResult.Error
-}
-
-func (d *OrderDao) GetOrderProductVariantDetailByID(ctx *gin.Context, id int32) (*model.OrderProductVariantDetail, error) {
-	var orderProductVariantDetail model.OrderProductVariantDetail
-	err := db.Get().Model(&model.OrderProductVariantDetail{}).Where("id = ?", id).First(&orderProductVariantDetail).Error
-	return &orderProductVariantDetail, err
-}
-
-func (d *OrderDao) UpdateOrderProductVariantDetailByID(ctx *gin.Context, id int32, value *model.OrderProductVariantDetail) error {
-	updateResult := db.Get().Model(&model.OrderProductVariantDetail{}).Where("id = ?", id).Updates(value)
-	return updateResult.Error
+func (d *OrderDao) UpdateOrderInfoByIDCTX(ctx context.Context, id int32, updateValue *model.OrderInfo) (int64, error) {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("id = ?", id).Updates(updateValue)
+	return updateResult.RowsAffected, updateResult.Error
 }

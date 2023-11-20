@@ -109,6 +109,8 @@ func NewRouter() *gin.Engine {
 		orderGroup.POST("/payOrder", handler.Order.PayOrder)                       //【测试用】花费积分
 		orderGroup.GET("/getOrderList", handler.Order.GetOrderList)                //获取订单列表
 		orderGroup.POST("/fillShipmentInfo", handler.Order.FillShipmentInfo)       //填写/修改快递单号
+		orderGroup.POST("/confirmReceipt", handler.Order.ConfirmReceipt)           //
+
 		//orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
 		//orderGroup.POST("/paymentCancel", handler.Order.PaymentCancel)
 	}

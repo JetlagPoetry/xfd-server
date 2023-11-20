@@ -240,3 +240,22 @@ func (h *OrderHandler) FillShipmentInfo(context *gin.Context) {
 	}
 	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
 }
+
+func (h *OrderHandler) ConfirmReceipt(ctx *gin.Context) {
+	var (
+		req types.ConfirmReceiptReq
+		xrr xerr.XErr
+	)
+	err := ctx.ShouldBindJSON(&req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.orderService.ConfirmReceipt(ctx, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] ConfirmReceipt failed, err=", xrr)
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xrr))
+		return
+	}
+	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, nil))
+}

@@ -238,25 +238,13 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 }
 
 func (s *OrderService) CreateOrder(ctx *gin.Context, req types.CreateOrderReq) (result *types.CreateOrderResp, xErr xerr.XErr) {
-	//1.校验用户是否是消费者
-	user, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
+	user, userAddress, shoppingCart, goods, productVariant, goodUser, xrr := s.checkOrderNormalInfo(ctx, req)
 	if xrr != nil {
 		return nil, xrr
 	}
-	//2.校验用户地址是否有效
-	userAddress, err := s.userAddressDao.GetByID(ctx, req.UserAddressID)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if userAddress == nil {
-		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not found", req.UserAddressID))
-	}
-	if userAddress.UserID != user.UserID {
-		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not belong to user %s", req.UserAddressID, user.UserID))
-	}
 	transactionHandler := repo.NewTransactionHandler(db.Get())
 	if xErr = transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
-		if result, xErr = s.createOrderWithTX(ctx, req, user, userAddress); xErr != nil {
+		if result, xErr = s.createOrderWithTX(ctx, req, user, userAddress, shoppingCart, goods, productVariant, goodUser); xErr != nil {
 			return xErr
 		}
 		return nil
@@ -266,111 +254,65 @@ func (s *OrderService) CreateOrder(ctx *gin.Context, req types.CreateOrderReq) (
 	return result, nil
 }
 
-func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOrderReq, user *model.User, addr *model.UserAddress) (*types.CreateOrderResp, xerr.XErr) {
-	orderSn := fmt.Sprintf("TD%d%s", time.Now().UnixMicro(), utils.GenerateRandomNumber(5))
+func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOrderReq, user *model.User, addr *model.UserAddress, shoppingCart *model.ShoppingCart, goods *model.Goods, productVariant *model.ProductVariant, goodUser *model.User) (*types.CreateOrderResp, xerr.XErr) {
+	orderSn := fmt.Sprintf("DD%s%s", utils.GenerateOrder(), utils.GenerateRandomNumber(3))
 	totalPrice := decimal.Zero
 	postPrice := decimal.Zero
 	if user.Point.Equal(decimal.Zero) {
 		return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("user %s point is %s, please add point", user.UserID, user.Point.String()))
 	}
-	orderProductVariantDetailList := make([]*model.OrderProductVariantDetail, 0)
-	for j, shoppingCartID := range req.ShoppingCartIDs {
-		//校验购物车是否存在
-		shoppingCart, err := s.orderDao.GetShoppingCartByUserIDAndShoppingCartID(ctx, user.UserID, shoppingCartID)
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if shoppingCart == nil {
-			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("shopping cart %d not found", shoppingCartID))
-		}
-		//校验商品信息
-		goods, err := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
-			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("goods %d not found,please check shopping cart %d,name is %s", shoppingCart.GoodsID, shoppingCart.ID, goods.Name))
-		}
 
-		//校验产品库存
-		productVariant, err := s.goods.GetProductVariantByProductVariantID(ctx, shoppingCart.ProductVariantID)
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if productVariant == nil {
-			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("product %d not found", shoppingCart.ProductVariantID))
-		}
-		if *productVariant.Stock < shoppingCart.Quantity {
-			return nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("product %d stock not enough,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
-		}
-
-		//扣除库存
-		leftStock := *productVariant.Stock - shoppingCart.Quantity
-		rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, productVariant.ID, &model.ProductVariant{Stock: &leftStock})
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if rowsAffected == 0 {
-			return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("reduce stock failed,please check shopping cart %d,name is %s,product variant id is %d", shoppingCart.ID, goods.Name, productVariant.ID))
-		}
-		//删除购物车
-		err = s.orderDao.DeleteShoppingCartByID(ctx, shoppingCart.ID)
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-		//计算价格
-		totalPrice = totalPrice.Add(productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity)))).Add(goods.RetailShippingFee)
-		postPrice = postPrice.Add(goods.RetailShippingFee)
-
-		//创建SKU产品详情
-		orderProductVariantDetail := &model.OrderProductVariantDetail{
-			OrderSn:               orderSn,
-			OrderProductSn:        fmt.Sprintf("DD%s%d%s", time.Now().Format("20060102150405.000")[:17], j, utils.GenerateRandomNumber(3)),
-			Status:                enum.OrderProductVariantDetailCreated,
-			UserID:                user.UserID,
-			ShoppingCartID:        shoppingCart.ID,
-			ProductVariantID:      shoppingCart.ProductVariantID,
-			GoodsID:               shoppingCart.GoodsID,
-			GoodsSupplierUserID:   shoppingCart.GoodsSupplierUserID,
-			SKUCode:               shoppingCart.SKUCode,
-			Quantity:              shoppingCart.Quantity,
-			TotalPrice:            productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity))),
-			Price:                 productVariant.Price,
-			PostPrice:             goods.RetailShippingFee,
-			Name:                  goods.Name,
-			Image:                 goods.GoodsFrontImage,
-			ProductAttr:           productVariant.ProductAttr,
-			EstimatedDeliveryTime: s.GetEstimatedDeliveryTime(goods.RetailShippingTime),
-		}
-		if req.Remark == "xfd-success" {
-			orderProductVariantDetail.Status = enum.OrderProductVariantDetailPaid
-		}
-		orderProductVariantDetailList = append(orderProductVariantDetailList, orderProductVariantDetail)
-	}
-	//批量创建订单SKU产品详情
-	_, err := s.orderDao.CreateOrderProductVariantDetails(ctx, orderProductVariantDetailList)
+	//扣除库存
+	leftStock := *productVariant.Stock - shoppingCart.Quantity
+	rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, productVariant.ID, &model.ProductVariant{Stock: &leftStock})
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	//创建订单
+	if rowsAffected == 0 {
+		return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("reduce stock failed,please check shopping cart %d,name is %s,product variant id is %d", shoppingCart.ID, goods.Name, productVariant.ID))
+	}
+	//删除购物车
+	err = s.orderDao.DeleteShoppingCartByIDCTX(ctx, shoppingCart.ID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	//计算价格
+	totalPrice = totalPrice.Add(productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity)))).Add(goods.RetailShippingFee)
+	postPrice = postPrice.Add(goods.RetailShippingFee)
+
 	orderInfo := &model.OrderInfo{
-		UserID:       user.UserID,
-		TotalPrice:   totalPrice,
-		PostPrice:    postPrice,
-		Status:       enum.OrderInfoCreated,
-		OrderSn:      orderSn,
-		ExpiredAt:    time.Now().Add(time.Minute * 15),
-		Address:      addr.Province + addr.City + addr.Region + addr.Address,
-		SignerName:   addr.Name,
-		SingerMobile: addr.Phone,
+		UserID:                        user.UserID,
+		UserPhone:                     user.Phone,
+		UserOrganizationName:          user.OrganizationName,
+		ShoppingCartID:                req.ShoppingCartID,
+		UnitPrice:                     productVariant.Price,
+		TotalPrice:                    totalPrice,
+		PostPrice:                     postPrice,
+		Status:                        enum.OrderInfoCreated,
+		OrderSn:                       orderSn,
+		ExpiredAt:                     time.Now().Add(time.Minute * 15),
+		SignerAddress:                 addr.Province + addr.City + addr.Region + addr.Address,
+		SignerName:                    addr.Name,
+		SingerMobile:                  addr.Phone,
+		EstimatedDeliveryTime:         s.GetEstimatedDeliveryTime(goods.RetailShippingTime),
+		Quantity:                      shoppingCart.Quantity,
+		Name:                          goods.Name,
+		Image:                         goods.GoodsFrontImage,
+		ProductAttr:                   productVariant.ProductAttr,
+		ProductVariantID:              productVariant.ID,
+		SKUCode:                       productVariant.SKUCode,
+		GoodsID:                       goods.ID,
+		GoodsSupplierUserID:           goods.UserID,
+		GoodsSupplierOrganizationName: goodUser.OrganizationName,
 	}
 	if req.Remark == "xfd-success" {
 		orderInfo.Status = enum.OderInfoPaidSuccess
 		payTime := time.Now().Add(time.Minute * 2)
 		orderInfo.PayedAt = &payTime
-		orderInfo.Message = "mock测试支付成功"
+		orderInfo.OtherMessage = "mock测试支付成功"
 	}
+
 	orderID, err := s.orderDao.CreateOrderInfo(ctx, orderInfo)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -456,11 +398,11 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 			return xErr
 		}
 		updateValue := &model.OrderInfo{
-			PostPrice: totalPrice,
-			PayedAt:   &payedAt,
-			Status:    enum.OderInfoPaidSuccess,
+			PointPrice: totalPrice,
+			PayedAt:    &payedAt,
+			Status:     enum.OderInfoPaidSuccess,
 		}
-		xrr := s.UpdateOrderStatus(ctx, order.OrderSn, updateValue)
+		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
 		if xrr != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, xrr)
 		}
@@ -479,12 +421,12 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 			return xErr
 		}
 		updateValue := &model.OrderInfo{
-			PostPrice: pointPrice,
-			WxPrice:   wxPrice,
-			Status:    enum.OrderInfoPaidWaiting,
-			TradeNo:   "wexin",
+			PointPrice: pointPrice,
+			WxPrice:    wxPrice,
+			Status:     enum.OrderInfoPaidWaiting,
+			TradeNo:    "wexin",
 		}
-		xrr := s.UpdateOrderStatus(ctx, order.OrderSn, updateValue)
+		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
 		if xrr != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, xrr)
 		}
@@ -588,9 +530,7 @@ func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.
 	}
 
 	// 更新订单信息
-	err := s.orderDao.UpdateOrderInfoByID(ctx, int(order.ID), &model.OrderInfo{
-		// todo
-	})
+	err := s.orderDao.UpdateOrderInfoByID(ctx, order.ID, &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -784,70 +724,20 @@ func (s *OrderService) GetEstimatedDeliveryTime(retailDeliveryTime enum.RetailDe
 // CreatePreOrder 用户获取预订单信息
 func (s *OrderService) CreatePreOrder(ctx *gin.Context, req types.CreateOrderReq) (*types.CreatePreOrderResp, xerr.XErr) {
 	//1.校验用户是否是消费者
-	user, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
+	user, userAddress, shoppingCart, goods, productVariant, _, xrr := s.checkOrderNormalInfo(ctx, req)
 	if xrr != nil {
 		return nil, xrr
 	}
+
 	totalPrice := decimal.Zero
-	if user.Point.IsZero() {
-		return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("user point is zero"))
-	}
-	//2.校验用户地址是否存在
-	userAddress, err := s.userAddressDao.GetByID(ctx, req.UserAddressID)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if userAddress == nil {
-		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not found", req.UserAddressID))
-	}
 	orderAddress := &types.PreOrderAddress{
 		Name:    userAddress.Name,
 		Phone:   userAddress.Phone,
 		Address: userAddress.Province + userAddress.City + userAddress.Region + userAddress.Address,
 	}
-	preOrderDetails := make([]*types.PreOrderProductVariantDetail, 0)
-	//3.校验购物车商品是否存在
-	for _, shoppingCartID := range req.ShoppingCartIDs {
-		shoppingCart, rr := s.orderDao.GetShoppingCartByUserIDAndShoppingCartID(ctx, user.UserID, shoppingCartID)
-		if rr != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
-		}
-		if shoppingCart == nil {
-			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("shopping cart %d not found", shoppingCartID))
-		}
-		//校验商品信息
-		goods, rr := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
-		if rr != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
-		}
-		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
-			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("goods %d not found,please check shopping cart %d,name is %s", shoppingCart.GoodsID, shoppingCart.ID, goods.Name))
-		}
-		//校验产品库存
-		productVariant, rr := s.goods.GetProductVariantByProductVariantID(ctx, shoppingCart.ProductVariantID)
-		if rr != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
-		}
-		if productVariant == nil {
-			return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("product %d not found", shoppingCart.ProductVariantID))
-		}
-		if *productVariant.Stock < shoppingCart.Quantity {
-			return nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("product %d stock not enough,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
-		}
-		//计算价格
-		totalPrice = totalPrice.Add(productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity)))).Add(goods.RetailShippingFee)
-		preOrderDetail := &types.PreOrderProductVariantDetail{
-			ShoppingCartID: shoppingCart.ID,
-			SKUCode:        shoppingCart.SKUCode,
-			Price:          productVariant.Price.Round(2).String(),
-			Quantity:       shoppingCart.Quantity,
-			Name:           goods.Name,
-			CoverURL:       goods.GoodsFrontImage,
-			ProductAttr:    productVariant.ProductAttr,
-			PostPrice:      goods.RetailShippingFee.Round(2).String(),
-		}
-		preOrderDetails = append(preOrderDetails, preOrderDetail)
-	}
+
+	//计算价格
+	totalPrice = totalPrice.Add(productVariant.Price.Mul(decimal.NewFromInt(int64(shoppingCart.Quantity)))).Add(goods.RetailShippingFee)
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
@@ -858,38 +748,33 @@ func (s *OrderService) CreatePreOrder(ctx *gin.Context, req types.CreateOrderReq
 		wxPrice = totalPrice.Sub(user.Point)
 	}
 	result := &types.CreatePreOrderResp{
-		PreOrderAddress:               orderAddress,
-		TotalPrice:                    totalPrice.Round(2).String(),
-		PointPrice:                    pointPrice.Round(2).String(),
-		WxPrice:                       wxPrice.Round(2).String(),
-		UserPoint:                     user.Point.Round(2).String(),
-		PreOrderProductVariantDetails: preOrderDetails,
+		PreOrderAddress: orderAddress,
+		TotalPrice:      totalPrice.Round(2).String(),
+		PointPrice:      pointPrice.Round(2).String(),
+		WxPrice:         wxPrice.Round(2).String(),
+		UserPoint:       user.Point.Round(2).String(),
+		ShoppingCartID:  shoppingCart.ID,
+		SKUCode:         shoppingCart.SKUCode,
+		Price:           productVariant.Price.Round(2).String(),
+		Quantity:        shoppingCart.Quantity,
+		Name:            goods.Name,
+		CoverURL:        goods.GoodsFrontImage,
+		ProductAttr:     productVariant.ProductAttr,
+		PostPrice:       goods.RetailShippingFee.Round(2).String(),
 	}
+
 	return result, nil
 }
 
-func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderSn string, value *model.OrderInfo) xerr.XErr {
-	err := s.orderDao.UpdateOrderByOrderSn(ctx, orderSn, value)
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID int32, value *model.OrderInfo) xerr.XErr {
+	rowsAffected, err := s.orderDao.UpdateOrderInfoByIDCTX(ctx, orderID, value)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	var updateDetailValue *model.OrderProductVariantDetail
-	if value.Status == enum.OrderInfoPaidWaiting {
-		updateDetailValue = &model.OrderProductVariantDetail{
-			Status: enum.OrderProductVariantDetailPaid,
-		}
-	}
-	if value.Status == enum.OderInfoPaidSuccess {
-		updateDetailValue = &model.OrderProductVariantDetail{
-			Status: enum.OrderProductVariantDetailPaid,
-		}
-	}
-	err = s.orderDao.UpdateOrderProductVariantDetailByOrderSn(ctx, orderSn, updateDetailValue)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("update order status failed,order id is %d", orderID))
 	}
 	return nil
-
 }
 
 func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*types.OrderListResp, xerr.XErr) {
@@ -925,30 +810,110 @@ func (s *OrderService) FillShipmentInfo(ctx *gin.Context, req types.FillShipment
 		return rr
 	}
 	//2.校验子订单有消息
-	orderProductVariantDetail, err := s.orderDao.GetOrderProductVariantDetailByID(ctx, req.QueryOrderID)
+	orderInfo, err := s.orderDao.GetOrderInfoByID(ctx, req.QueryOrderID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	if orderProductVariantDetail == nil {
+	if orderInfo == nil {
 		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
 	}
-	if orderProductVariantDetail.GoodsSupplierUserID != user.UserID {
+	if orderInfo.GoodsSupplierUserID != user.UserID {
 		return xerr.WithCode(xerr.ErrorOperationForbidden, fmt.Errorf("user %s is not goods supplier,cannot fill shipment info", user.UserID))
 	}
 	currentTime := time.Now()
-	updateValue := &model.OrderProductVariantDetail{
-		Status:          enum.OrderProductVariantDetailShipped,
+	updateValue := &model.OrderInfo{
+		Status:          enum.OderInfoShipped,
 		ShipmentCompany: req.ShipmentCompany,
 		ShipmentSn:      req.ShipmentSn,
 		DeliveryTime:    &currentTime,
 	}
 
-	if orderProductVariantDetail.ShipmentSn != "" {
-		updateValue.Message = orderProductVariantDetail.Message + "\n" + "历史物流信息:快递公司-" + orderProductVariantDetail.ShipmentCompany + "单号-" + orderProductVariantDetail.ShipmentSn + "时间-" + orderProductVariantDetail.DeliveryTime.Format("2006-01-02 15:04:05")
+	if orderInfo.ShipmentSn != "" {
+		updateValue.OtherMessage = orderInfo.OtherMessage + "\n" + "历史物流信息:快递公司-" + orderInfo.ShipmentCompany + "单号-" + orderInfo.ShipmentSn + "时间-" + orderInfo.DeliveryTime.Format("2006-01-02 15:04:05")
 	}
-	err = s.orderDao.UpdateOrderProductVariantDetailByID(ctx, req.QueryOrderID, updateValue)
+	err = s.orderDao.UpdateOrderInfoByID(ctx, req.QueryOrderID, updateValue)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+}
+
+func (s *OrderService) checkOrderNormalInfo(ctx *gin.Context, req types.CreateOrderReq) (*model.User, *model.UserAddress, *model.ShoppingCart, *model.Goods, *model.ProductVariant, *model.User, xerr.XErr) {
+	//1.校验用户是否是消费者
+	user, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
+	if xrr != nil {
+		return nil, nil, nil, nil, nil, nil, xrr
+	}
+	if user.Point.IsZero() {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("user point is zero"))
+	}
+	//2.校验用户地址是否存在
+	userAddress, err := s.userAddressDao.GetByID(ctx, req.UserAddressID)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if userAddress == nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not found", req.UserAddressID))
+	}
+	if userAddress.UserID != user.UserID {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user address %d not belong to user %s", req.UserAddressID, user.UserID))
+	}
+	//3.校验购物车商品是否存在
+	shoppingCart, rr := s.orderDao.GetShoppingCartByUserIDAndShoppingCartID(ctx, user.UserID, req.ShoppingCartID)
+	if rr != nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+	}
+	if shoppingCart == nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("shopping cart %d not found", req.ShoppingCartID))
+	}
+	//校验商品信息
+	goods, rr := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
+	if rr != nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+	}
+	if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("goods %d not found,please check shopping cart %d,name is %s", shoppingCart.GoodsID, shoppingCart.ID, goods.Name))
+	}
+	goodUser, err := s.userDao.GetByUserID(ctx, goods.UserID)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if goodUser == nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("goods user  %s not found", goods.UserID))
+	}
+	//校验产品库存
+	productVariant, rr := s.goods.GetProductVariantByProductVariantID(ctx, shoppingCart.ProductVariantID)
+	if rr != nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+	}
+	if productVariant == nil {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("product %d not found", shoppingCart.ProductVariantID))
+	}
+	if *productVariant.Stock < shoppingCart.Quantity {
+		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("product %d stock not enough,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
+	}
+	return user, userAddress, shoppingCart, goods, productVariant, goodUser, nil
+}
+
+func (s *OrderService) ConfirmReceipt(ctx *gin.Context, req types.ConfirmReceiptReq) xerr.XErr {
+	//1.校验用户是否是消费者
+	user, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
+	if xrr != nil {
+		return xrr
+	}
+	//2.订单有效性
+	orderInfo, err := s.orderDao.GetOrderInfoByID(ctx, req.QueryOrderID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if orderInfo == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
+	}
+	if orderInfo.UserID != user.UserID {
+		return xerr.WithCode(xerr.ErrorOperationForbidden, fmt.Errorf("user %s is not order owner,cannot confirm receipt", user.UserID))
+	}
+	if orderInfo.Status == enum.OderInfoShipped || orderInfo.Status == enum.OderInfoPaidSuccess {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order status is %d,not allow confirm receipt", orderInfo.Status))
 	}
 	return nil
 }

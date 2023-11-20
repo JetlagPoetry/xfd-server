@@ -5,8 +5,11 @@ type OrderInfoStatus int
 const (
 	OrderInfoCreated     OrderInfoStatus = iota + 1 //订单创建
 	OrderInfoPaidWaiting                            //交易创建
-	OderInfoPaidSuccess                             //交易成功
+	OderInfoPaidSuccess                             //交易成功，待发货
+	OderInfoShipped                                 //已发货
+	OderInfoReceived                                //已收货，已签收，确认收货
 	OderInfoAfterSale                               //售后/结束
+	OderInfoClosed                                  //交易关闭
 )
 
 func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
@@ -16,9 +19,15 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 	case 2:
 		return OrderInfoPaidWaiting, "交易创建"
 	case 3:
-		return OderInfoPaidSuccess, "交易成功"
+		return OderInfoPaidSuccess, "交易成功，待发货"
 	case 4:
+		return OderInfoShipped, "已发货"
+	case 5:
+		return OderInfoReceived, "已收货，已签收，确认收货"
+	case 6:
 		return OderInfoAfterSale, "售后/结束"
+	case 7:
+		return OderInfoClosed, "交易关闭"
 	default:
 		return OrderInfoCreated, "订单创建"
 	}
@@ -27,13 +36,19 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 func (g OrderInfoStatus) Code() int {
 	switch g {
 	case OrderInfoCreated:
-		return 0
-	case OrderInfoPaidWaiting:
 		return 1
-	case OderInfoPaidSuccess:
+	case OrderInfoPaidWaiting:
 		return 2
-	case OderInfoAfterSale:
+	case OderInfoPaidSuccess:
 		return 3
+	case OderInfoShipped:
+		return 4
+	case OderInfoReceived:
+		return 5
+	case OderInfoAfterSale:
+		return 6
+	case OderInfoClosed:
+		return 7
 	default:
 		return 0
 	}

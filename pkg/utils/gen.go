@@ -99,7 +99,7 @@ func sup(i int64, n int) string {
 var num int64
 
 func GenerateOrder() string {
-	t := TimeFormatUs()
+	t := time.Now().Format("20060102150405")
 	p := os.Getpid() % 1000
 	ps := sup(int64(p), 3)
 	i := atomic.AddInt64(&num, 1)
