@@ -104,12 +104,16 @@ func NewRouter() *gin.Engine {
 		orderGroup.POST("/modifyShoppingCart", handler.Order.ModifyShoppingCart)   //修改购物车商品数量
 		orderGroup.POST("/createPreOrder", handler.Order.CreatePreOrder)           //获取预订单信息
 		orderGroup.POST("/createOrder", handler.Order.CreateOrder)                 //创建订单，去结算
-		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退款
-		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
 		orderGroup.POST("/payOrder", handler.Order.PayOrder)                       //【测试用】花费积分
 		orderGroup.GET("/getOrderList", handler.Order.GetOrderList)                //获取订单列表
 		orderGroup.POST("/fillShipmentInfo", handler.Order.FillShipmentInfo)       //填写/修改快递单号
 		orderGroup.POST("/confirmReceipt", handler.Order.ConfirmReceipt)           //消费者确认收货
+		orderGroup.GET("/getOrderDetail", handler.Order.GetOrderDetail)            //后台获取订单详情
+		orderGroup.POST("/closeOrder", handler.Order.CloseOrder)                   //结束订单
+		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
+		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退货退款
+		orderGroup.GET("/getCustomerService", handler.Order.GetCustomerService)    //获取客服电话
+
 		//orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
 		//orderGroup.POST("/paymentCancel", handler.Order.PaymentCancel)
 	}

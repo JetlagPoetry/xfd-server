@@ -33,6 +33,7 @@ type OrderService struct {
 	orgDao         *dao.OrganizationDao
 	pointRemainDao *dao.PointRemainDao
 	pointRecordDao *dao.PointRecordDao
+	userVerifyDao  *dao.UserVerifyDao
 	inventoryLock  sync.Mutex
 }
 
@@ -45,6 +46,7 @@ func NewOrderService() *OrderService {
 		pointRemainDao: dao.NewPointRemainDao(),
 		pointRecordDao: dao.NewPointRecordDao(),
 		userAddressDao: dao.NewUserAddressDao(),
+		userVerifyDao:  dao.NewUserVerifyDao(),
 	}
 }
 
@@ -505,7 +507,6 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-
 		err = s.pointRecordDao.CreateInTxCTX(ctx, record)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -555,120 +556,169 @@ func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.
 	}, nil
 }
 
-func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) (*types.ApplyRefundResp, xerr.XErr) {
-	userID := common.GetUserID(ctx)
-	user, err := s.userDao.GetByUserID(ctx, userID)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeReq) xerr.XErr {
+	_, xrr := s.CheckUserRole(ctx, model.UserRoleAdmin)
+	if xrr != nil {
+		return xrr
 	}
-	if user.UserRole != model.UserRoleAdmin && user.UserRole != model.UserRoleRoot {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
-	}
-
-	tx := db.Get().Begin()
-	xErr := s.applyRefund(tx, req, user)
-	if xErr != nil {
-		tx.Rollback()
-		return nil, xErr
-	}
-
-	// 提交事务
-	if err = tx.Commit().Error; err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	return nil, nil
-}
-
-func (s *OrderService) applyRefund(tx *gorm.DB, req types.ApplyRefundReq, operator *model.User) xerr.XErr {
-	ok := redis.Lock(fmt.Sprintf("lock-order:order_id:%d", req.OrderID), time.Minute*5)
-	if !ok {
-		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("redis lock"))
-	}
-	defer redis.Unlock(fmt.Sprintf("lock-order:order_id:%d", req.OrderID))
-
-	// 获取order信息
-	orderInfo, err := s.orderDao.GetOrderInfoByIDTX(tx, req.OrderID)
+	orderInfo, err := s.orderDao.GetOrderInfoByID(ctx, req.QueryOrderID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if orderInfo == nil {
-		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order %d not found", req.OrderID))
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
 	}
-
-	userID := ""
-	user, err := s.userDao.GetByUserIDInTx(tx, userID)
+	if orderInfo.Status != enum.OderInfoAfterSale && orderInfo.Status != enum.OderInfoReceived && orderInfo.Status != enum.OderInfoShipped {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d status is %d, can not apply exchange", req.QueryOrderID, orderInfo.Status))
+	}
+	refundList, err := s.orderDao.GetOrderRefundByOrderID(ctx, req.QueryOrderID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-
-	if req.RefundPoint {
-		xErr := s.refundPoint(tx, user, operator, nil)
-		if xErr != nil {
-			return xErr
+	if len(refundList) > 0 {
+		for _, refund := range refundList {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
+				return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d has refund or closed id%d, can not apply exchange", req.QueryOrderID, refund.ID))
+			}
 		}
 	}
-
+	createNewRefund := &model.OrderRefund{
+		OrderID:       req.QueryOrderID,
+		OderSn:        orderInfo.OrderSn,
+		AfterSaleType: enum.AfterSaleTypeExchange,
+		Reason:        req.Reason,
+	}
+	transactionHandler := repo.NewTransactionHandler(db.Get())
+	if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+		if _err := s.applyRefundRecord(ctx, orderInfo, createNewRefund); _err != nil {
+			return _err
+		}
+		return nil
+	}); xErr != nil {
+		return xErr
+	}
 	return nil
 }
 
-func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeReq) (*types.ApplyExchangeResp, xerr.XErr) {
-	return nil, nil
-}
-
-func (s *OrderService) refundPoint(tx *gorm.DB, user, operator *model.User, order *model.OrderInfo) xerr.XErr {
-	point := order.PointPrice
-	// 加公司积分
-	org, err := s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	// 加员工积分
-	user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: user.Point.Add(point)})
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	records, err := s.pointRecordDao.ListByOrderIDInTx(tx, user.UserID, int(order.ID))
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	for _, record := range records {
-		remain, err := s.pointRemainDao.GetByIDForUpdate(tx, record.PointID)
+func (s *OrderService) refundPoint(ctx context.Context, tx *gorm.DB, user, operator *model.User, orderRefund *model.OrderRefund) xerr.XErr {
+	point := orderRefund.NeedRefundPoint
+	if tx != nil {
+		// 加公司积分
+		org, err := s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 
-		err = s.pointRemainDao.UpdateByIDInTx(tx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
+		err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 
-		newRecord := &model.PointRecord{
-			UserID:             user.UserID,
-			OrganizationID:     0,
-			ChangePoint:        decimal.Decimal{},
-			PointApplicationID: record.PointApplicationID,
-			PointID:            record.PointID,
-			OrderID:            record.OrderID,
-			Type:               model.PointRecordTypeRefund,
-			Status:             model.PointRecordStatusConfirmed,
-			Comment:            consts.PointCommentRefund,
-			OperateUserID:      operator.UserID,
-			OperateUsername:    operator.Username,
+		// 加员工积分
+		user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		err = s.pointRecordDao.CreateInTx(tx, newRecord)
+
+		err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: user.Point.Add(point)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		records, err := s.pointRecordDao.ListByOrderIDInTx(tx, user.UserID, int(orderRefund.OrderID))
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		for _, record := range records {
+			remain, err := s.pointRemainDao.GetByIDForUpdate(tx, record.PointID)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+
+			err = s.pointRemainDao.UpdateByIDInTx(tx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+			newRecord := &model.PointRecord{
+				UserID:             user.UserID,
+				OrganizationID:     0,
+				ChangePoint:        decimal.Decimal{},
+				PointApplicationID: record.PointApplicationID,
+				PointID:            record.PointID,
+				OrderID:            record.OrderID,
+				Type:               model.PointRecordTypeRefund,
+				Status:             model.PointRecordStatusConfirmed,
+				Comment:            consts.PointCommentRefund,
+				OperateUserID:      operator.UserID,
+				OperateUsername:    operator.Username,
+			}
+			err = s.pointRecordDao.CreateInTx(tx, newRecord)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+		}
+		_, err = s.orderDao.UpdateOrderRefundByIDTX(tx, orderRefund.ID, &model.OrderRefund{ReturnPointStatus: enum.ReturnPointStatusReturned})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+	} else {
+		// 加公司积分
+		org, err := s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		// 加员工积分
+		user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: user.Point.Add(point)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		records, err := s.pointRecordDao.ListByOrderIDInTxCTX(ctx, user.UserID, int(orderRefund.OrderID))
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		for _, record := range records {
+			remain, err := s.pointRemainDao.GetByIDForUpdateCTX(ctx, record.PointID)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+
+			err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+			newRecord := &model.PointRecord{
+				UserID:             user.UserID,
+				OrganizationID:     0,
+				ChangePoint:        decimal.Decimal{},
+				PointApplicationID: record.PointApplicationID,
+				PointID:            record.PointID,
+				OrderID:            record.OrderID,
+				Type:               model.PointRecordTypeRefund,
+				Status:             model.PointRecordStatusConfirmed,
+				Comment:            consts.PointCommentRefund,
+				OperateUserID:      operator.UserID,
+				OperateUsername:    operator.Username,
+			}
+			err = s.pointRecordDao.CreateInTxCTX(ctx, newRecord)
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
+			}
+		}
+		//更新orderRefund状态
+		_, err = s.orderDao.UpdateOrderRefundByID(ctx, orderRefund.ID, &model.OrderRefund{ReturnPointStatus: enum.ReturnPointStatusReturned})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
@@ -782,6 +832,11 @@ func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*
 	if rr != nil {
 		return nil, rr
 	}
+	if user.UserRole != model.UserRoleAdmin {
+		if req.CheckMiniAppParams() != nil {
+			return nil, xerr.WithCode(xerr.InvalidParams, req.CheckMiniAppParams())
+		}
+	}
 	switch user.UserRole {
 	case model.UserRoleCustomer:
 		req.UserID = user.UserID
@@ -790,7 +845,6 @@ func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		return &types.OrderListResp{PageResult: types.PageResult{TotalNum: total, PageNum: req.PageNum, PageSize: req.PageSize}, List: orderList}, nil
-
 	case model.UserRoleSupplier:
 		req.UserID = user.UserID
 		orderList, total, err := s.orderDao.SupplierGetQueryOrderList(ctx, req)
@@ -798,7 +852,12 @@ func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		return &types.OrderListResp{PageResult: types.PageResult{TotalNum: total, PageNum: req.PageNum, PageSize: req.PageSize}, List: orderList}, nil
-
+	case model.UserRoleAdmin:
+		orderList, total, err := s.orderDao.AdminGetQueryOrderList(ctx, req)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		return &types.OrderListResp{PageResult: types.PageResult{TotalNum: total, PageNum: req.PageNum, PageSize: req.PageSize}, List: orderList}, nil
 	}
 	return nil, nil
 }
@@ -915,7 +974,8 @@ func (s *OrderService) ConfirmReceipt(ctx *gin.Context, req types.ConfirmReceipt
 	if orderInfo.Status != enum.OderInfoShipped && orderInfo.Status != enum.OderInfoPaidSuccess {
 		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order status is %d,not allow confirm receipt", orderInfo.Status))
 	}
-	rowsAffected, er := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoReceived})
+	currentTime := time.Now()
+	rowsAffected, er := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoReceived, ConfirmTime: &currentTime})
 	if er != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, er)
 	}
@@ -923,4 +983,314 @@ func (s *OrderService) ConfirmReceipt(ctx *gin.Context, req types.ConfirmReceipt
 		return xerr.WithCode(xerr.ErrorOperationForbidden, fmt.Errorf("order status is %d,not allow confirm receipt", orderInfo.Status))
 	}
 	return nil
+}
+
+func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceiptReq) (*types.OrderDetailResp, xerr.XErr) {
+	isOrderClosed := false
+	_, xrr := s.CheckUserRole(ctx, model.UserRoleAdmin)
+	if xrr != nil {
+		return nil, xrr
+	}
+	orderInfo, err := s.orderDao.GetOrderInfoByID(ctx, req.QueryOrderID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if orderInfo == nil {
+		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
+	}
+	orderDetailInfo := types.OrderInfo{
+		OrderID:    orderInfo.ID,
+		OrderSn:    orderInfo.OrderSn,
+		Status:     orderInfo.Status,
+		CreatedAt:  &orderInfo.CreatedAt,
+		PayedAt:    orderInfo.PayedAt,
+		TotalPrice: orderInfo.TotalPrice.Round(2).String(),
+		WxPrice:    orderInfo.WxPrice.Round(2).String(),
+		PointPrice: orderInfo.PointPrice.Round(2).String(),
+	}
+	goodsInfo := types.GoodsInfo{
+		Name:        orderInfo.Name,
+		GoodsID:     orderInfo.GoodsID,
+		SKUCode:     orderInfo.SKUCode,
+		Image:       orderInfo.Image,
+		ProductAttr: orderInfo.ProductAttr,
+		Quantity:    orderInfo.Quantity,
+		UintPrice:   orderInfo.UnitPrice.Round(2).String(),
+		PostPrice:   orderInfo.PostPrice.Round(2).String(),
+	}
+	buyerInfo := types.BuyerInfo{
+		UserName:             orderInfo.UserID,
+		UserPhone:            orderInfo.UserPhone,
+		UserOrganizationName: orderInfo.UserOrganizationName,
+		SingerName:           orderInfo.SignerName,
+		SingerPhone:          orderInfo.SingerMobile,
+		SingerAddr:           orderInfo.SignerAddress,
+	}
+	var sellerInfo types.SellerInfo
+
+	sellerUser, err := s.userDao.GetByUserID(ctx, orderInfo.GoodsSupplierUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if sellerUser != nil {
+		sellerInfo = types.SellerInfo{
+			Name:             sellerUser.Username,
+			Phone:            sellerUser.Phone,
+			OrganizationName: sellerUser.OrganizationName,
+		}
+	}
+	verify, err := s.userVerifyDao.GetByUserID(ctx, orderInfo.GoodsSupplierUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if verify != nil {
+		sellerInfo.Position = verify.Position
+	}
+	refundList, err := s.orderDao.GetOrderRefundByOrderID(ctx, req.QueryOrderID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	afterSaleRecords := make([]*types.AfterSaleRecord, 0)
+	var manuallyCloseOrder *types.ManuallyCloseOrder
+	if len(refundList) != 0 {
+		for _, refund := range refundList {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes {
+				manuallyCloseOrder = &types.ManuallyCloseOrder{
+					CreatedAt:       &refund.CreatedAt,
+					Reason:          refund.Reason,
+					ReturnPointType: refund.ReturnPointType,
+				}
+				isOrderClosed = true
+				break
+			}
+			afterSaleRecord := &types.AfterSaleRecord{
+				CreatedAt:       &refund.CreatedAt,
+				Reason:          refund.Reason,
+				AfterSaleType:   refund.AfterSaleType,
+				ReturnPointType: refund.ReturnPointType,
+			}
+			if refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
+				isOrderClosed = true
+			}
+			afterSaleRecords = append(afterSaleRecords, afterSaleRecord)
+		}
+	}
+	orderRecord := types.OrderRecord{
+		CreatedAt:          orderInfo.CreatedAt,
+		PayedAt:            orderInfo.PayedAt,
+		DeliveryTime:       orderInfo.DeliveryTime,
+		ConfirmTime:        orderInfo.ConfirmTime,
+		ManuallyCloseOrder: manuallyCloseOrder,
+		AfterSaleRecords:   afterSaleRecords,
+	}
+	result := &types.OrderDetailResp{
+		IsOrderClosed: isOrderClosed,
+		OrderInfo:     orderDetailInfo,
+		GoodsInfo:     goodsInfo,
+		BuyerInfo:     buyerInfo,
+		SellerInfo:    sellerInfo,
+		OrderRecord:   orderRecord,
+	}
+	return result, nil
+}
+
+func (s *OrderService) CloseOrder(ctx *gin.Context, req types.CloseOrderReq) xerr.XErr {
+	operator, xrr := s.CheckUserRole(ctx, model.UserRoleAdmin)
+	if xrr != nil {
+		return xrr
+	}
+	orderInfo, err := s.orderDao.GetOrderInfoByID(ctx, req.QueryOrderID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if orderInfo == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
+	}
+	if orderInfo.Status != enum.OderInfoPaidSuccess {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order status is %d,not allow close", orderInfo.Status))
+	}
+	user, err := s.userDao.GetByUserID(ctx, orderInfo.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order user not found"))
+	}
+
+	transactionHandler := repo.NewTransactionHandler(db.Get())
+	if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+		if _err := s.closeOrder(ctx, req, user, operator, orderInfo); _err != nil {
+			return _err
+		}
+		return nil
+	}); xErr != nil {
+		return xErr
+	}
+	return nil
+
+}
+
+func (s *OrderService) closeOrder(ctx context.Context, req types.CloseOrderReq, user, operator *model.User, orderInfo *model.OrderInfo) xerr.XErr {
+	orderRefund, xErr := s.lockOrderForClose(ctx, req, orderInfo)
+	if xErr != nil {
+		return xErr
+	}
+	if orderRefund.ReturnPointStatus == enum.ReturnPointStatusWaitReturn && !orderRefund.NeedRefundPoint.Equal(decimal.Zero) {
+		xErr = s.refundPoint(ctx, nil, user, operator, orderRefund)
+		if xErr != nil {
+			return xErr
+		}
+	}
+	return nil
+}
+
+func (s *OrderService) lockOrderForClose(ctx context.Context, req types.CloseOrderReq, orderInfo *model.OrderInfo) (*model.OrderRefund, xerr.XErr) {
+	ok := redis.Lock(fmt.Sprintf("lock-order:order_sn:%s", orderInfo.OrderSn), time.Minute*5)
+	if !ok {
+		return nil, xerr.WithCode(xerr.ErrorRedisLock, errors.New("get lock failed"))
+	}
+	defer redis.Unlock(fmt.Sprintf("lock-order:order_sn:%s", orderInfo.OrderSn))
+	rowsAffected, er := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoAfterSale})
+	if er != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, er)
+	}
+	if rowsAffected == 0 {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("close order status failed,order id is %d", req.QueryOrderID))
+	}
+	createRefund := &model.OrderRefund{
+		OrderID:         req.QueryOrderID,
+		OderSn:          orderInfo.OrderSn,
+		ManuallyClosed:  enum.ManuallyClosedYes,
+		Reason:          req.Reason,
+		ReturnPointType: req.ReturnPointType,
+	}
+	if req.ReturnPointType == enum.ReturnPointYes {
+		createRefund.NeedRefundPoint = orderInfo.PointPrice
+		createRefund.ReturnPointStatus = enum.ReturnPointStatusWaitReturn
+	}
+	id, err := s.orderDao.CreateOrderRefund(ctx, createRefund)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	createRefund.ID = id
+	return createRefund, nil
+}
+
+func (s *OrderService) applyRefundRecord(ctx context.Context, orderInfo *model.OrderInfo, createNewRefund *model.OrderRefund) xerr.XErr {
+	ok := redis.Lock(fmt.Sprintf("lock-order:order_sn:%s", orderInfo.OrderSn), time.Minute*5)
+	if !ok {
+		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("get lock failed"))
+	}
+	defer redis.Unlock(fmt.Sprintf("lock-order:order_sn:%s", orderInfo.OrderSn))
+	//更新售后记录
+	_, err := s.orderDao.CreateOrderRefund(ctx, createNewRefund)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	//更新订单状态
+	if orderInfo.Status != enum.OderInfoAfterSale {
+		rowsAffected, err := s.orderDao.UpdateOrderInfoByIDCTX(ctx, createNewRefund.OrderID, &model.OrderInfo{Status: enum.OderInfoAfterSale})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		if rowsAffected == 0 {
+			return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("exchange order status failed,order id is %d", createNewRefund.OrderID))
+		}
+	}
+	return nil
+}
+
+func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) xerr.XErr {
+	operator, xrr := s.CheckUserRole(ctx, model.UserRoleAdmin)
+	if xrr != nil {
+		return xrr
+	}
+	orderInfo, err := s.orderDao.GetOrderInfoByID(ctx, req.QueryOrderID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if orderInfo == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
+	}
+	if orderInfo.Status != enum.OderInfoAfterSale && orderInfo.Status != enum.OderInfoReceived && orderInfo.Status != enum.OderInfoShipped {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d status is %d, can not apply refund", req.QueryOrderID, orderInfo.Status))
+	}
+	user, err := s.userDao.GetByUserID(ctx, orderInfo.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user == nil {
+		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("order user not found"))
+	}
+	refundList, err := s.orderDao.GetOrderRefundByOrderID(ctx, req.QueryOrderID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if len(refundList) > 0 {
+		for _, refund := range refundList {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
+				return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d has refund or closed id%d, can not apply refund", req.QueryOrderID, refund.ID))
+			}
+		}
+	}
+	transactionHandler := repo.NewTransactionHandler(db.Get())
+	if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+		if _err := s.applyRefundTX(ctx, req, orderInfo, operator, user); _err != nil {
+			return _err
+		}
+		return nil
+	}); xErr != nil {
+		return xErr
+	}
+
+	return nil
+}
+
+func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundReq, orderInfo *model.OrderInfo, operator *model.User, user *model.User) xerr.XErr {
+	createNewRefund := &model.OrderRefund{
+		OrderID:         req.QueryOrderID,
+		OderSn:          orderInfo.OrderSn,
+		AfterSaleType:   enum.AfterSaleTypeReturnAndRefund,
+		ReturnPointType: req.ReturnPointType,
+		Reason:          req.Reason,
+	}
+	if req.ReturnPointType == enum.ReturnPointNo {
+		xrr := s.applyRefundRecord(ctx, orderInfo, createNewRefund)
+		if xrr != nil {
+			return xrr
+		}
+		return nil
+	}
+	if req.ReturnPointType == enum.ReturnPointYes {
+		createNewRefund.NeedRefundPoint = orderInfo.PointPrice
+		createNewRefund.ReturnPointStatus = enum.ReturnPointStatusWaitReturn
+		//创建售后记录
+		xrr := s.applyRefundRecord(ctx, orderInfo, createNewRefund)
+		if xrr != nil {
+			return xrr
+		}
+		if !createNewRefund.NeedRefundPoint.Equal(decimal.Zero) {
+			xErr := s.refundPoint(ctx, nil, user, operator, createNewRefund)
+			if xErr != nil {
+				return xErr
+			}
+		}
+
+	}
+	return nil
+}
+
+func (s *OrderService) GetCustomerService(ctx *gin.Context, req types.GetCustomerServiceReq) (*types.GetCustomerServiceResp, xerr.XErr) {
+	_, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
+	if xrr != nil {
+		return nil, xrr
+	}
+	supplierUser, err := s.userDao.GetByUserID(ctx, req.SupplierUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if supplierUser == nil {
+		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("supplier user %s not found", req.SupplierUserID))
+	}
+	return &types.GetCustomerServiceResp{Phone: supplierUser.Phone}, nil
 }

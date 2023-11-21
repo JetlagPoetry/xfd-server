@@ -119,42 +119,40 @@ func (h *OrderHandler) CreateOrder(context *gin.Context) {
 
 func (h *OrderHandler) ApplyRefund(context *gin.Context) {
 	var (
-		req  types.ApplyRefundReq
-		resp *types.ApplyRefundResp
-		xrr  xerr.XErr
+		req types.ApplyRefundReq
+		xrr xerr.XErr
 	)
 	err := context.ShouldBindJSON(&req)
 	if err != nil {
 		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	resp, xrr = h.orderService.ApplyRefund(context, req)
+	xrr = h.orderService.ApplyRefund(context, req)
 	if xrr != nil {
 		log.Println("[OrderHandler] ApplyRefund failed, err=", xrr)
 		context.JSON(http.StatusOK, response.RespError(context, xrr))
 		return
 	}
-	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
 }
 
 func (h *OrderHandler) ApplyExchange(ctx *gin.Context) {
 	var (
-		req  types.ApplyExchangeReq
-		resp *types.ApplyExchangeResp
-		xrr  xerr.XErr
+		req types.ApplyExchangeReq
+		xrr xerr.XErr
 	)
 	err := ctx.ShouldBindJSON(&req)
 	if err != nil {
 		ctx.JSON(http.StatusOK, response.RespError(ctx, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	resp, xrr = h.orderService.ApplyExchange(ctx, req)
+	xrr = h.orderService.ApplyExchange(ctx, req)
 	if xrr != nil {
 		log.Println("[OrderHandler] ApplyExchange failed, err=", xrr)
 		ctx.JSON(http.StatusOK, response.RespError(ctx, xrr))
 		return
 	}
-	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, resp))
+	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, nil))
 
 }
 
@@ -200,9 +198,6 @@ func (h *OrderHandler) CreatePreOrder(context *gin.Context) {
 
 // GetOrderList 获取订单列表
 func (h *OrderHandler) GetOrderList(context *gin.Context) {
-	//消费者 待发货，已发货，全部
-	//供应商 待发货，已发货，全部
-	//官方 待发货，待收货，已签收，售后/结束  全部
 	var (
 		req  types.OrderListReq
 		resp *types.OrderListResp
@@ -258,4 +253,64 @@ func (h *OrderHandler) ConfirmReceipt(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, nil))
+}
+
+func (h *OrderHandler) GetOrderDetail(context *gin.Context) {
+	var (
+		req  types.ConfirmReceiptReq
+		resp *types.OrderDetailResp
+		xrr  xerr.XErr
+	)
+	err := context.ShouldBindQuery(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.GetOrderDetail(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] GetOrderDetail failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, resp))
+}
+
+func (h *OrderHandler) CloseOrder(context *gin.Context) {
+	var (
+		req types.CloseOrderReq
+		xrr xerr.XErr
+	)
+	err := context.ShouldBindJSON(&req)
+	if err != nil {
+		context.JSON(http.StatusOK, response.RespError(context, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	xrr = h.orderService.CloseOrder(context, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] CloseOrder failed, err=", xrr)
+		context.JSON(http.StatusOK, response.RespError(context, xrr))
+		return
+	}
+	context.JSON(http.StatusOK, response.RespSuccess(context, nil))
+}
+
+func (h *OrderHandler) GetCustomerService(ctx *gin.Context) {
+	var (
+		req  types.GetCustomerServiceReq
+		resp *types.GetCustomerServiceResp
+		xrr  xerr.XErr
+	)
+	err := ctx.ShouldBindQuery(&req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.GetCustomerService(ctx, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] GetCustomerService failed, err=", xrr)
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xrr))
+		return
+	}
+	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, resp))
+
 }

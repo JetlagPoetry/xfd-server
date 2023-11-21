@@ -28,6 +28,14 @@ func (d *OrderDao) AddShoppingCart(ctx *gin.Context, shoppingCart *model.Shoppin
 	return shoppingCart.ID, nil
 }
 
+func (d *OrderDao) CreateOrderRefund(ctx context.Context, orderRefund *model.OrderRefund) (id int32, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.OrderRefund{}).Create(orderRefund).Error
+	if err != nil {
+		return 0, err
+	}
+	return orderRefund.ID, nil
+}
+
 func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartListReq) (shoppingCartList []*model.ShoppingCart, count int64, err error) {
 	result := db.Get().Debug().Model(&model.ShoppingCart{}).Where("user_id = ?", req.UserID)
 	result = result.Count(&count)
@@ -44,44 +52,77 @@ func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartL
 }
 
 func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
-	query := db.Get().Debug().Model(&model.OrderInfo{}).
+	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image,product_attr, shipment_company,shipment_sn,estimated_delivery_time,goods_supplier_user_id,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
 		Where("user_id = ? and status in (3,4,5,6)", req.UserID)
 	if req.Status != 0 {
-		query = query.Where("status = ?", req.Status)
+		queryOrder = queryOrder.Where("status = ?", req.Status)
 	}
 	// 获取订单列表总数
-	query.Count(&count)
+	queryOrder.Count(&count)
 
 	// 添加排序、分页等操作
-	query = query.Order("created_at desc,goods_id").
+	queryOrder = queryOrder.Order("created_at desc,goods_id").
 		Offset(req.Offset()).
 		Limit(req.Limit())
 
 	// 执行查询
-	if err = query.Find(&queryOrderList).Error; err != nil {
+	if err = queryOrder.Find(&queryOrderList).Error; err != nil {
 		return nil, 0, err
 	}
 	return queryOrderList, count, nil
 }
 
 func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
-	query := db.Get().Debug().Model(&model.OrderInfo{}).
+	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image, product_attr, shipment_company,shipment_sn,estimated_delivery_time,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
 		Where("goods_supplier_user_id= ? and status in (3,4,5,6)", req.UserID)
 	if req.Status != 0 {
-		query = query.Where("status = ?", req.Status)
+		queryOrder = queryOrder.Where("status = ?", req.Status)
 	}
 	// 获取订单列表总数
-	query.Count(&count)
+	queryOrder.Count(&count)
 
 	// 添加排序、分页等操作
-	query = query.Order("created_at desc,goods_id").
+	queryOrder = queryOrder.Order("created_at desc,goods_id").
 		Offset(req.Offset()).
 		Limit(req.Limit())
 
 	// 执行查询
-	if err = query.Find(&queryOrderList).Error; err != nil {
+	if err = queryOrder.Find(&queryOrderList).Error; err != nil {
+		return nil, 0, err
+	}
+	return queryOrderList, count, nil
+}
+
+func (d *OrderDao) AdminGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
+	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
+		Select("id,order_sn,status,name,goods_supplier_organization_name,total_price,user_phone,user_organization_name,payed_at").
+		Where("status in (3,4,5,6)")
+	queryOrder = queryOrder.Where(&model.OrderInfo{
+		Status:    req.Status,
+		OrderSn:   req.OrderSn,
+		UserPhone: req.UserPhone,
+	})
+	if req.UserOrganizationName != "" {
+		queryOrder = queryOrder.Where("user_organization_name like ?", "%"+req.UserOrganizationName+"%")
+	}
+	if req.SupplierOrganizationName != "" {
+		queryOrder = queryOrder.Where("goods_supplier_organization_name like ?", "%"+req.SupplierOrganizationName+"%")
+	}
+	if req.GoodName != "" {
+		queryOrder = queryOrder.Where("name like ?", "%"+req.GoodName+"%")
+	}
+	// 获取订单列表总数
+	queryOrder.Count(&count)
+
+	// 添加排序、分页等操作
+	queryOrder = queryOrder.Order("payed_at desc,goods_id").
+		Offset(req.Offset()).
+		Limit(req.Limit())
+
+	// 执行查询
+	if err = queryOrder.Find(&queryOrderList).Error; err != nil {
 		return nil, 0, err
 	}
 	return queryOrderList, count, nil
@@ -196,6 +237,20 @@ func (d *OrderDao) GetOrderInfoByIDTX(tx *gorm.DB, id int) (orderInfo *model.Ord
 	return orderInfos[0], nil
 }
 
+// GetOrderRefundByOrderID 根据订单ID获取退款信息
+func (d *OrderDao) GetOrderRefundByOrderID(ctx context.Context, orderID int32) (refund []*model.OrderRefund, err error) {
+	var refundList []*model.OrderRefund
+	err = db.GetRepo().GetDB(ctx).Model(&model.OrderRefund{}).
+		Where("order_id = ?", orderID).Find(&refundList).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(refundList) == 0 {
+		return nil, nil
+	}
+	return refundList, nil
+}
+
 /*update*/
 
 // UpdateShoppingCartByID 通过购物车ID更新购物车信息
@@ -264,5 +319,17 @@ func (d *OrderDao) UpdateOrderByOrderSn(ctx context.Context, orderSn string, val
 
 func (d *OrderDao) UpdateOrderInfoByIDCTX(ctx context.Context, id int32, updateValue *model.OrderInfo) (int64, error) {
 	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("id = ?", id).Updates(updateValue)
+	return updateResult.RowsAffected, updateResult.Error
+}
+
+//UpdateOrderRefundByID
+
+func (d *OrderDao) UpdateOrderRefundByID(ctx context.Context, id int32, updateValue *model.OrderRefund) (int64, error) {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.OrderRefund{}).Where("id = ?", id).Updates(updateValue)
+	return updateResult.RowsAffected, updateResult.Error
+}
+
+func (d *OrderDao) UpdateOrderRefundByIDTX(tx *gorm.DB, id int32, updateValue *model.OrderRefund) (int64, error) {
+	updateResult := tx.Model(&model.OrderRefund{}).Where("id = ?", id).Updates(updateValue)
 	return updateResult.RowsAffected, updateResult.Error
 }

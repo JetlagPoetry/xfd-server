@@ -97,6 +97,14 @@ func (d *PointRecordDao) ListByOrderIDInTx(tx *gorm.DB, userID string, orderID i
 	return list, nil
 }
 
+func (d *PointRecordDao) ListByOrderIDInTxCTX(ctx context.Context, userID string, orderID int) (list []*model.PointRecord, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("user_id = ? AND order_id = ? AND status = ?", userID,
+		orderID, model.PointRecordStatusConfirmed).Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
 func (d *PointRecordDao) GetByID(ctx context.Context, id int) (record *model.PointRecord, err error) {
 	err = db.Get().Model(&model.PointRecord{}).Where("id = ?", id).First(&record).Error
 	if err != nil {

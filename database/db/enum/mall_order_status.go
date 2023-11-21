@@ -6,7 +6,7 @@ const (
 	OrderInfoCreated     OrderInfoStatus = iota + 1 //订单创建
 	OrderInfoPaidWaiting                            //交易创建
 	OderInfoPaidSuccess                             //交易成功，待发货
-	OderInfoShipped                                 //已发货
+	OderInfoShipped                                 //已发货，待收货
 	OderInfoReceived                                //已收货，已签收，确认收货
 	OderInfoAfterSale                               //售后/结束
 	OderInfoClosed                                  //交易关闭
@@ -145,15 +145,37 @@ func (g QueryOrderStatus) Code() int {
 type AfterSaleType int
 
 const (
-	AfterSaleTypeExchange        AfterSaleType = iota + 1
-	AfterSaleTypeReturnAndRefund AfterSaleType = iota + 1
+	AfterSaleTypeExchange AfterSaleType = iota + 1
+	AfterSaleTypeReturnAndRefund
 )
+
+func GetAfterSaleType(status int) (AfterSaleType, string) {
+	switch status {
+	case 1:
+		return AfterSaleTypeExchange, "换货"
+	case 2:
+		return AfterSaleTypeReturnAndRefund, "退货退款"
+	default:
+		return AfterSaleTypeExchange, "换货"
+	}
+}
+
+func (g AfterSaleType) Code() int {
+	switch g {
+	case AfterSaleTypeExchange:
+		return 1
+	case AfterSaleTypeReturnAndRefund:
+		return 2
+	default:
+		return 0
+	}
+}
 
 type ReturnPointType int
 
 const (
-	ReturnPointTypeNoReturn ReturnPointType = iota + 1
-	ReturnPointTypeReturn
+	ReturnPointNo ReturnPointType = iota + 1
+	ReturnPointYes
 )
 
 type ReturnPointStatus int
@@ -163,4 +185,11 @@ const (
 	ReturnPointStatusNoReturn ReturnPointStatus = iota
 	ReturnPointStatusWaitReturn
 	ReturnPointStatusReturned
+)
+
+type ManuallyClosed int
+
+const (
+	ManuallyClosedNo ManuallyClosed = iota + 1
+	ManuallyClosedYes
 )

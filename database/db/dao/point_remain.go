@@ -70,6 +70,14 @@ func (d *PointRemainDao) GetByIDForUpdate(tx *gorm.DB, id int) (record *model.Po
 	return record, nil
 }
 
+func (d *PointRemainDao) GetByIDForUpdateCTX(ctx context.Context, id int) (record *model.PointRemain, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).First(&record).Error
+	if err != nil {
+		return nil, err
+	}
+	return record, nil
+}
+
 func (d *PointRemainDao) GetByID(ctx context.Context, id int) (record *model.PointRemain, err error) {
 	err = db.Get().Model(&model.PointRemain{}).Where("id = ?", id).First(&record).Error
 	if err != nil {
