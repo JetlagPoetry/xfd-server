@@ -2,10 +2,13 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"log"
 	"net/http"
 	"xfd-backend/pkg/response"
 	"xfd-backend/pkg/types"
+	"xfd-backend/pkg/utils"
+	"xfd-backend/pkg/wechatpay"
 	"xfd-backend/pkg/xerr"
 	"xfd-backend/service"
 )
@@ -312,5 +315,27 @@ func (h *OrderHandler) GetCustomerService(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, response.RespSuccess(ctx, resp))
+
+}
+
+func (h *OrderHandler) PaymentConfirm(c *gin.Context) {
+	var (
+		xErr xerr.XErr
+	)
+	transaction := &payments.Transaction{}
+	_, err := wechatpay.WechatPayHandler.ParseNotifyRequest(c, c.Request, &transaction)
+
+	if err != nil {
+		c.JSON(500, map[string]string{"code": "FAIL", "message": "失败"})
+		return
+	}
+
+	log.Println("[PaymentConfirm] api called, req=", utils.ToJson(transaction))
+	xErr = h.orderService.PaymentConfirm(c, transaction)
+	if xErr != nil {
+		c.JSON(500, map[string]string{"code": "FAIL", "message": "失败"})
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
 
 }

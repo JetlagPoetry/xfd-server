@@ -17,7 +17,7 @@ func NewPointRecordDao() *PointRecordDao {
 }
 
 func (d *PointRecordDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int, like string) (list []*model.PointRecord, count int64, err error) {
-	sql := db.Get().Model(&model.PointRecord{})
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{})
 	if len(like) > 0 {
 		sql = sql.Where("category_name LIKE ? AND status = 1", "%"+like+"%")
 	} else {
@@ -38,7 +38,7 @@ func (d *PointRecordDao) List(ctx context.Context, page types.PageRequest, categ
 }
 
 func (d *PointRecordDao) ListByOrderIDs(ctx context.Context, page types.PageRequest, orderIDs []int, status model.PointRecordStatus) (list []*model.PointRecord, count int64, err error) {
-	sql := db.Get().Model(&model.PointRecord{}).Where("id IN (?)", orderIDs)
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("id IN (?)", orderIDs)
 	if status != 0 {
 		sql = sql.Where("status = ?", status)
 	}
@@ -53,7 +53,7 @@ func (d *PointRecordDao) ListByOrderIDs(ctx context.Context, page types.PageRequ
 }
 
 func (d *PointRecordDao) ListByApplyID(ctx context.Context, page types.PageRequest, applyID int) (list []*model.PointRecord, count int64, err error) {
-	sql := db.Get().Model(&model.PointRecord{}).Where("point_application_id = ? AND status = ?", applyID, model.PointRecordStatusConfirmed)
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("point_application_id = ? AND status = ?", applyID, model.PointRecordStatusConfirmed)
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
@@ -65,7 +65,7 @@ func (d *PointRecordDao) ListByApplyID(ctx context.Context, page types.PageReque
 }
 
 func (d *PointRecordDao) ListByUserID(ctx context.Context, page types.PageRequest, userID string) (list []*model.PointRecord, count int64, err error) {
-	sql := db.Get().Model(&model.PointRecord{}).Where("user_id = ? AND status = ?", userID, model.PointRecordStatusConfirmed)
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("user_id = ? AND status = ?", userID, model.PointRecordStatusConfirmed)
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
@@ -77,7 +77,7 @@ func (d *PointRecordDao) ListByUserID(ctx context.Context, page types.PageReques
 }
 
 func (d *PointRecordDao) ListByOrgID(ctx context.Context, page types.PageRequest, orgID int) (list []*model.PointRecord, count int64, err error) {
-	sql := db.Get().Model(&model.PointRecord{}).Where("organization_id = ? AND status = ?", orgID, model.PointRecordStatusConfirmed)
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("organization_id = ? AND status = ?", orgID, model.PointRecordStatusConfirmed)
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
@@ -106,7 +106,7 @@ func (d *PointRecordDao) ListByOrderIDInTxCTX(ctx context.Context, userID string
 	return list, nil
 }
 func (d *PointRecordDao) GetByID(ctx context.Context, id int) (record *model.PointRecord, err error) {
-	err = db.Get().Model(&model.PointRecord{}).Where("id = ?", id).First(&record).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("id = ?", id).First(&record).Error
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (d *PointRecordDao) GetByID(ctx context.Context, id int) (record *model.Poi
 }
 
 func (d *PointRecordDao) GetByUserID(ctx context.Context, userID string) (record *model.PointRecord, err error) {
-	err = db.Get().Model(&model.PointRecord{}).Where("user_id = ?", userID).First(&record).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("user_id = ?", userID).First(&record).Error
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (d *PointRecordDao) GetByUserID(ctx context.Context, userID string) (record
 }
 
 func (d *PointRecordDao) Create(ctx context.Context, record *model.PointRecord) (err error) {
-	err = db.Get().Model(&model.PointRecord{}).Create(record).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Create(record).Error
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,15 @@ func (d *PointRecordDao) BatchCreateInTx(tx *gorm.DB, list []*model.PointRecord)
 }
 
 func (d *PointRecordDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointRecord) (err error) {
-	updateResult := db.Get().Model(&model.PointRecord{}).Where("id =?", id).Updates(updateValue)
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("id =?", id).Updates(updateValue)
+	if err = updateResult.Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointRecordDao) UpdateByOrderID(ctx context.Context, orderID int, updateValue *model.PointRecord) (err error) {
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("order_id = ?", orderID).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}
@@ -154,7 +162,7 @@ func (d *PointRecordDao) UpdateByID(ctx context.Context, id int, updateValue *mo
 }
 
 func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty model.PointRecordType) (sum decimal.Decimal, err error) {
-	err = db.Get().Table("point_record").Select("IFNULL(SUM(change_point),0)").Where("point_application_id = ? AND type = ?", applyID, ty).Row().Scan(&sum)
+	err = db.GetRepo().GetDB(ctx).Table("point_record").Select("IFNULL(SUM(change_point),0)").Where("point_application_id = ? AND type = ?", applyID, ty).Row().Scan(&sum)
 	if err != nil {
 		return decimal.Decimal{}, err
 	}

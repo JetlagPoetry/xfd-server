@@ -17,7 +17,7 @@ func NewPointApplicationDao() *PointApplicationDao {
 }
 
 func (d *PointApplicationDao) Lists(ctx context.Context, page types.PageRequest, orgID int) (list []*model.PointApplication, count int64, err error) {
-	sql := db.Get().Model(&model.PointApplication{})
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointApplication{})
 
 	if orgID > 0 {
 		sql = sql.Where("organization_id = ? ", orgID)
@@ -33,7 +33,7 @@ func (d *PointApplicationDao) Lists(ctx context.Context, page types.PageRequest,
 }
 
 func (d *PointApplicationDao) GetByID(ctx context.Context, id int) (order *model.PointApplication, err error) {
-	err = db.Get().Model(&model.PointApplication{}).Where("id = ?", id).First(&order).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("id = ?", id).First(&order).Error
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (d *PointApplicationDao) GetByIDForUpdate(tx *gorm.DB, id int) (order *mode
 }
 
 func (d *PointApplicationDao) ListByStatus(ctx context.Context, status model.PointApplicationStatus) (apply []*model.PointApplication, err error) {
-	err = db.Get().Model(&model.PointApplication{}).Where("status = ?", status).Find(&apply).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("status = ?", status).Find(&apply).Error
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (d *PointApplicationDao) ListByStatus(ctx context.Context, status model.Poi
 }
 
 func (d *PointApplicationDao) ListExpired(ctx context.Context) (apply []*model.PointApplication, err error) {
-	err = db.Get().Model(&model.PointApplication{}).Where("end_time <= now() AND status = ? ", model.PointApplicationStatusFinish).Find(&apply).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("end_time <= now() AND status = ? ", model.PointApplicationStatusFinish).Find(&apply).Error
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (d *PointApplicationDao) ListByStatusInTx(tx *gorm.DB, status model.PointAp
 }
 
 func (d *PointApplicationDao) GetByStatus(ctx context.Context, status model.PointApplicationStatus) (apply *model.PointApplication, err error) {
-	err = db.Get().Model(&model.PointApplication{}).Where("status = ?", status).First(&apply).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("status = ?", status).First(&apply).Error
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (d *PointApplicationDao) GetByStatus(ctx context.Context, status model.Poin
 }
 
 func (d *PointApplicationDao) CountByStatus(ctx context.Context, status model.PointApplicationStatus) (count int64, err error) {
-	err = db.Get().Model(&model.PointApplication{}).Where("status = ?", status).Count(&count).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("status = ?", status).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -97,7 +97,7 @@ func (d *PointApplicationDao) CreateInTx(tx *gorm.DB, record *model.PointApplica
 }
 
 func (d *PointApplicationDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointApplication) (err error) {
-	updateResult := db.Get().Model(&model.PointApplication{}).Where("id =?", id).Updates(updateValue)
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}

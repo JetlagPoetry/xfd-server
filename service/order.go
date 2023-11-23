@@ -571,7 +571,7 @@ func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeRe
 	return nil
 }
 
-func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.User, point decimal.Decimal, orderID int, t model.PointRecordType) xerr.XErr {
+func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.User, point decimal.Decimal, orderID int) xerr.XErr {
 	// 加公司积分
 	org, err := s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
 	if err != nil {
@@ -619,14 +619,6 @@ func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.Us
 			Status:             model.PointRecordStatusConfirmed,
 			Comment:            consts.PointCommentRefund,
 		}
-		// 不应该存point comment的...
-		if t == model.PointRecordTypeRefund {
-			newRecord.Type = model.PointRecordTypeRefund
-			newRecord.Comment = consts.PointCommentRefund
-		} else if t == model.PointRecordTypeOrderCancel {
-			newRecord.Type = model.PointRecordTypeOrderCancel
-			newRecord.Comment = consts.PointCommentCancel
-		}
 		if operator != nil {
 			newRecord.OperateUserID = operator.UserID
 			newRecord.OperateUsername = operator.Username
@@ -635,6 +627,54 @@ func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.Us
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
+	}
+
+	return nil
+}
+
+func (s *OrderService) revertPoint(ctx context.Context, user *model.User, point decimal.Decimal, orderID int) xerr.XErr {
+	// 加公司积分
+	org, err := s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 加员工积分
+	user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: user.Point.Add(point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	records, err := s.pointRecordDao.ListByOrderIDInTxCTX(ctx, user.UserID, int(orderID))
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	for _, record := range records {
+		remain, err := s.pointRemainDao.GetByIDForUpdateCTX(ctx, record.PointID)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+	}
+
+	err = s.pointRecordDao.UpdateByOrderID(ctx, orderID, &model.PointRecord{Status: model.PointRecordStatusCancelled})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	return nil
@@ -1049,7 +1089,7 @@ func (s *OrderService) closeOrder(ctx context.Context, req types.CloseOrderReq, 
 		return xErr
 	}
 	if orderRefund.ReturnPointStatus == enum.ReturnPointStatusWaitReturn && !orderRefund.NeedRefundPoint.Equal(decimal.Zero) {
-		xErr = s.refundPoint(ctx, user, operator, orderRefund.NeedRefundPoint, int(orderRefund.OrderID), model.PointRecordTypeRefund)
+		xErr = s.refundPoint(ctx, user, operator, orderRefund.NeedRefundPoint, int(orderRefund.OrderID))
 		if xErr != nil {
 			return xErr
 		}
@@ -1188,7 +1228,7 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 			return xrr
 		}
 		if !createNewRefund.NeedRefundPoint.Equal(decimal.Zero) {
-			xErr := s.refundPoint(ctx, user, operator, createNewRefund.NeedRefundPoint, int(createNewRefund.OrderID), model.PointRecordTypeRefund)
+			xErr := s.refundPoint(ctx, user, operator, createNewRefund.NeedRefundPoint, int(createNewRefund.OrderID))
 			if xErr != nil {
 				return xErr
 			}
@@ -1218,13 +1258,13 @@ func (s *OrderService) GetCustomerService(ctx *gin.Context, req types.GetCustome
 	return &types.GetCustomerServiceResp{Phone: supplierUser.Phone}, nil
 }
 
-func (s *OrderService) BatchPaymentCancel(ctx context.Context) xerr.XErr {
+func (s *OrderService) BatchPaymentLookup(ctx context.Context) xerr.XErr {
 	list, err := s.orderDao.ListByStatus(ctx, enum.OrderInfoPaidWaiting)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	log2.Println("[MallService] BatchPaymentLookup called, waiting2pay orders count=", len(list))
+	log2.Println("[OrderService] BatchPaymentLookup called, waiting2pay orders count=", len(list))
 
 	for _, order := range list {
 		transactionHandler := repo.NewTransactionHandler(db.Get())
@@ -1238,7 +1278,6 @@ func (s *OrderService) BatchPaymentCancel(ctx context.Context) xerr.XErr {
 			return xErr
 		}
 	}
-
 	return nil
 }
 
@@ -1330,10 +1369,63 @@ func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	err = s.refundPoint(ctx, user, nil, order.PointPrice, int(order.ID), model.PointRecordTypeCancel)
+	err = s.revertPoint(ctx, user, order.PointPrice, int(order.ID))
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	return nil
+}
+
+func (s *OrderService) PaymentConfirm(ctx context.Context, req *payments.Transaction) xerr.XErr {
+	switch *req.TradeState {
+	case consts.WECHAT_PAY_TRADE_STATE:
+		transactionHandler := repo.NewTransactionHandler(db.Get())
+		if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+			if _, err := s.paymentConfirm(ctx, req); err != nil {
+				return err
+			}
+			return nil
+		}); xErr != nil {
+			return xErr
+		}
+	}
+
+	return nil
+}
+
+func (s *OrderService) BatchPointConfirm(ctx context.Context) xerr.XErr {
+	list, err := s.orderDao.ListByStatus(ctx, enum.OrderInfoPaidPointConfirmWaiting)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	log2.Println("[OrderService] BatchPointConfirm called, waiting2pay orders count=", len(list))
+
+	for _, order := range list {
+		transactionHandler := repo.NewTransactionHandler(db.Get())
+		if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+			xErr := s.pointConfirm(ctx, order)
+			if xErr != nil {
+				return xErr
+			}
+			return nil
+		}); xErr != nil {
+			return xErr
+		}
+	}
+	return nil
+}
+
+func (s *OrderService) pointConfirm(ctx context.Context, order *model.OrderInfo) xerr.XErr {
+	err := s.pointRecordDao.UpdateByOrderID(ctx, int(order.ID), &model.PointRecord{Status: model.PointRecordStatusConfirmed})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	_, err = s.orderDao.UpdateOrderInfoByIDCTX(ctx, order.ID, &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
 	return nil
 }

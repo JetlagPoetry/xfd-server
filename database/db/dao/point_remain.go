@@ -18,7 +18,7 @@ func NewPointRemainDao() *PointRemainDao {
 }
 
 func (d *PointRemainDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int, like string) (list []*model.PointRemain, count int64, err error) {
-	sql := db.Get().Model(&model.PointRemain{})
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRemain{})
 	if len(like) > 0 {
 		sql = sql.Where("category_name LIKE ? AND status = 1", "%"+like+"%")
 	} else {
@@ -79,7 +79,7 @@ func (d *PointRemainDao) GetByIDForUpdateCTX(ctx context.Context, id int) (recor
 }
 
 func (d *PointRemainDao) GetByID(ctx context.Context, id int) (record *model.PointRemain, err error) {
-	err = db.Get().Model(&model.PointRemain{}).Where("id = ?", id).First(&record).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("id = ?", id).First(&record).Error
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (d *PointRemainDao) GetByID(ctx context.Context, id int) (record *model.Poi
 }
 
 func (d *PointRemainDao) GetByUserID(ctx context.Context, userID string) (record *model.PointRemain, err error) {
-	err = db.Get().Model(&model.PointRemain{}).Where("user_id = ?", userID).First(&record).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("user_id = ?", userID).First(&record).Error
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (d *PointRemainDao) GetByUserID(ctx context.Context, userID string) (record
 }
 
 func (d *PointRemainDao) Create(ctx context.Context, record *model.PointRemain) (err error) {
-	err = db.Get().Model(&model.PointRemain{}).Create(record).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Create(record).Error
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (d *PointRemainDao) CreateInTx(tx *gorm.DB, record *model.PointRemain) (err
 }
 
 func (d *PointRemainDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointRemain) (err error) {
-	updateResult := db.Get().Model(&model.PointRemain{}).Where("id =?", id).Updates(updateValue)
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (d *PointRemainDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateVa
 }
 
 func (d *PointRemainDao) SumPointRemainByApplyID(ctx context.Context, applyID int) (sum decimal.Decimal, err error) {
-	err = db.Get().Table("point_remain").Select("IFNULL(SUM(point_remain),0)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
+	err = db.GetRepo().GetDB(ctx).Table("point_remain").Select("IFNULL(SUM(point_remain),0)").Where("point_application_id = ?", applyID).Row().Scan(&sum)
 	if err != nil {
 		return decimal.Decimal{}, err
 	}

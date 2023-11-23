@@ -15,7 +15,7 @@ func NewPointApplicationTmpDao() *PointApplicationTmpDao {
 }
 
 func (d *PointApplicationTmpDao) GetByID(ctx context.Context, id int) (order *model.PointApplicationTmp, err error) {
-	err = db.Get().Model(&model.PointApplicationTmp{}).Where("id = ?", id).First(&order).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("id = ?", id).First(&order).Error
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (d *PointApplicationTmpDao) GetByID(ctx context.Context, id int) (order *mo
 }
 
 func (d *PointApplicationTmpDao) ListByStatus(ctx context.Context, status model.PointApplicationTmpStatus) (apply []*model.PointApplicationTmp, err error) {
-	err = db.Get().Model(&model.PointApplicationTmp{}).Where("status = ?", status).Limit(500).Find(&apply).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("status = ?", status).Limit(500).Find(&apply).Error
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (d *PointApplicationTmpDao) ListByStatus(ctx context.Context, status model.
 }
 
 func (d *PointApplicationTmpDao) GetByStatus(ctx context.Context, status model.PointApplicationTmpStatus) (apply *model.PointApplicationTmp, err error) {
-	err = db.Get().Model(&model.PointApplicationTmp{}).Where("status = ?", status).First(&apply).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("status = ?", status).First(&apply).Error
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (d *PointApplicationTmpDao) GetByStatus(ctx context.Context, status model.P
 }
 
 func (d *PointApplicationTmpDao) CountByStatus(ctx context.Context, status model.PointApplicationTmpStatus) (count int64, err error) {
-	err = db.Get().Model(&model.PointApplicationTmp{}).Where("status = ?", status).Count(&count).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("status = ?", status).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -63,7 +63,7 @@ func (d *PointApplicationTmpDao) CreateInTx(tx *gorm.DB, record *model.PointAppl
 }
 
 func (d *PointApplicationTmpDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointApplicationTmp) (err error) {
-	updateResult := db.Get().Model(&model.PointApplicationTmp{}).Where("id =?", id).Updates(updateValue)
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}

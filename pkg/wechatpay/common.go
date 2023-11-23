@@ -81,7 +81,7 @@ func CreateOrder(ctx context.Context, orderSn, desc, openID string, price int64)
 		OutTradeNo:  core.String(orderSn),
 		//Attach:      core.String("自定义数据说明"),
 		TimeExpire: core.Time(time.Now().Add(time.Minute * consts.WECHAT_PAY_EXPIRE_MINUTE)),
-		NotifyUrl:  core.String(os.Getenv("DOMAIN_NAME") + "/api/v1/order/paymentCallback"),
+		NotifyUrl:  core.String(os.Getenv("DOMAIN_NAME") + "/api/v1/order/paymentConfirm"),
 		Amount: &jsapi.Amount{
 			Total: core.Int64(price),
 		},

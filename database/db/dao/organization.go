@@ -17,7 +17,7 @@ func NewOrganizationDao() *OrganizationDao {
 }
 
 func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, name string) (list []*model.Organization, count int64, err error) {
-	sql := db.Get().Model(&model.Organization{})
+	sql := db.GetRepo().GetDB(ctx).Model(&model.Organization{})
 
 	if len(name) > 0 {
 		where := "name LIKE '%" + name + "%'"
@@ -34,7 +34,7 @@ func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, nam
 }
 
 func (d *OrganizationDao) GetByID(ctx context.Context, id int) (org *model.Organization, err error) {
-	err = db.Get().Model(&model.Organization{}).Where("id = ?", id).First(&org).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.Organization{}).Where("id = ?", id).First(&org).Error
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (d *OrganizationDao) GetByIDForUpdate(tx *gorm.DB, id int) (org *model.Orga
 }
 
 func (d *OrganizationDao) GetByCode(ctx context.Context, code string) (org *model.Organization, err error) {
-	err = db.Get().Model(&model.Organization{}).Where("code = ?", code).First(&org).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.Organization{}).Where("code = ?", code).First(&org).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	} else if err != nil {
@@ -86,7 +86,7 @@ func (d *OrganizationDao) GetByCodeInTx(tx *gorm.DB, code string) (org *model.Or
 }
 
 func (d *OrganizationDao) Create(ctx context.Context, org *model.Organization) (err error) {
-	err = db.Get().Model(&model.Organization{}).Create(org).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.Organization{}).Create(org).Error
 	if err != nil {
 		return err
 	}

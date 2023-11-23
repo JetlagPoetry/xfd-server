@@ -15,7 +15,7 @@ func NewUserAddressDao() *UserAddressDao {
 }
 
 func (r *UserAddressDao) Lists(ctx context.Context, limit, offset int) (list []*model.UserAddress, count int64, err error) {
-	sql := db.Get().Model(&model.UserAddress{}).Where("")
+	sql := db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("")
 
 	if err = sql.Limit(limit).Offset(offset).Find(&list).Error; err != nil {
 		return nil, 0, err
@@ -28,7 +28,7 @@ func (r *UserAddressDao) Lists(ctx context.Context, limit, offset int) (list []*
 }
 
 func (r *UserAddressDao) ListByUserID(ctx context.Context, userID string) (list []*model.UserAddress, err error) {
-	err = db.Get().Model(&model.UserAddress{}).Where("user_id = ?", userID).Find(&list).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("user_id = ?", userID).Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (r *UserAddressDao) ListByUserID(ctx context.Context, userID string) (list 
 }
 
 func (r *UserAddressDao) GetByID(ctx context.Context, id int) (addr *model.UserAddress, err error) {
-	err = db.Get().Model(&model.UserAddress{}).Where("id = ?", id).First(&addr).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("id = ?", id).First(&addr).Error
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (r *UserAddressDao) GetByID(ctx context.Context, id int) (addr *model.UserA
 }
 
 func (r *UserAddressDao) Create(ctx context.Context, addr *model.UserAddress) (err error) {
-	err = db.Get().Model(&model.UserAddress{}).Create(addr).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Create(addr).Error
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (r *UserAddressDao) CreateInTx(tx *gorm.DB, addr *model.UserAddress) (err e
 }
 
 func (r *UserAddressDao) UpdateByID(ctx context.Context, id int, updateValue *model.UserAddress) (err error) {
-	updateResult := db.Get().Model(&model.UserAddress{}).Where("id =?", id).Updates(updateValue)
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (r *UserAddressDao) UpdateByUserIDInTx(tx *gorm.DB, userID string, updateVa
 }
 
 func (r *UserAddressDao) Delete(ctx context.Context, id int) (err error) {
-	if err = db.Get().Where("id =? ", id).Delete(&model.UserAddress{}).Error; err != nil {
+	if err = db.GetRepo().GetDB(ctx).Where("id =? ", id).Delete(&model.UserAddress{}).Error; err != nil {
 		return err
 	}
 	return nil

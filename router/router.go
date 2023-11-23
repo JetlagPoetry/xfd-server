@@ -113,8 +113,7 @@ func NewRouter() *gin.Engine {
 		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
 		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退货退款
 		orderGroup.GET("/getCustomerService", handler.Order.GetCustomerService)    //获取客服电话
-
-		//orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
+		orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
 		//orderGroup.POST("/paymentCancel", handler.Order.PaymentCancel)
 	}
 

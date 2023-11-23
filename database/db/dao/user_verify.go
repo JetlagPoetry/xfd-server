@@ -16,7 +16,7 @@ func NewUserVerifyDao() *UserVerifyDao {
 }
 
 func (d *UserVerifyDao) ListUserVerifyByUserID(ctx context.Context, userID string) (userVerifyList []*model.UserVerify, err error) {
-	if err = db.Get().Model(&model.UserVerify{}).Where("user_id = ?", userID).
+	if err = db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Where("user_id = ?", userID).
 		Order("id desc").Find(&userVerifyList).Error; err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (d *UserVerifyDao) ListUserVerifyByUserID(ctx context.Context, userID strin
 }
 
 func (d *UserVerifyDao) List(ctx context.Context, page types.PageRequest) (list []*model.UserVerify, count int64, err error) {
-	sql := db.Get().Model(&model.UserVerify{}).Order("updated_at desc")
+	sql := db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Order("updated_at desc")
 	err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error
 	if err != nil {
 		return nil, 0, err
@@ -37,7 +37,7 @@ func (d *UserVerifyDao) List(ctx context.Context, page types.PageRequest) (list 
 }
 
 func (d *UserVerifyDao) GetByID(ctx context.Context, id int) (verify *model.UserVerify, err error) {
-	err = db.Get().Model(&model.UserVerify{}).Where("id = ?", id).First(&verify).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Where("id = ?", id).First(&verify).Error
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (d *UserVerifyDao) GetByID(ctx context.Context, id int) (verify *model.User
 }
 
 func (d *UserVerifyDao) GetByUserID(ctx context.Context, userID string) (verify *model.UserVerify, err error) {
-	err = db.Get().Model(&model.UserVerify{}).Where("user_id = ?", userID).First(&verify).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Where("user_id = ?", userID).First(&verify).Error
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (d *UserVerifyDao) GetByUserID(ctx context.Context, userID string) (verify 
 }
 
 func (d *UserVerifyDao) GetByStatus(ctx context.Context, status model.UserVerifyStatus) (verify *model.UserVerify, err error) {
-	err = db.Get().Model(&model.UserVerify{}).Where("status = ?", status).
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Where("status = ?", status).
 		Order("id asc").First(&verify).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
@@ -64,7 +64,7 @@ func (d *UserVerifyDao) GetByStatus(ctx context.Context, status model.UserVerify
 }
 
 func (d *UserVerifyDao) CountByStatus(ctx context.Context, status model.UserVerifyStatus) (count int64, err error) {
-	err = db.Get().Model(&model.UserVerify{}).Where("status = ?", status).Count(&count).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Where("status = ?", status).Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -72,7 +72,7 @@ func (d *UserVerifyDao) CountByStatus(ctx context.Context, status model.UserVeri
 }
 
 func (d *UserVerifyDao) Create(ctx context.Context, User *model.UserVerify) (err error) {
-	err = db.Get().Model(&model.UserVerify{}).Create(User).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Create(User).Error
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (d *UserVerifyDao) CreateInTx(tx *gorm.DB, User *model.UserVerify) (err err
 }
 
 func (d *UserVerifyDao) UpdateByID(ctx context.Context, id int, updateValue *model.UserVerify) (err error) {
-	updateResult := db.Get().Model(&model.UserVerify{}).Where("id =?", id).Updates(updateValue)
+	updateResult := db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
 		return err
 	}
