@@ -7,4 +7,5 @@ const (
 	PointCommentSpend       = "积分消费"
 	PointCommentExpire      = "积分过期"
 	PointCommentRefund      = "订单退款"
+	PointCommentCancel      = "订单取消"
 )

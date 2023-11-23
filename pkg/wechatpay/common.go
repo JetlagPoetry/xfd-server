@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"time"
+	"xfd-backend/pkg/consts"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
@@ -55,24 +58,30 @@ func GetWxOpenID(ctx context.Context, code string) (*types.WxOpenIDResp, xerr.XE
 	return result, nil
 }
 
-func CreateOrder(ctx context.Context, orderSn, desc, openID string, price int64) (*types.WxOrderResponse, xerr.XErr) {
+func CreateOrder(ctx context.Context, orderSn, desc, openID string, price int64) (*jsapi.PrepayWithRequestPaymentResponse, xerr.XErr) {
 	var (
 		req  jsapi.PrepayRequest
 		resp *jsapi.PrepayWithRequestPaymentResponse
 		err  error
 	)
 	defer func() {
-		log.Printf("[WxService] CreateOrder called, url=%s, resp=%v, err=%v\n", utils.ToJson(req), utils.ToJson(resp), err)
+		log.Printf("[WxService] CreateOrder called, req=%s, resp=%v, err=%v\n", utils.ToJson(req), utils.ToJson(resp), err)
 	}()
-	svc := jsapi.JsapiApiService{Client: WechatPayClient}
+
+	// 测试环境，强制用1分钱
+	if os.Getenv("WECHAT_TEST_OPEN") == "true" {
+		price = 1
+	}
+
 	// 得到prepay_id，以及调起支付所需的参数和签名
 	req = jsapi.PrepayRequest{
-		Appid:       core.String(os.Getenv("WC_APP_ID")),
-		Mchid:       core.String(os.Getenv("WC_MCH_ID")),
+		Appid:       core.String(os.Getenv("APP_ID")),
+		Mchid:       core.String(os.Getenv("WC_ID")),
 		Description: core.String(desc),
 		OutTradeNo:  core.String(orderSn),
 		//Attach:      core.String("自定义数据说明"),
-		NotifyUrl: core.String("https://www.weixin.qq.com/wxpay/pay.php"),
+		TimeExpire: core.Time(time.Now().Add(time.Minute * consts.WECHAT_PAY_EXPIRE_MINUTE)),
+		NotifyUrl:  core.String(os.Getenv("DOMAIN_NAME") + "/api/v1/order/paymentCallback"),
 		Amount: &jsapi.Amount{
 			Total: core.Int64(price),
 		},
@@ -80,9 +89,49 @@ func CreateOrder(ctx context.Context, orderSn, desc, openID string, price int64)
 			Openid: core.String(openID),
 		},
 	}
-	resp, _, err = svc.PrepayWithRequestPayment(ctx, req)
-	if err == nil {
+	resp, _, err = WechatPayJsAPI.PrepayWithRequestPayment(ctx, req)
+	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorCallApi, err)
 	}
-	return &types.WxOrderResponse{}, nil
+	return resp, nil
+}
+
+func CancelOrder(ctx context.Context, orderSn string) xerr.XErr {
+	var (
+		req  jsapi.CloseOrderRequest
+		resp *payments.Transaction
+		err  error
+	)
+
+	defer func() {
+		log.Printf("[WxService] CancelOrder called, req=%s, resp=%v, err=%v\n", utils.ToJson(req), utils.ToJson(resp), err)
+	}()
+
+	req = jsapi.CloseOrderRequest{
+		OutTradeNo: core.String(orderSn),
+		Mchid:      core.String(os.Getenv("WC_ID")),
+	}
+	_, err = WechatPayJsAPI.CloseOrder(ctx, req)
+
+	return nil
+}
+
+func LookupOrder(ctx context.Context, orderSn string) (*payments.Transaction, xerr.XErr) {
+	var (
+		req  jsapi.QueryOrderByOutTradeNoRequest
+		resp *payments.Transaction
+		err  error
+	)
+
+	defer func() {
+		log.Printf("[WxService] LookupOrder called, req=%s, resp=%v, err=%v\n", utils.ToJson(req), utils.ToJson(resp), err)
+	}()
+
+	req = jsapi.QueryOrderByOutTradeNoRequest{
+		OutTradeNo: core.String(orderSn),
+		Mchid:      core.String(os.Getenv("WC_ID")),
+	}
+	resp, _, err = WechatPayJsAPI.QueryOrderByOutTradeNo(ctx, req)
+
+	return resp, nil
 }

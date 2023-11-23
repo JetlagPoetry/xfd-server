@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"time"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
@@ -49,20 +50,11 @@ type CreateOrderReq struct {
 }
 
 type CreateOrderResp struct {
-	OrderID     int32                `json:"orderID"`
-	OrderSn     string               `json:"orderSn"`
-	OrderStatus enum.OrderInfoStatus `json:"orderStatus"`
-	PayWx       bool                 `json:"payWx"`
-	PayData     *WechatPay           `json:"payData,omitempty"`
-}
-
-type WechatPay struct {
-	AppID     string `json:"appId"`
-	Timestamp int64  `json:"timeStamp"`
-	NonceStr  string `json:"nonceStr"`
-	Package   string `json:"package"`
-	SignType  string `json:"signType"`
-	PaySign   string `json:"paySign"`
+	OrderID     int32                                   `json:"orderID"`
+	OrderSn     string                                  `json:"orderSn"`
+	OrderStatus enum.OrderInfoStatus                    `json:"orderStatus"`
+	PayWx       bool                                    `json:"payWx"`
+	PayData     *jsapi.PrepayWithRequestPaymentResponse `json:"payData,omitempty"`
 }
 
 type ApplyRefundReq struct {

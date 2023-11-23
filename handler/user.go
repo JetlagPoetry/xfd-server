@@ -66,7 +66,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// todo
+	// todo recover
 	//if  len(req.Code) == 0{
 	//	c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 	//	return

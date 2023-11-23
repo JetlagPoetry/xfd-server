@@ -17,6 +17,7 @@ type PurchaseService struct {
 	purchaseDao *dao.OrderPurchaseDao
 	quoteDao    *dao.OrderQuoteDao
 	userDao     *dao.UserDao
+	goodsDao    *dao.GoodsDao
 }
 
 func NewPurchaseService() *PurchaseService {
@@ -24,6 +25,7 @@ func NewPurchaseService() *PurchaseService {
 		purchaseDao: dao.NewOrderPurchaseDao(),
 		quoteDao:    dao.NewOrderQuoteDao(),
 		userDao:     dao.NewUserDao(),
+		goodsDao:    dao.NewGoodsDao(),
 	}
 }
 
@@ -241,13 +243,17 @@ func (s *PurchaseService) GetQuotes(ctx context.Context, req types.PurchaseGetQu
 	list := make([]*types.PurchaseQuote, 0)
 	for _, quote := range quoteList {
 		user := userMap[quote.QuoteUserID]
-		// todo 获取商品名、商品url
+
+		goods, err := s.goodsDao.GetGoodsByGoodsID(ctx, int32(quote.GoodsID))
+		if err != nil || goods == nil {
+			continue
+		}
 		list = append(list, &types.PurchaseQuote{
 			QuoteID:    int(quote.ID),
 			OrderID:    int(purchaseOrder.ID),
 			GoodsID:    quote.GoodsID,
-			GoodsName:  "",
-			GoodsURL:   "",
+			GoodsName:  goods.Name,
+			GoodsURL:   goods.GoodsFrontImage,
 			Price:      quote.Price.Round(2).String(),
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),

@@ -91,5 +91,25 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointVerify failed, err=", err)
 	}
 
+	_, err = c.AddFunc("0 */6 * * * ?", func() {
+		log.Println("[Cron] SetCategoryCache start")
+
+		ok := redis.Lock("cron-set-category-cache", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron-set-category-cache")
+
+		err := service.NewMallService().SetCategoryCache(context.Background())
+		if err != nil {
+			log.Println("[Cron] SetCategoryCache failed, err=", err)
+			return
+		}
+		log.Println("[Cron] SetCategoryCache success")
+	})
+	if err != nil {
+		log.Println("[Cron] ProcessPointVerify failed, err=", err)
+	}
+
 	c.Start()
 }

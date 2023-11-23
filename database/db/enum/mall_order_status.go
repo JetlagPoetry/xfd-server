@@ -3,13 +3,14 @@ package enum
 type OrderInfoStatus int
 
 const (
-	OrderInfoCreated     OrderInfoStatus = iota + 1 //订单创建
-	OrderInfoPaidWaiting                            //交易创建
-	OderInfoPaidSuccess                             //交易成功，待发货
-	OderInfoShipped                                 //已发货，待收货
-	OderInfoReceived                                //已收货，已签收，确认收货
-	OderInfoAfterSale                               //售后/结束
-	OderInfoClosed                                  //交易关闭
+	OrderInfoCreated                 OrderInfoStatus = iota + 1 //订单创建
+	OrderInfoPaidWaiting                                        //交易创建，待微信支付
+	OderInfoPaidSuccess                                         //交易成功，待发货
+	OderInfoShipped                                             //已发货，待收货
+	OderInfoReceived                                            //已收货，已签收，确认收货
+	OderInfoAfterSale                                           //售后/结束
+	OderInfoClosed                                              //交易关闭
+	OrderInfoPaidPointConfirmWaiting                            // 交易成功，待实际抵扣积分
 )
 
 func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
@@ -28,6 +29,8 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 		return OderInfoAfterSale, "售后/结束"
 	case 7:
 		return OderInfoClosed, "交易关闭"
+	case 8:
+		return OrderInfoPaidPointConfirmWaiting, "交易成功，待发货"
 	default:
 		return OrderInfoCreated, "订单创建"
 	}
@@ -49,6 +52,8 @@ func (g OrderInfoStatus) Code() int {
 		return 6
 	case OderInfoClosed:
 		return 7
+	case OrderInfoPaidPointConfirmWaiting:
+		return 8
 	default:
 		return 0
 	}

@@ -7,8 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/martian/log"
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
-	"os"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
+	log2 "log"
 	"sync"
 	"time"
 	"xfd-backend/database/db"
@@ -321,18 +322,18 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 	}
 	orderInfo.ID = orderID
 	//扣除积分
-	xrr := s.payForOrder(ctx, req.Code, user, orderInfo)
+	payData, payWx, xrr := s.payForOrder(ctx, req.Code, user, orderInfo)
 	if xrr != nil {
 		return nil, xrr
 	}
-	if user.Point.GreaterThanOrEqual(totalPrice) {
+	if !payWx {
 		// 只用积分支付
 		orderInfo.Status = enum.OderInfoPaidSuccess
 	} else {
 		// 积分+微信支付
 		orderInfo.Status = enum.OrderInfoPaidWaiting
 	}
-	return &types.CreateOrderResp{OrderID: orderInfo.ID, OrderSn: orderInfo.OrderSn, OrderStatus: orderInfo.Status}, nil
+	return &types.CreateOrderResp{OrderID: orderInfo.ID, OrderSn: orderInfo.OrderSn, OrderStatus: orderInfo.Status, PayWx: payWx, PayData: payData}, nil
 }
 
 func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types.PayOrderResp, xerr.XErr) {
@@ -344,7 +345,7 @@ func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types
 
 	transactionHandler := repo.NewTransactionHandler(db.Get())
 	if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
-		if xErr := s.payForOrder(ctx, "", user, &model.OrderInfo{ID: 123, TotalPrice: decimal.NewFromFloat(9.95)}); xErr != nil {
+		if _, _, xErr := s.payForOrder(ctx, "", user, &model.OrderInfo{ID: 123, TotalPrice: decimal.NewFromFloat(9.95)}); xErr != nil {
 			return xErr
 		}
 		return nil
@@ -356,15 +357,14 @@ func (s *OrderService) PayOrder(ctx *gin.Context, req types.PayOrderReq) (*types
 }
 
 // org->point_application->user->point_remain->point_record
-func (s *OrderService) payForOrder(ctx context.Context, code string, user *model.User, order *model.OrderInfo) xerr.XErr {
-
+func (s *OrderService) payForOrder(ctx context.Context, code string, user *model.User, order *model.OrderInfo) (*jsapi.PrepayWithRequestPaymentResponse, bool, xerr.XErr) {
 	if user.OrganizationID == 0 {
-		return xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
+		return nil, false, xerr.WithCode(xerr.ErrorUserOrgNotFound, errors.New("user not belong to org"))
 	}
 
 	ok := redis.Lock(fmt.Sprintf("user-point:user_id:%s", user.UserID), time.Minute*5)
 	if !ok {
-		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("get lock failed"))
+		return nil, false, xerr.WithCode(xerr.ErrorRedisLock, errors.New("get lock failed"))
 	}
 	defer redis.Unlock(fmt.Sprintf("user-point:user_id:%s", user.UserID))
 
@@ -374,22 +374,22 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	)
 	org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
 	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
 	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if user == nil {
-		return xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
+		return nil, false, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
 	}
 	if user.Point.Equals(decimal.Zero) {
-		return xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
+		return nil, false, xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
 	}
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	totalPrice := order.TotalPrice
 	payWx := false
-	//var wechatPay *types.WechatPay
+	var payData *jsapi.PrepayWithRequestPaymentResponse
 	payedAt := time.Now()
 	if user.Point.GreaterThanOrEqual(totalPrice) {
 		// 只用积分支付
@@ -397,7 +397,7 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 		wxPrice = decimal.Zero
 		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
 		if xErr != nil {
-			return xErr
+			return nil, false, xErr
 		}
 		updateValue := &model.OrderInfo{
 			PointPrice: totalPrice,
@@ -406,7 +406,7 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 		}
 		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
 		if xrr != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, xrr)
+			return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
 		}
 	} else {
 		// 积分+微信支付
@@ -416,38 +416,25 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 
 		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
 		if xErr != nil {
-			return xErr
+			return nil, false, xErr
 		}
-		_, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
+		payData, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
 		if xErr != nil {
-			return xErr
+			return nil, false, xErr
 		}
 		updateValue := &model.OrderInfo{
 			PointPrice: pointPrice,
 			WxPrice:    wxPrice,
 			Status:     enum.OrderInfoPaidWaiting,
-			TradeNo:    "wexin",
+			TradeNo:    *payData.PrepayId,
 		}
 		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
 		if xrr != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, xrr)
+			return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
 		}
 	}
-	//此时总订单初始状态 enum.OrderInfoPaidWaiting（待付款） 子订单初始状态 enum.OrderProductVariantDetailPending（待付款）
-	// todo 修改订单，支付金额、微信支付字段、订单状态、修改子订单、订单状态、支付时间
-	//todo 返回订单状态（积分支付成功/积分支付失败/微信等待支付）
-	//看情况是否需要区分 订单待付款/支付待付款 两种状态 解决方案加一个 订单创建的初始态 enum.OrderInfoCreated enum.OrderProductVariantDetailCreated
 
-	//if !payWx {
-	//	err = s.orderDao.UpdateOrderInfoByID(ctx, int(order.ID), &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
-	//	if err != nil {
-	//		return xerr.WithCode(xerr.ErrorDatabase, err)
-	//	}
-	//} else {
-	//fmt.Sprintf(wechatPay)
-	//}
-
-	return nil
+	return payData, payWx, nil
 }
 
 func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo, user *model.User, org *model.Organization, point decimal.Decimal, payWx bool) xerr.XErr {
@@ -518,42 +505,26 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 	return nil
 }
 
-func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) (*types.WechatPay, xerr.XErr) {
+func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) (*jsapi.PrepayWithRequestPaymentResponse, xerr.XErr) {
 	// 请求wx预付单，保存
 	openResp, xErr := wechatpay.GetWxOpenID(ctx, code)
 	if xErr != nil {
 		return nil, xErr
 	}
 
-	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "新发地小程序商城", openResp.OpenID, wxPrice.Mul(decimal.NewFromInt(100)).Floor().IntPart())
+	// 请求wx预付单，保存
+	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "艺图小程序商城", openResp.OpenID,
+		wxPrice.Mul(decimal.NewFromInt(100)).Floor().IntPart())
 	if xErr != nil {
 		return nil, xErr
 	}
-
 	// 更新订单信息
-	err := s.orderDao.UpdateOrderInfoByID(ctx, order.ID, &model.OrderInfo{Status: enum.OderInfoPaidSuccess})
+	err := s.orderDao.UpdateOrderInfoByID(ctx, order.ID, &model.OrderInfo{Status: enum.OrderInfoPaidWaiting})
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	appID := os.Getenv("WC_ID")
-	timestamp := time.Now().Unix()
-	nonce := utils.RandStr(32)
-	pack := fmt.Sprintf("prepay_id=%s", orderResp.PrepayID)
-	data := fmt.Sprintf("%s\n%d\n%s\n%s\n", appID, timestamp, nonce, pack)
-	sign, err := wechatpay.WechatPayClient.Sign(ctx, data)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
-	}
-
-	return &types.WechatPay{
-		AppID:     appID,
-		Timestamp: timestamp,
-		NonceStr:  nonce,
-		Package:   pack,
-		SignType:  "RSA",
-		PaySign:   sign.Signature,
-	}, nil
+	return orderResp, nil
 }
 
 func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeReq) xerr.XErr {
@@ -600,125 +571,67 @@ func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeRe
 	return nil
 }
 
-func (s *OrderService) refundPoint(ctx context.Context, tx *gorm.DB, user, operator *model.User, orderRefund *model.OrderRefund) xerr.XErr {
-	point := orderRefund.NeedRefundPoint
-	if tx != nil {
-		// 加公司积分
-		org, err := s.orgDao.GetByIDForUpdate(tx, user.OrganizationID)
+func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.User, point decimal.Decimal, orderID int, t model.PointRecordType) xerr.XErr {
+	// 加公司积分
+	org, err := s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 加员工积分
+	user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: user.Point.Add(point)})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	records, err := s.pointRecordDao.ListByOrderIDInTxCTX(ctx, user.UserID, int(orderID))
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	for _, record := range records {
+		remain, err := s.pointRemainDao.GetByIDForUpdateCTX(ctx, record.PointID)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 
-		err = s.orgDao.UpdateByIDInTx(tx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
+		err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-
-		// 加员工积分
-		user, err = s.userDao.GetByUserIDForUpdate(tx, user.UserID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
+		newRecord := &model.PointRecord{
+			UserID:             user.UserID,
+			OrganizationID:     user.OrganizationID,
+			ChangePoint:        record.ChangePoint.Mul(decimal.NewFromInt(-1)),
+			PointApplicationID: record.PointApplicationID,
+			PointID:            record.PointID,
+			OrderID:            record.OrderID,
+			Type:               model.PointRecordTypeRefund,
+			Status:             model.PointRecordStatusConfirmed,
+			Comment:            consts.PointCommentRefund,
 		}
-
-		err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, &model.User{Point: user.Point.Add(point)})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
+		// 不应该存point comment的...
+		if t == model.PointRecordTypeRefund {
+			newRecord.Type = model.PointRecordTypeRefund
+			newRecord.Comment = consts.PointCommentRefund
+		} else if t == model.PointRecordTypeOrderCancel {
+			newRecord.Type = model.PointRecordTypeOrderCancel
+			newRecord.Comment = consts.PointCommentCancel
 		}
-
-		records, err := s.pointRecordDao.ListByOrderIDInTx(tx, user.UserID, int(orderRefund.OrderID))
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
+		if operator != nil {
+			newRecord.OperateUserID = operator.UserID
+			newRecord.OperateUsername = operator.Username
 		}
-
-		for _, record := range records {
-			remain, err := s.pointRemainDao.GetByIDForUpdate(tx, record.PointID)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-
-			err = s.pointRemainDao.UpdateByIDInTx(tx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-			newRecord := &model.PointRecord{
-				UserID:             user.UserID,
-				OrganizationID:     0,
-				ChangePoint:        decimal.Decimal{},
-				PointApplicationID: record.PointApplicationID,
-				PointID:            record.PointID,
-				OrderID:            record.OrderID,
-				Type:               model.PointRecordTypeRefund,
-				Status:             model.PointRecordStatusConfirmed,
-				Comment:            consts.PointCommentRefund,
-				OperateUserID:      operator.UserID,
-				OperateUsername:    operator.Username,
-			}
-			err = s.pointRecordDao.CreateInTx(tx, newRecord)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-		}
-		_, err = s.orderDao.UpdateOrderRefundByIDTX(tx, orderRefund.ID, &model.OrderRefund{ReturnPointStatus: enum.ReturnPointStatusReturned})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-	} else {
-		// 加公司积分
-		org, err := s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		err = s.orgDao.UpdateByIDInTxCTX(ctx, user.OrganizationID, &model.Organization{Point: org.Point.Add(point)})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-		// 加员工积分
-		user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-		err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: user.Point.Add(point)})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-		records, err := s.pointRecordDao.ListByOrderIDInTxCTX(ctx, user.UserID, int(orderRefund.OrderID))
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-
-		for _, record := range records {
-			remain, err := s.pointRemainDao.GetByIDForUpdateCTX(ctx, record.PointID)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-
-			err = s.pointRemainDao.UpdateByIDInTxCTX(ctx, record.PointID, &model.PointRemain{PointRemain: remain.PointRemain.Sub(record.ChangePoint)})
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-			newRecord := &model.PointRecord{
-				UserID:             user.UserID,
-				OrganizationID:     0,
-				ChangePoint:        decimal.Decimal{},
-				PointApplicationID: record.PointApplicationID,
-				PointID:            record.PointID,
-				OrderID:            record.OrderID,
-				Type:               model.PointRecordTypeRefund,
-				Status:             model.PointRecordStatusConfirmed,
-				Comment:            consts.PointCommentRefund,
-				OperateUserID:      operator.UserID,
-				OperateUsername:    operator.Username,
-			}
-			err = s.pointRecordDao.CreateInTxCTX(ctx, newRecord)
-			if err != nil {
-				return xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-		}
-		//更新orderRefund状态
-		_, err = s.orderDao.UpdateOrderRefundByID(ctx, orderRefund.ID, &model.OrderRefund{ReturnPointStatus: enum.ReturnPointStatusReturned})
+		err = s.pointRecordDao.CreateInTxCTX(ctx, newRecord)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
@@ -1136,9 +1049,14 @@ func (s *OrderService) closeOrder(ctx context.Context, req types.CloseOrderReq, 
 		return xErr
 	}
 	if orderRefund.ReturnPointStatus == enum.ReturnPointStatusWaitReturn && !orderRefund.NeedRefundPoint.Equal(decimal.Zero) {
-		xErr = s.refundPoint(ctx, nil, user, operator, orderRefund)
+		xErr = s.refundPoint(ctx, user, operator, orderRefund.NeedRefundPoint, int(orderRefund.OrderID), model.PointRecordTypeRefund)
 		if xErr != nil {
 			return xErr
+		}
+		//更新orderRefund状态
+		_, err := s.orderDao.UpdateOrderRefundByID(ctx, orderRefund.ID, &model.OrderRefund{ReturnPointStatus: enum.ReturnPointStatusReturned})
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 	}
 	return nil
@@ -1270,9 +1188,14 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 			return xrr
 		}
 		if !createNewRefund.NeedRefundPoint.Equal(decimal.Zero) {
-			xErr := s.refundPoint(ctx, nil, user, operator, createNewRefund)
+			xErr := s.refundPoint(ctx, user, operator, createNewRefund.NeedRefundPoint, int(createNewRefund.OrderID), model.PointRecordTypeRefund)
 			if xErr != nil {
 				return xErr
+			}
+			//更新orderRefund状态
+			_, err := s.orderDao.UpdateOrderRefundByID(ctx, createNewRefund.ID, &model.OrderRefund{ReturnPointStatus: enum.ReturnPointStatusReturned})
+			if err != nil {
+				return xerr.WithCode(xerr.ErrorDatabase, err)
 			}
 		}
 
@@ -1293,4 +1216,124 @@ func (s *OrderService) GetCustomerService(ctx *gin.Context, req types.GetCustome
 		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("supplier user %s not found", req.SupplierUserID))
 	}
 	return &types.GetCustomerServiceResp{Phone: supplierUser.Phone}, nil
+}
+
+func (s *OrderService) BatchPaymentCancel(ctx context.Context) xerr.XErr {
+	list, err := s.orderDao.ListByStatus(ctx, enum.OrderInfoPaidWaiting)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	log2.Println("[MallService] BatchPaymentLookup called, waiting2pay orders count=", len(list))
+
+	for _, order := range list {
+		transactionHandler := repo.NewTransactionHandler(db.Get())
+		if xErr := transactionHandler.WithTransaction(ctx, func(ctx context.Context) xerr.XErr {
+			_, xErr := s.paymentLookup(ctx, order, false)
+			if xErr != nil {
+				return xErr
+			}
+			return nil
+		}); xErr != nil {
+			return xErr
+		}
+	}
+
+	return nil
+}
+
+// paymentLookup 查看订单是否已支付成功，如果支付成功，则执行paymentConfirm。调用cancel=true时，主动关闭订单
+func (s *OrderService) paymentLookup(ctx context.Context, order *model.OrderInfo, cancel bool) (enum.OrderInfoStatus, xerr.XErr) {
+	if order.Status != enum.OrderInfoPaidWaiting {
+		return order.Status, nil
+	}
+
+	lock := redis.Lock(fmt.Sprintf("payment-look-up:order_id:%d", order.ID), time.Minute*5)
+	if !lock {
+		return 0, xerr.WithCode(xerr.ErrorRedisLock, errors.New("get lock failed"))
+	}
+	defer redis.Unlock(fmt.Sprintf("payment-look-up:order_id:%d", order.ID))
+
+	resp, cErr := wechatpay.LookupOrder(ctx, order.OrderSn)
+	if cErr != nil {
+		return 0, cErr
+	}
+
+	if *resp.TradeState == consts.WECHAT_PAY_TRADE_STATE {
+		status, cErr := s.paymentConfirm(ctx, resp)
+		if cErr != nil {
+			return 0, cErr
+		}
+		return status, nil
+	}
+	if cancel || (order.Status == enum.OrderInfoPaidWaiting && order.CreatedAt.Add(time.Minute*consts.WECHAT_PAY_EXPIRE_MINUTE).Before(time.Now())) {
+		cErr = s.paymentCancel(ctx, order)
+		if cErr != nil {
+			return 0, cErr
+		}
+	}
+	return order.Status, nil
+}
+
+func (s *OrderService) paymentConfirm(ctx context.Context, req *payments.Transaction) (enum.OrderInfoStatus, xerr.XErr) {
+	order, err := s.orderDao.GetOrderInfoByOrderSn(ctx, *req.OutTradeNo)
+	if err != nil {
+		return 0, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	// 修改订单状态
+	if order.Status != enum.OrderInfoPaidWaiting {
+		return order.Status, nil
+	}
+
+	successTime, err := time.Parse("2006-01-02T15:04:05+MST", *req.SuccessTime)
+	if err != nil {
+		return 0, xerr.WithCode(xerr.InvalidParams, err)
+	}
+	_, err = s.orderDao.UpdateOrderInfoByIDCTX(ctx, order.ID, &model.OrderInfo{
+		PayedAt: &successTime,
+		Status:  enum.OrderInfoPaidPointConfirmWaiting,
+	})
+	if err != nil {
+		return 0, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return enum.OderInfoPaidSuccess, nil
+}
+
+func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo) xerr.XErr {
+	if order.Status != enum.OrderInfoPaidWaiting {
+		return xerr.WithCode(xerr.ErrorDatabase, errors.New("order has been processed"))
+	}
+
+	cErr := wechatpay.CancelOrder(ctx, order.TradeNo)
+	if cErr != nil {
+		return cErr
+	}
+
+	// 恢复库存
+	variant, err := s.goods.GetProductVariantByProductVariantIDForUpdate(ctx, order.ProductVariantID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	leftStock := *variant.Stock + order.Quantity
+	rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, order.ProductVariantID, &model.ProductVariant{Stock: &leftStock})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorOrderCreate, errors.New("reduce stock failed"))
+	}
+
+	user, err := s.userDao.GetByUserID(ctx, order.UserID)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	err = s.refundPoint(ctx, user, nil, order.PointPrice, int(order.ID), model.PointRecordTypeCancel)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return nil
 }

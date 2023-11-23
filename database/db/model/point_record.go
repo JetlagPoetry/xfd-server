@@ -33,6 +33,7 @@ const (
 	PointRecordTypeQuit        PointRecordType = 3 // 离职
 	PointRecordTypeCancel      PointRecordType = 4 // 清零
 	PointRecordTypeRefund      PointRecordType = 5 // 退款
+	PointRecordTypeOrderCancel PointRecordType = 6 // 退款订单未支付
 )
 
 type PointRecordStatus int

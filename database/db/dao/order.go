@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"xfd-backend/database/db"
+	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/types"
 )
@@ -249,6 +250,14 @@ func (d *OrderDao) GetOrderRefundByOrderID(ctx context.Context, orderID int32) (
 		return nil, nil
 	}
 	return refundList, nil
+}
+
+func (r *OrderDao) ListByStatus(ctx context.Context, status enum.OrderInfoStatus) (list []*model.OrderInfo, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("status = ?", status).Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 /*update*/

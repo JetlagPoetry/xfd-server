@@ -67,7 +67,7 @@ func (s *UserService) test(tx *gorm.DB, req types.UserSendCodeReq) error {
 }
 
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
-	// todo
+	// todo recover
 	//code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
 	//if err == goredis.Nil {
 	//	return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
@@ -302,7 +302,7 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		UserRole:     user.UserRole,
 		VerifyStatus: model.UserVerifyStatusUnknown,
 		Point:        user.Point.Round(2).String(),
-		NotifyVerify: false, // todo 用verify.id 判断是否首次认证成功
+		NotifyVerify: false,
 	}
 
 	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {

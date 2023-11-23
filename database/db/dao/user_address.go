@@ -36,7 +36,7 @@ func (r *UserAddressDao) ListByUserID(ctx context.Context, userID string) (list 
 }
 
 func (r *UserAddressDao) GetByID(ctx context.Context, id int) (addr *model.UserAddress, err error) {
-	err = db.Get().Model(&model.UserAddress{}).Where("id = ?", id).Find(&addr).Error
+	err = db.Get().Model(&model.UserAddress{}).Where("id = ?", id).First(&addr).Error
 	if err != nil {
 		return nil, err
 	}
