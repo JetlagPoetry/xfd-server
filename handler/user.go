@@ -132,13 +132,13 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 
 func (h *UserHandler) GetVerifyInfo(c *gin.Context) {
 	var (
-		resp *types.GetUserInfoResp
+		resp *types.GetVerifyInfoResp
 		xErr xerr.XErr
 	)
 
-	resp, xErr = h.userService.GetUserInfo(c)
+	resp, xErr = h.userService.GetVerifyInfo(c)
 	if xErr != nil {
-		log.Println("[UserHandler] GetUserInfo failed, err=", xErr)
+		log.Println("[UserHandler] GetVerifyInfo failed, err=", xErr)
 		c.JSON(http.StatusOK, response.RespError(c, xErr))
 		return
 	}
