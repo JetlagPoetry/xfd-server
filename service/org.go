@@ -478,6 +478,8 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 		PointApplicationID: int(apply.ID),
 		Point:              member.Point,
 		PointRemain:        member.Point,
+		StartTime:          apply.StartTime,
+		EndTime:            apply.EndTime,
 	}
 	err = s.PointRemainDao.CreateInTx(tx, remain)
 	if err != nil {
@@ -1057,6 +1059,24 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	remainList, err := s.PointRemainDao.ListValidByUserIDCTX(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	var firstExpireTime, lastExpireTime time.Time
+	if len(remainList) > 0 {
+		firstExpireTime = remainList[0].EndTime
+		lastExpireTime = remainList[0].EndTime
+	}
+	for _, remain := range remainList {
+		if remain.EndTime.Before(firstExpireTime) {
+			firstExpireTime = remain.EndTime
+		}
+		if remain.EndTime.After(lastExpireTime) {
+			lastExpireTime = remain.EndTime
+		}
+	}
 	list := make([]*types.OrgMember, 0)
 	for _, user := range userList {
 		list = append(list, &types.OrgMember{
@@ -1066,6 +1086,8 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 			OrganizationName: user.OrganizationName,
 			Point:            user.Point.Round(2).String(),
 			CreateTime:       user.CreatedAt.Unix(),
+			FirstExpireTime:  firstExpireTime.Unix(),
+			LastExpireTime:   lastExpireTime.Unix(),
 		})
 	}
 

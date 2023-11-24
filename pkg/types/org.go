@@ -168,6 +168,8 @@ type OrgMember struct {
 	OrganizationName string `json:"organization_name"`
 	Point            string `json:"point"`
 	CreateTime       int64  `json:"createTime"`
+	FirstExpireTime  int64  `json:"firstExpireTime"`
+	LastExpireTime   int64  `json:"lastExpireTime"`
 }
 
 type GetPointRecordsByApplyReq struct {

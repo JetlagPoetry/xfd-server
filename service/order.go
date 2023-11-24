@@ -451,7 +451,7 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	remainList, err = s.pointRemainDao.ListByUserIDCTX(ctx, user.UserID)
+	remainList, err = s.pointRemainDao.ListValidByUserIDCTX(ctx, user.UserID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}

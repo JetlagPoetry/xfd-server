@@ -32,6 +32,7 @@ func NewRouter() *gin.Engine {
 		userGroup.POST("/login", handler.User.Login)           // 登录
 		userGroup.POST("/submitRole", handler.User.SubmitRole) // 选择身份，提交认证信息
 		userGroup.POST("/refreshToken", handler.User.RefreshToken)
+		userGroup.POST("/verifyInfo", handler.User.GetVerifyInfo)
 		userGroup.GET("/info", handler.User.GetUserInfo)
 		userGroup.POST("/modifyInfo", handler.User.ModifyInfo)
 		userGroup.POST("/assignAdmin", handler.User.AssignAdmin)

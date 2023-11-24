@@ -99,29 +99,8 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 
-		verifyHistory := &model.UserVerify{}
-		notify := false
-		if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
-			verifyList, err := s.userVerifyDao.ListUserVerifyByUserID(ctx, user.UserID)
-			if err != nil {
-				return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-			if len(verifyList) > 0 {
-				verifyHistory = verifyList[0] // 选取最后一次认证
-
-				_, err := redis.RedisClient.Get(fmt.Sprintf("user-verify-notify:verify_id:%d", verifyHistory.ID)).Result()
-				if err == goredis.Nil {
-					notify = true
-					redis.RedisClient.Set(fmt.Sprintf("user-verify-notify:verify_id:%d", verifyHistory.ID), 1, 0)
-				}
-			}
-		}
-
 		resp = &types.UserLoginResp{
-			UserRole:      user.UserRole,
-			VerifyStatus:  verifyHistory.Status,
-			VerifyComment: verifyHistory.Comment,
-			NotifyVerify:  notify,
+			UserRole: user.UserRole,
 		}
 	} else if req.Source == types.SourceCMS {
 		user, err = s.userDao.GetByPhone(ctx, req.Phone)
@@ -289,6 +268,61 @@ func (s *UserService) RefreshToken(ctx context.Context) (*types.UserRefreshToken
 	}, nil
 }
 
+func (s *UserService) GetVerifyInfo(ctx context.Context) (*types.GetVerifyInfoResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 返回用户信息+用户当前绑定的公司
+	resp := &types.GetVerifyInfoResp{
+		Username: user.Username,
+		UserRole: user.UserRole,
+	}
+
+	verifyList, err := s.userVerifyDao.ListUserVerifyByUserID(ctx, user.UserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	// 消费者及其他身份，直接返回
+	if user.UserRole != model.UserRoleSupplier && user.UserRole != model.UserRoleBuyer {
+		return resp, nil
+	}
+
+	// 没有认证信息，直接返回
+	if len(verifyList) == 0 {
+		return resp, nil
+	}
+
+	notify := false
+	successHistory := false
+	verifyHistory := verifyList[0] // 选取最后一次认证
+	if verifyHistory.Status == model.UserVerifyStatusSuccess {
+		_, err := redis.RedisClient.Get(fmt.Sprintf("user-verify-notify:verify_id:%d", verifyHistory.ID)).Result()
+		if err == goredis.Nil {
+			notify = true
+			redis.RedisClient.Set(fmt.Sprintf("user-verify-notify:verify_id:%d", verifyHistory.ID), 1, 0)
+		}
+	}
+
+	for _, verify := range verifyList {
+		if verify.Status == model.UserVerifyStatusSuccess {
+			successHistory = true
+			break
+		}
+	}
+
+	resp.NotifyVerify = notify
+	resp.VerifyHistory = successHistory
+	resp.VerifyComment = verifyHistory.Comment
+	resp.VerifyStatus = verifyHistory.Status
+	resp.Organization = verifyHistory.Organization
+
+	return resp, nil
+}
+
 func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
@@ -296,36 +330,14 @@ func (s *UserService) GetUserInfo(ctx context.Context) (*types.GetUserInfoResp, 
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	// 返回用户信息+用户当前绑定的公司
 	resp := &types.GetUserInfoResp{
-		Username:     user.Username,
-		AvatarURL:    user.AvatarURL,
-		UserRole:     user.UserRole,
-		VerifyStatus: model.UserVerifyStatusUnknown,
-		Point:        user.Point.Round(2).String(),
-		NotifyVerify: false,
-	}
-
-	if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
-		verifyList, err := s.userVerifyDao.ListUserVerifyByUserID(ctx, userID)
-		if err != nil {
-			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if len(verifyList) > 0 {
-			verify := verifyList[0]
-
-			resp.VerifyStatus = verify.Status
-			resp.VerifyComment = verify.Comment
-			resp.Organization = verify.Organization
-
-			organization, err := s.organizationDao.GetByCode(ctx, verify.OrganizationCode)
-			if err != nil {
-				return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-			}
-			if organization != nil {
-				resp.Organization = organization.Name
-				resp.OrganizationID = int(organization.ID)
-			}
-		}
+		Username:       user.Username,
+		AvatarURL:      user.AvatarURL,
+		UserRole:       user.UserRole,
+		Organization:   user.OrganizationName,
+		OrganizationID: user.OrganizationID,
+		Point:          user.Point.Round(2).String(),
 	}
 
 	return resp, nil
