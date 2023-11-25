@@ -26,7 +26,7 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 	case 5:
 		return OderInfoReceived, "已收货，已签收，确认收货"
 	case 6:
-		return OderInfoAfterSale, "售后/结束"
+		return OderInfoAfterSale, "售后/结束,"
 	case 7:
 		return OderInfoClosed, "交易关闭"
 	case 8:
