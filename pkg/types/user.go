@@ -153,6 +153,14 @@ type UserAddress struct {
 	IsDefault bool   `json:"isDefault"`
 }
 
+type UserGetDefaultAddressReq struct {
+}
+
+type UserGetDefaultAddressResp struct {
+	UserAddress
+	NoDefault bool `json:"noDefault"`
+}
+
 type UserAddAddressReq struct {
 	Name      string `json:"name"`
 	Phone     string ` json:"phone"`

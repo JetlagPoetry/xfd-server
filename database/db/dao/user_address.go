@@ -35,6 +35,16 @@ func (r *UserAddressDao) ListByUserID(ctx context.Context, userID string) (list 
 	return list, nil
 }
 
+func (r *UserAddressDao) GetByUserIDAndDefault(ctx context.Context, userID string) (addr *model.UserAddress, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("user_id = ? AND is_default = ?", userID, 1).First(&addr).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return addr, nil
+}
+
 func (r *UserAddressDao) GetByID(ctx context.Context, id int) (addr *model.UserAddress, err error) {
 	err = db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("id = ?", id).First(&addr).Error
 	if err != nil {

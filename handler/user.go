@@ -286,6 +286,28 @@ func (h *UserHandler) GetAddressList(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
+func (h *UserHandler) GetDefaultAddress(c *gin.Context) {
+	var (
+		req  types.UserGetDefaultAddressReq
+		resp *types.UserGetDefaultAddressResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+
+	resp, xErr = h.userService.GetDefaultAddress(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] GetDefaultAddress failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
 func (h *UserHandler) AddAddress(c *gin.Context) {
 	var (
 		req  types.UserAddAddressReq
