@@ -32,13 +32,13 @@ const (
 )
 
 type UserLoginResp struct {
-	AccessToken   string                 `json:"accessToken"`   // 访问令牌
-	TokenType     string                 `json:"tokenType"`     // 令牌类型
-	ExpiresAt     int64                  `json:"expiresAt"`     // 令牌到期时间戳
-	UserRole      model.UserRole         `json:"userRole"`      // 用户角色
-	VerifyStatus  model.UserVerifyStatus `json:"verifyStatus"`  // 认证状态
-	VerifyComment string                 `json:"verifyComment"` // 认证备注
-	NotifyVerify  bool                   `json:"notifyVerify"`  // 是否提示认证成功
+	AccessToken string         `json:"accessToken"` // 访问令牌
+	TokenType   string         `json:"tokenType"`   // 令牌类型
+	ExpiresAt   int64          `json:"expiresAt"`   // 令牌到期时间戳
+	UserRole    model.UserRole `json:"userRole"`    // 用户角色
+	//VerifyStatus  model.UserVerifyStatus `json:"verifyStatus"`  // 认证状态
+	//VerifyComment string                 `json:"verifyComment"` // 认证备注
+	//NotifyVerify  bool                   `json:"notifyVerify"`  // 是否提示认证成功
 }
 
 type UserSubmitRoleReq struct {
@@ -63,16 +63,26 @@ type UserRefreshTokenResp struct {
 	ExpiresAt   int64  `json:"expiresAt"`   // 令牌到期时间戳
 }
 
+type GetVerifyInfoResp struct {
+	Username      string                 `json:"username"`
+	UserRole      model.UserRole         `json:"userRole"`
+	VerifyStatus  model.UserVerifyStatus `json:"verifyStatus"`
+	VerifyComment string                 `json:"verifyComment"`
+	Organization  string                 `json:"organization"`
+	NotifyVerify  bool                   `json:"notifyVerify"`  // 是否提示认证成功
+	VerifyHistory bool                   `json:"verifyHistory"` // 是否有曾经通过的审核
+}
+
 type GetUserInfoResp struct {
-	Username       string                 `json:"username"`
-	AvatarURL      string                 `json:"avatarUrl"`
-	UserRole       model.UserRole         `json:"userRole"`
-	VerifyStatus   model.UserVerifyStatus `json:"verifyStatus"`
-	VerifyComment  string                 `json:"verifyComment"`
-	Organization   string                 `json:"organization"`
-	OrganizationID int                    `json:"organizationID"`
-	Point          string                 `json:"point"`
-	NotifyVerify   bool                   `json:"notifyVerify"` // 是否提示认证成功
+	Username  string         `json:"username"`
+	AvatarURL string         `json:"avatarUrl"`
+	UserRole  model.UserRole `json:"userRole"`
+	//VerifyStatus   model.UserVerifyStatus `json:"verifyStatus"`
+	//VerifyComment  string                 `json:"verifyComment"`
+	Organization   string `json:"organization"`
+	OrganizationID int    `json:"organizationID"`
+	Point          string `json:"point"`
+	//NotifyVerify   bool                   `json:"notifyVerify"` // 是否提示认证成功
 }
 
 //type UserVerifyStatus int32

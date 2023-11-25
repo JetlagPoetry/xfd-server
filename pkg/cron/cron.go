@@ -12,7 +12,7 @@ import (
 func StartCron() {
 	c := cron.New(cron.WithSeconds())
 	_, err := c.AddFunc("0 */5 * * * ?", func() {
-		log.Println("[Cron] ProcessPointVerify start")
+		//log.Println("[Cron] ProcessPointVerify start")
 
 		ok := redis.Lock("cron-process-point-verify", time.Minute*10)
 		if !ok {
@@ -32,7 +32,7 @@ func StartCron() {
 	}
 
 	_, err = c.AddFunc("30 */3 * * * ?", func() {
-		log.Println("[Cron] ProcessPointDistribute start")
+		//log.Println("[Cron] ProcessPointDistribute start")
 
 		ok := redis.Lock("cron-process-point-distribute", time.Minute*10)
 		if !ok {
@@ -52,7 +52,7 @@ func StartCron() {
 	}
 
 	_, err = c.AddFunc("0 0 * * * ?", func() {
-		log.Println("[Cron] ProcessPointExpired start")
+		//log.Println("[Cron] ProcessPointExpired start")
 
 		ok := redis.Lock("cron-process-point-expire", time.Minute*10)
 		if !ok {
@@ -72,7 +72,7 @@ func StartCron() {
 	}
 
 	_, err = c.AddFunc("0 */6 * * * ?", func() {
-		log.Println("[Cron] SetCategoryCache start")
+		//log.Println("[Cron] SetCategoryCache start")
 
 		ok := redis.Lock("cron-set-category-cache", time.Minute*10)
 		if !ok {
@@ -92,7 +92,7 @@ func StartCron() {
 	}
 
 	_, err = c.AddFunc("*/5 * * * * ?", func() {
-		log.Println("[Cron]  start")
+		//log.Println("[Cron] BatchPaymentLookup start")
 
 		ok := redis.Lock("cron-set-payment-lookup", time.Minute*10)
 		if !ok {
@@ -112,7 +112,7 @@ func StartCron() {
 	}
 
 	_, err = c.AddFunc("*/30 * * * * ?", func() {
-		log.Println("[Cron]  start")
+		//log.Println("[Cron] BatchPointConfirm start")
 
 		ok := redis.Lock("cron-batch-point-confirm", time.Minute*10)
 		if !ok {

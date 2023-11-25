@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm/clause"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/model"
-	"xfd-backend/pkg/types"
 )
 
 type PointRemainDao struct {
@@ -17,29 +16,18 @@ func NewPointRemainDao() *PointRemainDao {
 	return &PointRemainDao{}
 }
 
-func (d *PointRemainDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int, like string) (list []*model.PointRemain, count int64, err error) {
-	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRemain{})
-	if len(like) > 0 {
-		sql = sql.Where("category_name LIKE ? AND status = 1", "%"+like+"%")
-	} else {
-		sql = sql.Where("category_a = ? AND category_b = ? AND status = 1", categoryA, categoryB)
-
-		if categoryC > 0 {
-			sql = sql.Where("category_c = ?", categoryC)
-		}
+func (d *PointRemainDao) ListByUserID(tx *gorm.DB, userID string) (list []*model.PointRemain, err error) {
+	err = tx.Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0",
+		userID).Order("id ASC").Find(&list).Error
+	if err != nil {
+		return nil, err
 	}
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
-	return list, count, nil
+	return list, nil
 }
 
-func (d *PointRemainDao) ListByUserID(tx *gorm.DB, userID string) (list []*model.PointRemain, err error) {
-	err = tx.Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0", userID).Order("id ASC").Find(&list).Error
+func (d *PointRemainDao) ListValidByUserIDCTX(ctx context.Context, userID string) (list []*model.PointRemain, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0 AND start_time <= now() AND end_time >= now()",
+		userID).Order("id ASC").Find(&list).Error
 	if err != nil {
 		return nil, err
 	}
@@ -166,20 +154,10 @@ func (d *PointRemainDao) SumPointRemainByApplyIDInTx(tx *gorm.DB, applyID int) (
 	return sum, nil
 }
 
-func (d *PointRemainDao) ListByUserIDCTX(ctx context.Context, userID string) (list []*model.PointRemain, err error) {
-	err = db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("user_id = ? AND point_remain > 0", userID).Order("id ASC").Find(&list).Error
-	if err != nil {
-		return nil, err
-	}
-	return list, nil
-
-}
-
 func (d *PointRemainDao) UpdateByIDInTxCTX(ctx context.Context, id int, updateValue *model.PointRemain) error {
 	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointRemain{}).Where("id =?", id).Updates(updateValue)
 	if err := updateResult.Error; err != nil {
 		return err
 	}
 	return nil
-
 }

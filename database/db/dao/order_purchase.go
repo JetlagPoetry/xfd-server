@@ -25,7 +25,7 @@ func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, cat
 			sql = sql.Where("category_c = ?", categoryC)
 		}
 	}
-	if err = sql.Order("created_at desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -40,7 +40,7 @@ func (d *OrderPurchaseDao) ListByOrderIDs(ctx context.Context, page types.PageRe
 	if status != 0 {
 		sql = sql.Where("status = ?", status)
 	}
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -55,7 +55,7 @@ func (d *OrderPurchaseDao) ListByUser(ctx context.Context, page types.PageReques
 	if status != 0 {
 		sql = sql.Where("status = ?", status)
 	}
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
