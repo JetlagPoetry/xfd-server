@@ -25,7 +25,7 @@ type ShoppingCartModifyReq struct {
 
 type ShoppingCartListResp struct {
 	PageResult
-	List []*ShoppingCartDetail `json:"list,omitempty"`
+	List []*ShoppingCartDetail `json:"list"`
 }
 
 type ShoppingCartDetail struct {
