@@ -25,7 +25,7 @@ type ShoppingCartModifyReq struct {
 
 type ShoppingCartListResp struct {
 	PageResult
-	List []*ShoppingCartDetail `json:"list,omitempty"`
+	List []*ShoppingCartDetail `json:"list"`
 }
 
 type ShoppingCartDetail struct {
@@ -124,7 +124,7 @@ type OrderListReq struct {
 }
 
 func (o *OrderListReq) CheckMiniAppParams() error {
-	if o.Status == enum.OderInfoShipped || o.Status == enum.OderInfoReceived || o.Status == enum.OderInfoAfterSale {
+	if o.Status == enum.OderInfoReceived || o.Status == enum.OderInfoAfterSale {
 		return fmt.Errorf("invalid query status, status=%d,please check", o.Status)
 	}
 	if o.OrderSn != "" || o.GoodName != "" || o.SupplierOrganizationName != "" || o.UserPhone != "" || o.UserOrganizationName != "" {
