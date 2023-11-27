@@ -74,7 +74,9 @@ func (d *PointApplicationDao) ListByStatusInTx(tx *gorm.DB, status model.PointAp
 
 func (d *PointApplicationDao) GetByStatus(ctx context.Context, status model.PointApplicationStatus) (apply *model.PointApplication, err error) {
 	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplication{}).Where("status = ?", status).First(&apply).Error
-	if err != nil {
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	return apply, nil
