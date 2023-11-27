@@ -41,7 +41,9 @@ func Init() error {
 	//_ = db.AutoMigrate(&model.Specification{})
 	//_ = db.AutoMigrate(&model.SpecificationValue{})
 	//_ = db.AutoMigrate(&model.ProductVariant{})
-
+	//_ = db.AutoMigrate(&model.OrderInfo{})
+	//_ = db.AutoMigrate(&model.ShoppingCart{})
+	//_ = db.AutoMigrate(&model.OrderRefund{})
 	sqlDB, err := db.DB()
 	if err != nil {
 		fmt.Println("DB Init error,err=", err.Error())
