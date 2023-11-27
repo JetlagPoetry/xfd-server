@@ -40,6 +40,7 @@ func NewRouter() *gin.Engine {
 		userGroup.POST("/deleteUser", handler.User.DeleteUser)
 
 		userGroup.GET("/getAddressList", handler.User.GetAddressList)
+		userGroup.GET("/getDefaultAddress", handler.User.GetDefaultAddress)
 		userGroup.POST("/addAddress", handler.User.AddAddress)
 		userGroup.POST("/modifyAddress", handler.User.ModifyAddress)
 		userGroup.POST("/deleteAddress", handler.User.DeleteAddress)

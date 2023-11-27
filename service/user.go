@@ -501,6 +501,31 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 	return &types.UserGetAddressListResp{List: list}, nil
 }
 
+func (s *UserService) GetDefaultAddress(ctx context.Context, req types.UserGetDefaultAddressReq) (*types.UserGetDefaultAddressResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+
+	addr, err := s.userAddressDao.GetByUserIDAndDefault(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if addr == nil {
+		return &types.UserGetDefaultAddressResp{NoDefault: true}, nil
+	}
+	return &types.UserGetDefaultAddressResp{
+		UserAddress: types.UserAddress{
+			ID:        int(addr.ID),
+			Name:      addr.Name,
+			Phone:     addr.Phone,
+			Province:  addr.Province,
+			City:      addr.City,
+			Region:    addr.Region,
+			Address:   addr.Address,
+			IsDefault: true,
+		},
+		NoDefault: false,
+	}, nil
+}
+
 func (s *UserService) AddAddress(ctx context.Context, req types.UserAddAddressReq) (*types.UserAddAddressResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)
 
