@@ -88,7 +88,7 @@ func StartCron() {
 		log.Println("[Cron] SetCategoryCache success")
 	})
 	if err != nil {
-		log.Println("[Cron] ProcessPointVerify failed, err=", err)
+		log.Println("[Cron] SetCategoryCache failed, err=", err)
 	}
 
 	_, err = c.AddFunc("*/5 * * * * ?", func() {

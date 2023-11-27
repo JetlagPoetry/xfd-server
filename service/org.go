@@ -273,7 +273,7 @@ func (s *OrgService) VerifyPoint(ctx context.Context, req types.OrgVerifyPointRe
 	xErr := s.verifyPoint(tx, req, user)
 	if xErr != nil {
 		tx.Rollback()
-		return nil, xerr.WithCode(xerr.ErrorDatabase, xErr)
+		return nil, xErr
 	}
 
 	// 提交事务
@@ -281,7 +281,7 @@ func (s *OrgService) VerifyPoint(ctx context.Context, req types.OrgVerifyPointRe
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	return nil, nil
+	return &types.OrgVerifyPointResp{}, nil
 }
 
 func (s *OrgService) verifyPoint(tx *gorm.DB, req types.OrgVerifyPointReq, user *model.User) xerr.XErr {
@@ -611,6 +611,9 @@ func (s *OrgService) GetApplyToVerify(ctx context.Context, req types.OrgGetApply
 	apply, err := s.PointApplicationDao.GetByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if apply == nil {
+		return &types.OrgGetApplyToVerifyResp{HasNext: false}, nil
 	}
 
 	count, err := s.PointApplicationDao.CountByStatus(ctx, model.PointApplicationStatusUnknown)
@@ -1070,8 +1073,8 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 		lastExpireTime = remainList[0].EndTime
 	}
 	for _, remain := range remainList {
-		if remain.EndTime.Before(firstExpireTime) {
-			firstExpireTime = remain.EndTime
+		if remain.StartTime.Before(firstExpireTime) {
+			firstExpireTime = remain.StartTime
 		}
 		if remain.EndTime.After(lastExpireTime) {
 			lastExpireTime = remain.EndTime
