@@ -16,6 +16,7 @@ type SupplyService struct {
 	purchaseDao *dao.OrderPurchaseDao
 	quoteDao    *dao.OrderQuoteDao
 	userDao     *dao.UserDao
+	orderDao    *dao.OrderDao
 }
 
 func NewSupplyService() *SupplyService {
@@ -23,6 +24,7 @@ func NewSupplyService() *SupplyService {
 		purchaseDao: dao.NewOrderPurchaseDao(),
 		quoteDao:    dao.NewOrderQuoteDao(),
 		userDao:     dao.NewUserDao(),
+		orderDao:    dao.NewOrderDao(),
 	}
 }
 
@@ -222,5 +224,11 @@ func (s *SupplyService) GetStatistics(ctx context.Context, req types.SupplyGetSt
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	return &types.SupplyGetStatisticsResp{NewPurchase: int(count)}, nil
+	//查看零售待发货的订单数量
+	count, err = s.orderDao.CountWaitingForDeliveryOrderBySupplyUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	return &types.SupplyGetStatisticsResp{NewPurchase: int(count), NewWaitingForDelivery: int(count)}, nil
 }

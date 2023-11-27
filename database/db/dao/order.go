@@ -253,7 +253,7 @@ func (d *OrderDao) GetOrderRefundByOrderID(ctx context.Context, orderID int32) (
 	return refundList, nil
 }
 
-func (r *OrderDao) ListByStatus(ctx context.Context, status enum.OrderInfoStatus) (list []*model.OrderInfo, err error) {
+func (d *OrderDao) ListByStatus(ctx context.Context, status enum.OrderInfoStatus) (list []*model.OrderInfo, err error) {
 	err = db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).Where("status = ?", status).Find(&list).Error
 	if err != nil {
 		return nil, err
@@ -342,4 +342,13 @@ func (d *OrderDao) UpdateOrderRefundByID(ctx context.Context, id int32, updateVa
 func (d *OrderDao) UpdateOrderRefundByIDTX(tx *gorm.DB, id int32, updateValue *model.OrderRefund) (int64, error) {
 	updateResult := tx.Model(&model.OrderRefund{}).Where("id = ?", id).Updates(updateValue)
 	return updateResult.RowsAffected, updateResult.Error
+}
+
+func (d *OrderDao) CountWaitingForDeliveryOrderBySupplyUserID(ctx context.Context, userID string) (count int64, err error) {
+	query := db.GetRepo().GetDB(ctx).Model(&model.OrderInfo{}).
+		Where("goods_supplier_user_id = ? and status = 3", userID).Count(&count)
+	if query.Error != nil {
+		return 0, query.Error
+	}
+	return count, nil
 }
