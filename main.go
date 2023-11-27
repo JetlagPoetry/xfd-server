@@ -33,6 +33,7 @@ func Init() {
 	utils.InitSms()
 	jwt.Init()
 	redis.Init()
+
 	if err := wechatpay.Init(); err != nil {
 		panic(fmt.Sprintf("wechat pay init failed with %+v", err))
 	}
