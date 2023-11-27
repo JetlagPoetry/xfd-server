@@ -78,9 +78,10 @@ func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderLi
 	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image, product_attr, shipment_company,shipment_sn,estimated_delivery_time,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
 		Where("goods_supplier_user_id= ? and status in (3,4,5,6)", req.UserID)
-	if req.Status != 0 {
-		queryOrder = queryOrder.Where("status = ?", req.Status)
-	}
+	queryOrder = queryOrder.Where(&model.OrderInfo{
+		Status:  req.Status,
+		OrderSn: req.OrderSn,
+	})
 	// 获取订单列表总数
 	queryOrder.Count(&count)
 

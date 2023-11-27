@@ -127,7 +127,7 @@ func (o *OrderListReq) CheckMiniAppParams() error {
 	if o.Status == enum.OderInfoReceived || o.Status == enum.OderInfoAfterSale {
 		return fmt.Errorf("invalid query status, status=%d,please check", o.Status)
 	}
-	if o.OrderSn != "" || o.GoodName != "" || o.SupplierOrganizationName != "" || o.UserPhone != "" || o.UserOrganizationName != "" {
+	if o.GoodName != "" || o.SupplierOrganizationName != "" || o.UserPhone != "" || o.UserOrganizationName != "" {
 		return fmt.Errorf("only support query by status")
 	}
 	return nil
