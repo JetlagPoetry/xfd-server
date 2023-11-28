@@ -12,6 +12,7 @@ import (
 	"github.com/wechatpay-apiv3/wechatpay-go/utils"
 	"log"
 	"os"
+	"strings"
 )
 
 var WechatPayClient *core.Client
@@ -25,9 +26,10 @@ func Init() error {
 		mchAPIv3Key                = os.Getenv("WC_API_V3_KEY") // 商户APIv3密钥
 	)
 
-	log.Println("WC_CLIENT_KEY:", os.Getenv("WC_CLIENT_KEY"))
+	key := strings.Replace(os.Getenv("WC_CLIENT_KEY"), "\\n", "\n", -1)
+	log.Println("WC_CLIENT_KEY:", key)
 	// 使用 utils 提供的函数从本地文件中加载商户私钥，商户私钥会用来生成请求的签名
-	mchPrivateKey, err := utils.LoadPrivateKey(os.Getenv("WC_CLIENT_KEY"))
+	mchPrivateKey, err := utils.LoadPrivateKey(key)
 	if err != nil {
 		return err
 	}
