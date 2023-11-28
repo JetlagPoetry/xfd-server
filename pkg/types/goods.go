@@ -148,19 +148,21 @@ type MyGoodsListReq struct {
 
 // GoodsDetailResp 商品详情信息
 type GoodsDetailResp struct {
-	ID                 int32                   `json:"id"`
-	Name               string                  `json:"name"`
-	GoodsFrontImage    string                  `json:"goodsFrontImage"`              // 商品首图
-	Images             []string                `json:"images"`                       // 商品轮播图
-	Description        string                  `json:"description"`                  // 商品详情
-	DescImages         []string                `json:"descImages"`                   // 商品详情图
-	WholesaleLogistics []int                   `json:"wholesaleLogistics,omitempty"` // 批发物流
-	WholesaleShipping  string                  `json:"wholesaleShipping,omitempty"`  // 批发发货地
-	RetailShippingTime enum.RetailDeliveryTime `json:"retailShippingTime,omitempty"`
-	RetailShippingFee  string                  `json:"retailShippingFee,omitempty"`
-	SpecInfo           []*SpecInfo             `json:"specInfo"`
-	WholesaleProducts  []*ProductVariantInfo   `json:"wholesaleProducts,omitempty"`
-	RetailProducts     []*ProductVariantInfo   `json:"retailProduct,omitempty"`
+	ID                     int32                   `json:"id"`
+	Name                   string                  `json:"name"`
+	GoodsSupplierUserID    string                  `json:"goodsSupplierUserID,omitempty"`
+	GoodsSupplierUserPhone string                  `json:"goodsSupplierUserPhone,omitempty"`
+	GoodsFrontImage        string                  `json:"goodsFrontImage"`              // 商品首图
+	Images                 []string                `json:"images"`                       // 商品轮播图
+	Description            string                  `json:"description"`                  // 商品详情
+	DescImages             []string                `json:"descImages"`                   // 商品详情图
+	WholesaleLogistics     []int                   `json:"wholesaleLogistics,omitempty"` // 批发物流
+	WholesaleShipping      string                  `json:"wholesaleShipping,omitempty"`  // 批发发货地
+	RetailShippingTime     enum.RetailDeliveryTime `json:"retailShippingTime,omitempty"`
+	RetailShippingFee      string                  `json:"retailShippingFee,omitempty"`
+	SpecInfo               []*SpecInfo             `json:"specInfo"`
+	WholesaleProducts      []*ProductVariantInfo   `json:"wholesaleProducts,omitempty"`
+	RetailProducts         []*ProductVariantInfo   `json:"retailProduct,omitempty"`
 }
 
 type ProductVariantInfo struct {
