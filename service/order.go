@@ -89,7 +89,7 @@ func (s *OrderService) AddShoppingCart(ctx *gin.Context, req types.ShoppingCartA
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
 		}
-		return xerr.WithCode(xerr.ErrorProductExistCart, fmt.Errorf("product %d already in shopping cart", req.ProductVariantID))
+		return nil
 	}
 	//7.新增购物车
 	newShoppingCart := &model.ShoppingCart{
