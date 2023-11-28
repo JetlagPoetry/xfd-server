@@ -15,7 +15,7 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.Cors())
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/user/login", "/api/v1/user/sendCode")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1", "/api/v1/user/login", "/api/v1/user/sendCode")) // 登录校验, 参数为跳过登录的路由
 
 	testGroup := r.Group("/api/v1/test")
 	{
@@ -24,6 +24,9 @@ func NewRouter() *gin.Engine {
 		})
 		testGroup.GET("/error", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
+		})
+		testGroup.GET("/hello1", func(c *gin.Context) {
+			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test02\"}"))
 		})
 	}
 	userGroup := r.Group("/api/v1/user")
