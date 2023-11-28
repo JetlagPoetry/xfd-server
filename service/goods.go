@@ -494,13 +494,12 @@ func (s *GoodsService) GetGoodsDetail(c *gin.Context, req types.GoodsReq) (*type
 		return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("商品不存在"))
 	}
 	goodsDetail := &types.GoodsDetailResp{
-		ID:                  goods.ID,
-		Name:                goods.Name,
-		GoodsFrontImage:     goods.GoodsFrontImage,
-		Images:              goods.GetImagesList(),
-		Description:         goods.Description,
-		DescImages:          goods.GetDescImagesList(),
-		GoodsSupplierUserID: goods.UserID,
+		ID:              goods.ID,
+		Name:            goods.Name,
+		GoodsFrontImage: goods.GoodsFrontImage,
+		Images:          goods.GetImagesList(),
+		Description:     goods.Description,
+		DescImages:      goods.GetDescImagesList(),
 	}
 
 	req.UserID = common.GetUserID(c)
@@ -508,7 +507,7 @@ func (s *GoodsService) GetGoodsDetail(c *gin.Context, req types.GoodsReq) (*type
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	if req.UserRole == model.UserRoleBuyer {
+	if user.UserRole == model.UserRoleBuyer {
 		goodsDetail.GoodsSupplierUserID = goods.UserID
 		goodsSupplierUser, err := s.userDao.GetByUserID(c, goods.UserID)
 		if err != nil {
