@@ -50,4 +50,5 @@ type SupplyGetStatisticsReq struct {
 type SupplyGetStatisticsResp struct {
 	NewPurchase           int `json:"newPurchase"`
 	NewWaitingForDelivery int `json:"newWaitingForDelivery"`
+	Test                  int `json:"test"`
 }

@@ -230,5 +230,5 @@ func (s *SupplyService) GetStatistics(ctx context.Context, req types.SupplyGetSt
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	return &types.SupplyGetStatisticsResp{NewPurchase: int(count), NewWaitingForDelivery: int(count)}, nil
+	return &types.SupplyGetStatisticsResp{NewPurchase: int(count), NewWaitingForDelivery: int(count), Test: 10000000}, nil
 }
