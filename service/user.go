@@ -125,6 +125,7 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 
 	redis.RedisClient.Del(fmt.Sprintf("user-login-code:phone:%s", req.Phone))
 
+	resp.UserID = user.UserID
 	resp.AccessToken = token.AccessToken
 	resp.TokenType = token.TokenType
 	resp.ExpiresAt = token.ExpiresAt
