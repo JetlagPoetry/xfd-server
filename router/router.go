@@ -19,6 +19,9 @@ func NewRouter() *gin.Engine {
 
 	testGroup := r.Group("/api/v1/test")
 	{
+		testGroup.GET("/hello1", func(c *gin.Context) {
+			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test\"}"))
+		})
 		testGroup.GET("/hello", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test\"}"))
 		})
