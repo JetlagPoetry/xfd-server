@@ -25,9 +25,6 @@ func NewRouter() *gin.Engine {
 		testGroup.GET("/error", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
 		})
-		testGroup.GET("/hello1", func(c *gin.Context) {
-			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test02\"}"))
-		})
 	}
 	userGroup := r.Group("/api/v1/user")
 	{
