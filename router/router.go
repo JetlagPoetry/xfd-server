@@ -65,7 +65,7 @@ func NewRouter() *gin.Engine {
 		supplyGroup.POST("/submitQuote", handler.Supply.SubmitQuote)              // 提交报价
 		supplyGroup.GET("/getQuotedPurchases", handler.Supply.GetQuotedPurchases) // 查看报价过的所有采购单
 		supplyGroup.GET("/getStatistics", handler.Supply.GetStatistics)           // 查看采购商统计数据
-		supplyGroup.POST("/answerQuote", handler.Purchase.AnswerQuote)            // 供货商回复报价
+		supplyGroup.POST("/answerQuote", handler.Supply.AnswerQuote)              // 供货商回复报价
 	}
 	orgGroup := r.Group("/api/v1/org")
 	{
