@@ -139,3 +139,24 @@ func (h *SupplyHandler) GetStatistics(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
+
+func (h *SupplyHandler) AnswerQuote(c *gin.Context) {
+	var (
+		req  types.SupplyAnswerQuoteReq
+		resp *types.SupplyAnswerQuoteResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.supplyService.AnswerQuote(c, req)
+	if xErr != nil {
+		log.Println("[SupplyHandler] AnswerQuote failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}

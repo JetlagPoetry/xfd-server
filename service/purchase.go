@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
+	"xfd-backend/database/redis"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
@@ -288,6 +290,37 @@ func (s *PurchaseService) GetStatistics(ctx context.Context, req types.PurchaseG
 	return &types.PurchaseGetStatisticsResp{
 		NewQuote: int(count),
 	}, nil
+}
+
+func (s *PurchaseService) NotifySupply(ctx context.Context, req types.PurchaseNotifySupplyReq) (*types.PurchaseNotifySupplyResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+
+	supplier, err := s.userDao.GetByUserID(ctx, req.SupplyUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if supplier.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
+
+	// 设置redis hash，保存当前用户的提示数
+	if err := redis.RedisClient.HIncrBy(fmt.Sprintf(redis.SUPPLY_NOTIFY_WITH_PURCHASE, supplier.UserID), user.UserID, int64(req.Count)).Err(); err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+
+	// 设置redis hash，增加供应商的提示数字
+	if err := redis.RedisClient.IncrBy(fmt.Sprintf(redis.SUPPLY_NOTIFY_NUMBER, supplier.UserID), int64(req.Count)).Err(); err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+
+	return &types.PurchaseNotifySupplyResp{}, nil
 }
 
 func (s *PurchaseService) AnswerQuote(ctx context.Context, req types.PurchaseAnswerQuoteReq) (*types.PurchaseAnswerQuoteResp, xerr.XErr) {

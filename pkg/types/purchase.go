@@ -100,6 +100,14 @@ type PurchaseGetStatisticsResp struct {
 	NewQuote int `json:"newQuote"`
 }
 
+type PurchaseNotifySupplyReq struct {
+	SupplyUserID string `json:"supplyUserID"`
+	Count        int    `json:"count"`
+}
+
+type PurchaseNotifySupplyResp struct {
+}
+
 type PurchaseAnswerQuoteReq struct {
 	SupplyUserID string `json:"supplyUserID"`
 }

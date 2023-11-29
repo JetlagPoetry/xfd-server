@@ -51,3 +51,10 @@ type SupplyGetStatisticsResp struct {
 	NewPurchase           int `json:"newPurchase"`
 	NewWaitingForDelivery int `json:"newWaitingForDelivery"`
 }
+
+type SupplyAnswerQuoteReq struct {
+	PurchaseUserID string `json:"purchaseUserID"`
+}
+
+type SupplyAnswerQuoteResp struct {
+}

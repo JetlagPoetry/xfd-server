@@ -3,8 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	goredis "github.com/go-redis/redis"
+	"strconv"
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/model"
+	"xfd-backend/database/redis"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
@@ -219,16 +223,76 @@ func (s *SupplyService) GetStatistics(ctx context.Context, req types.SupplyGetSt
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
 	}
 
-	count, err := s.quoteDao.CountBySupplyUserIDAndNotifySupply(ctx, userID, true)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	//count, err := s.quoteDao.CountBySupplyUserIDAndNotifySupply(ctx, userID, true)
+	//if err != nil {
+	//	return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
+	result, err := redis.RedisClient.Get(fmt.Sprintf(redis.SUPPLY_NOTIFY_NUMBER, user.UserID)).Result()
+	if err != goredis.Nil && err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
 	}
+	newPurchase, _ := strconv.Atoi(result)
 
 	//查看零售待发货的订单数量
-	count, err = s.orderDao.CountWaitingForDeliveryOrderBySupplyUserID(ctx, userID)
+	count, err := s.orderDao.CountWaitingForDeliveryOrderBySupplyUserID(ctx, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	return &types.SupplyGetStatisticsResp{NewPurchase: int(count), NewWaitingForDelivery: int(count)}, nil
+	return &types.SupplyGetStatisticsResp{NewPurchase: newPurchase, NewWaitingForDelivery: int(count)}, nil
+}
+
+func (s *SupplyService) AnswerQuote(ctx context.Context, req types.SupplyAnswerQuoteReq) (*types.SupplyAnswerQuoteResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user.UserRole != model.UserRoleSupplier {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not supplier"))
+	}
+
+	purchaser, err := s.userDao.GetByUserID(ctx, req.PurchaseUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if purchaser.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not buyer"))
+	}
+
+	value := 0
+	result, err := redis.RedisClient.HGet(fmt.Sprintf(redis.SUPPLY_NOTIFY_WITH_PURCHASE, user.UserID), purchaser.UserID).Result()
+	if err != goredis.Nil && err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+	value, _ = strconv.Atoi(result)
+	if err := redis.RedisClient.HSet(fmt.Sprintf(redis.SUPPLY_NOTIFY_WITH_PURCHASE, user.UserID), purchaser.UserID, 0).Err(); err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+	// 设置redis hash，减少供应商的提示数字
+	if err := redis.RedisClient.DecrBy(fmt.Sprintf(redis.SUPPLY_NOTIFY_NUMBER, user.UserID), int64(value)).Err(); err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
+	}
+
+	// 触发该supplier的数字校准
+	go s.notifyCalibration(user.UserID)
+
+	return &types.SupplyAnswerQuoteResp{}, nil
+}
+
+func (s *SupplyService) notifyCalibration(supplyUserID string) error {
+	result, err := redis.RedisClient.HGetAll(fmt.Sprintf(redis.SUPPLY_NOTIFY_WITH_PURCHASE, supplyUserID)).Result()
+	if err != nil {
+		return err
+	}
+	total := 0
+	for _, v := range result {
+		num, _ := strconv.Atoi(v)
+		total += num
+	}
+	_, err = redis.RedisClient.Set(fmt.Sprintf(redis.SUPPLY_NOTIFY_NUMBER, supplyUserID), total, 0).Result()
+	if err != nil {
+		return err
+	}
+	return nil
 }

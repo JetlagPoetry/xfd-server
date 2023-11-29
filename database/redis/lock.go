@@ -2,8 +2,6 @@ package redis
 
 import "time"
 
-const ()
-
 func Lock(key string, expiration time.Duration) bool {
 	ok, err := RedisClient.SetNX(key, 1, expiration).Result()
 	if err != nil {

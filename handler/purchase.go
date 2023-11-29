@@ -175,6 +175,27 @@ func (h *PurchaseHandler) GetStatistics(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
+func (h *PurchaseHandler) NotifySupply(c *gin.Context) {
+	var (
+		req  types.PurchaseNotifySupplyReq
+		resp *types.PurchaseNotifySupplyResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xErr = h.purchaseService.NotifySupply(c, req)
+	if xErr != nil {
+		log.Println("[PurchaseHandler] NotifySupply failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
 func (h *PurchaseHandler) AnswerQuote(c *gin.Context) {
 	var (
 		req  types.PurchaseAnswerQuoteReq
