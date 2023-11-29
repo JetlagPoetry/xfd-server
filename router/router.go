@@ -55,7 +55,7 @@ func NewRouter() *gin.Engine {
 		purchaseGroup.POST("/modifyOrderStatus", handler.Purchase.ModifyOrderStatus) // 删除或结束采购单
 		purchaseGroup.GET("/getQuotes", handler.Purchase.GetQuotes)                  // 查看采购单的报价列表
 		purchaseGroup.GET("/getStatistics", handler.Purchase.GetStatistics)          // 查看采购商统计数据
-		purchaseGroup.POST("/notifySupply", handler.Purchase.AnswerQuote)            // 采购商回复报价
+		purchaseGroup.POST("/notifySupply", handler.Purchase.NotifySupply)           // 采购商回复报价
 		//purchaseGroup.POST("/answerQuote", handler.Purchase.AnswerQuote)             // 采购商回复报价
 	}
 	supplyGroup := r.Group("/api/v1/supply")
