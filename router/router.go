@@ -126,6 +126,7 @@ func NewRouter() *gin.Engine {
 
 	commonGroup := r.Group("/api/v1/common")
 	{
+		commonGroup.GET("/getConfig", handler.Common.GetConfig)            //获取区域地址代码
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
 		commonGroup.POST("/uploadFile", handler.Common.UploadFile)         //上传图片
 		commonGroup.POST("/upload", handler.Common.UploadFile)             //上传图片

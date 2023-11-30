@@ -27,6 +27,30 @@ const (
 	DefaultFolderName = "temp"
 )
 
+func (h *CommonHandler) GetConfig(c *gin.Context) {
+	var (
+		req  types.CommonGetConfigReq
+		resp *types.CommonGetConfigResp
+		xErr xerr.XErr
+	)
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if len(req.Key) == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+	resp, xErr = h.commonService.GetConfig(c, req)
+	if xErr != nil {
+		log.Println("[CommonHandler] GetConfig failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
 func (h *CommonHandler) GetArea(c *gin.Context) {
 	var (
 		req  types.AreaReq
