@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type Config struct {
 	gorm.Model
-	Key   string `gorm:"column:key" json:"key"`
+	Name  string `gorm:"column:name" json:"name"`
 	Value string `gorm:"column:value" json:"value"`
 }
 

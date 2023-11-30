@@ -33,7 +33,7 @@ func (s *CommonService) GetConfig(ctx *gin.Context, req types.CommonGetConfigReq
 	}
 
 	// 如果不存在，从db中读取
-	config, err := s.configDao.GetByKey(ctx, req.Key)
+	config, err := s.configDao.GetByName(ctx, req.Key)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}

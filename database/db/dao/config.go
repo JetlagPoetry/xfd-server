@@ -13,8 +13,8 @@ func NewConfigDao() *ConfigDao {
 	return &ConfigDao{}
 }
 
-func (d *ConfigDao) GetByKey(ctx context.Context, key string) (cfg *model.Config, err error) {
-	err = db.GetRepo().GetDB(ctx).Model(&model.Config{}).Where("key = ?", key).First(&cfg).Error
+func (d *ConfigDao) GetByName(ctx context.Context, name string) (cfg *model.Config, err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.Config{}).Where("name = ?", name).First(&cfg).Error
 	if err != nil {
 		return nil, err
 	}
