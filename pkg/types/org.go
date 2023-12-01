@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/shopspring/decimal"
 	"mime/multipart"
 	"time"
 	"xfd-backend/database/db/model"
@@ -30,18 +31,19 @@ type OrgGetApplyToVerifyReq struct {
 }
 
 type OrgGetApplyToVerifyResp struct {
-	ID                int    `json:"id"`
-	OrganizationName  string `json:"organizationName"`
-	OrganizationCode  string `json:"organizationCode"`
-	Comment           string `json:"comment"`
-	UserID            string `json:"userID"`
-	Username          string `json:"username"`
-	UserCertificateNo string `json:"userCertificateNo"`
-	UserPosition      string `json:"userPosition"`
-	UserPhone         string `json:"userPhone"`
-	SubmitTime        int64  `json:"submitTime"`
-	ApplyURL          string `json:"applyURL"`
-	HasNext           bool   `json:"hasNext"`
+	ID                int             `json:"id"`
+	OrganizationName  string          `json:"organizationName"`
+	OrganizationCode  string          `json:"organizationCode"`
+	Comment           string          `json:"comment"`
+	UserID            string          `json:"userID"`
+	Username          string          `json:"username"`
+	UserCertificateNo string          `json:"userCertificateNo"`
+	UserPosition      string          `json:"userPosition"`
+	UserPhone         string          `json:"userPhone"`
+	SubmitTime        int64           `json:"submitTime"`
+	ApplyURL          string          `json:"applyURL"`
+	TotalPoint        decimal.Decimal `json:"totalPoint"`
+	HasNext           bool            `json:"hasNext"`
 }
 
 type OrgGetApplysReq struct {
@@ -72,6 +74,7 @@ type PointOrder struct {
 	VerifyUserID     string                       `json:"verifyUserID"`
 	VerifyUsername   string                       `json:"verifyUsername"`
 	PointOrderStatus model.PointApplicationStatus `json:"pointOrderStatus"`
+	TotalPoint       decimal.Decimal              `json:"totalPoint"`
 	ApplyURL         string                       `json:"applyURL"`
 }
 

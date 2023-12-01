@@ -648,6 +648,7 @@ func (s *OrgService) GetApplyToVerify(ctx context.Context, req types.OrgGetApply
 		UserPhone:         applyUser.Phone,
 		SubmitTime:        apply.CreatedAt.Unix(),
 		ApplyURL:          apply.FileURL,
+		TotalPoint:        apply.TotalPoint,
 		HasNext:           count > 1,
 	}, nil
 }
@@ -691,6 +692,7 @@ func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (
 			VerifyUsername:   apply.VerifyUsername,
 			PointOrderStatus: apply.Status,
 			ApplyURL:         apply.FileURL,
+			TotalPoint:       apply.TotalPoint,
 		})
 	}
 
