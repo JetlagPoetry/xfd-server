@@ -904,9 +904,6 @@ func (s *OrderService) checkOrderNormalInfo(ctx *gin.Context, req types.CreateOr
 	if *productVariant.Stock < shoppingCart.Quantity {
 		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("product %d stock not enough,please check shopping cart %d,name is %s", shoppingCart.ProductVariantID, shoppingCart.ID, goods.Name))
 	}
-	if len(req.Code) == 0 {
-		return nil, nil, nil, nil, nil, nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("missing param code"))
-	}
 	return user, userAddress, shoppingCart, goods, productVariant, goodUser, nil
 }
 

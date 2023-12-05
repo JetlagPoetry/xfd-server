@@ -46,7 +46,7 @@ type CreateOrderReq struct {
 	UserAddressID  int    `json:"userAddressID" binding:"required"`
 	ShoppingCartID int32  `json:"shoppingCartID" binding:"required"`
 	Remark         string `json:"remark"`
-	Code           string `json:"code"` // 获取openid
+	Code           string `json:"code"  binding:"required"` // 获取openid
 }
 
 type CreateOrderResp struct {
