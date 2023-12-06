@@ -66,10 +66,10 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	if len(req.Code) == 0 {
-		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
-		return
-	}
+	//if  len(req.Code) == 0{
+	//	c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+	//	return
+	//}
 
 	resp, xErr = h.userService.Login(c, req)
 	if xErr != nil {
