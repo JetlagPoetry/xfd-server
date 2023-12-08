@@ -21,6 +21,7 @@ type SupplyService struct {
 	quoteDao    *dao.OrderQuoteDao
 	userDao     *dao.UserDao
 	orderDao    *dao.OrderDao
+	goodsDao    *dao.GoodsDao
 }
 
 func NewSupplyService() *SupplyService {
@@ -29,6 +30,7 @@ func NewSupplyService() *SupplyService {
 		quoteDao:    dao.NewOrderQuoteDao(),
 		userDao:     dao.NewUserDao(),
 		orderDao:    dao.NewOrderDao(),
+		goodsDao:    dao.NewGoodsDao(),
 	}
 }
 
@@ -89,6 +91,9 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPur
 			CategoryNameA: category[int32(purchase.CategoryA)].Name,
 			CategoryNameB: category[int32(purchase.CategoryB)].Name,
 			CategoryNameC: category[int32(purchase.CategoryC)].Name,
+			CategoryA:     purchase.CategoryA,
+			CategoryB:     purchase.CategoryB,
+			CategoryC:     purchase.CategoryC,
 			CategoryName:  purchase.CategoryName,
 			Period:        purchase.Period,
 			Quantity:      purchase.Quantity,
@@ -125,19 +130,25 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotes
 
 	list := make([]*types.PurchaseQuote, 0)
 	for _, quote := range quoteList {
-		list = append(list, &types.PurchaseQuote{
-			QuoteID:    int(quote.ID),
-			OrderID:    int(purchaseOrder.ID),
-			GoodsID:    quote.GoodsID,
-			GoodsURL:   "", // todo
-			GoodsName:  "",
+
+		newQuote := &types.PurchaseQuote{
+			QuoteID: int(quote.ID),
+			OrderID: int(purchaseOrder.ID),
+			GoodsID: quote.GoodsID,
+
 			Price:      quote.Price.Round(2).String(),
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),
 			UserID:     userID,
 			UserName:   user.Username,
 			UserAvatar: user.AvatarURL,
-		})
+		}
+		goods, err := s.goodsDao.GetGoodsByGoodsID(ctx, int32(quote.GoodsID))
+		if err == nil && goods != nil {
+			newQuote.GoodsURL = goods.GoodsFrontImage
+			newQuote.GoodsName = goods.Name
+		}
+		list = append(list, newQuote)
 	}
 	return &types.SupplyGetQuotesResp{List: list}, nil
 }

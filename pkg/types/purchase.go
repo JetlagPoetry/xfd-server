@@ -17,6 +17,9 @@ type PurchaseOrder struct {
 	CategoryNameA string                    `json:"categoryNameA"`
 	CategoryNameB string                    `json:"categoryNameB"`
 	CategoryNameC string                    `json:"categoryNameC"`
+	CategoryA     int                       `json:"categoryA"`
+	CategoryB     int                       `json:"categoryB"`
+	CategoryC     int                       `json:"categoryC"`
 	CategoryName  string                    `json:"categoryName"`
 	Period        model.PurchasePeriod      `json:"period"`
 	Quantity      int                       `json:"quantity"`
