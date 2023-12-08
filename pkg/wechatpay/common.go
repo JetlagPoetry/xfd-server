@@ -2,6 +2,7 @@ package wechatpay
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,7 +36,12 @@ func GetWxOpenID(ctx context.Context, code string) (*types.WxOpenIDResp, xerr.XE
 		log.Printf("[WxService] GetWxOpenID  called, url=%s, resp=%v, err=%v\n", fullURL, utils.ToJson(result), err)
 	}()
 
-	resp, err := http.Get(fullURL)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: tr}
+	resp, err := client.Get(fullURL)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorCallApi, err)
 	}
