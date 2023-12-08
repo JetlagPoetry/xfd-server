@@ -33,7 +33,7 @@ func GetWxOpenID(ctx context.Context, code string) (*types.WxOpenIDResp, xerr.XE
 	fullURL := fmt.Sprintf("%s?appid=%s&secret=%s&grant_type=%s&js_code=%s", url, appID, secret, grantType, code)
 
 	defer func() {
-		log.Printf("[WxService] GetWxOpenID  called, url=%s, resp=%v, err=%v\n", fullURL, utils.ToJson(result), err)
+		log.Printf("[WxService] GetWxOpenID called, url=%s, resp=%v, err=%v\n", fullURL, utils.ToJson(result), err)
 	}()
 
 	tr := &http.Transport{

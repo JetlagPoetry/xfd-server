@@ -506,14 +506,14 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 }
 
 func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) (*jsapi.PrepayWithRequestPaymentResponse, xerr.XErr) {
-	// 请求wx预付单，保存
-	openResp, xErr := wechatpay.GetWxOpenID(ctx, code)
-	if xErr != nil {
-		return nil, xErr
-	}
+	//// 获取openid
+	//openResp, xErr := wechatpay.GetWxOpenID(ctx, code)
+	//if xErr != nil {
+	//	return nil, xErr
+	//}
 
 	// 请求wx预付单，保存
-	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "艺图小程序商城", openResp.OpenID,
+	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "艺图小程序商城", "oXGaj6w0W6FFHmsyWHzcRWGO9pSQ",
 		wxPrice.Mul(decimal.NewFromInt(100)).Floor().IntPart())
 	if xErr != nil {
 		return nil, xErr
