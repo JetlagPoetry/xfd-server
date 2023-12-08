@@ -383,57 +383,79 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	if user == nil {
 		return nil, false, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
 	}
-	if user.Point.Equals(decimal.Zero) {
-		return nil, false, xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
-	}
+	//if user.Point.Equals(decimal.Zero) {
+	//	return nil, false, xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
+	//}
+	//pointPrice, wxPrice := decimal.Zero, decimal.Zero
+	//totalPrice := order.TotalPrice
+	//payWx := false
+	//var payData *jsapi.PrepayWithRequestPaymentResponse
+	//payedAt := time.Now()
+	//if user.Point.GreaterThanOrEqual(totalPrice) {
+	//	// 只用积分支付
+	//	pointPrice = totalPrice
+	//	wxPrice = decimal.Zero
+	//	xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
+	//	if xErr != nil {
+	//		return nil, false, xErr
+	//	}
+	//	updateValue := &model.OrderInfo{
+	//		PointPrice: totalPrice,
+	//		PayedAt:    &payedAt,
+	//		Status:     enum.OderInfoPaidSuccess,
+	//	}
+	//	xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
+	//	if xrr != nil {
+	//		return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
+	//	}
+	//} else {
+	//	// 积分+微信支付
+	//	payWx = true
+	//	pointPrice = user.Point
+	//	wxPrice = totalPrice.Sub(user.Point)
+	//
+	//	xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
+	//	if xErr != nil {
+	//		return nil, false, xErr
+	//	}
+	//	payData, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
+	//	if xErr != nil {
+	//		return nil, false, xErr
+	//	}
+	//	updateValue := &model.OrderInfo{
+	//		PointPrice: pointPrice,
+	//		WxPrice:    wxPrice,
+	//		Status:     enum.OrderInfoPaidWaiting,
+	//		TradeNo:    *payData.PrepayId,
+	//	}
+	//	xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
+	//	if xrr != nil {
+	//		return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
+	//	}
+	//}
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	totalPrice := order.TotalPrice
 	payWx := false
 	var payData *jsapi.PrepayWithRequestPaymentResponse
-	payedAt := time.Now()
-	if user.Point.GreaterThanOrEqual(totalPrice) {
-		// 只用积分支付
-		pointPrice = totalPrice
-		wxPrice = decimal.Zero
-		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
-		if xErr != nil {
-			return nil, false, xErr
-		}
-		updateValue := &model.OrderInfo{
-			PointPrice: totalPrice,
-			PayedAt:    &payedAt,
-			Status:     enum.OderInfoPaidSuccess,
-		}
-		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
-		if xrr != nil {
-			return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
-		}
-	} else {
-		// 积分+微信支付
-		payWx = true
-		pointPrice = user.Point
-		wxPrice = totalPrice.Sub(user.Point)
+	// 积分+微信支付
+	payWx = true
+	pointPrice = user.Point
+	wxPrice = totalPrice.Sub(user.Point)
 
-		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
-		if xErr != nil {
-			return nil, false, xErr
-		}
-		payData, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
-		if xErr != nil {
-			return nil, false, xErr
-		}
-		updateValue := &model.OrderInfo{
-			PointPrice: pointPrice,
-			WxPrice:    wxPrice,
-			Status:     enum.OrderInfoPaidWaiting,
-			TradeNo:    *payData.PrepayId,
-		}
-		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
-		if xrr != nil {
-			return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
-		}
+	payData, xErr := s.payWithWx(ctx, code, order, user, wxPrice)
+	if xErr != nil {
+		return nil, false, xErr
 	}
-
+	updateValue := &model.OrderInfo{
+		PointPrice: pointPrice,
+		WxPrice:    wxPrice,
+		Status:     enum.OrderInfoPaidWaiting,
+		TradeNo:    *payData.PrepayId,
+	}
+	xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
+	if xrr != nil {
+		return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
+	}
 	return payData, payWx, nil
 }
 
@@ -506,14 +528,14 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 }
 
 func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.OrderInfo, user *model.User, wxPrice decimal.Decimal) (*jsapi.PrepayWithRequestPaymentResponse, xerr.XErr) {
-	//// 获取openid
-	//openResp, xErr := wechatpay.GetWxOpenID(ctx, code)
-	//if xErr != nil {
-	//	return nil, xErr
-	//}
+	// 获取openid
+	openResp, xErr := wechatpay.GetWxOpenID(ctx, code)
+	if xErr != nil {
+		return nil, xErr
+	}
 
 	// 请求wx预付单，保存
-	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "艺图小程序商城", "oXGaj6w0W6FFHmsyWHzcRWGO9pSQ",
+	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "艺图小程序商城", openResp.OpenID,
 		wxPrice.Mul(decimal.NewFromInt(100)).Floor().IntPart())
 	if xErr != nil {
 		return nil, xErr
