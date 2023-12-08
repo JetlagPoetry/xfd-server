@@ -368,21 +368,21 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	}
 	defer redis.Unlock(fmt.Sprintf("user-point:user_id:%s", user.UserID))
 
-	var (
-		org *model.Organization
-		err error
-	)
-	org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
-	if err != nil {
-		return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
-	if err != nil {
-		return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if user == nil {
-		return nil, false, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
-	}
+	//var (
+	//	org *model.Organization
+	//	err error
+	//)
+	//org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+	//if err != nil {
+	//	return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
+	//user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+	//if err != nil {
+	//	return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
+	//}
+	//if user == nil {
+	//	return nil, false, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
+	//}
 	//if user.Point.Equals(decimal.Zero) {
 	//	return nil, false, xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
 	//}
@@ -1366,7 +1366,7 @@ func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo
 		return xerr.WithCode(xerr.ErrorDatabase, errors.New("order has been processed"))
 	}
 
-	cErr := wechatpay.CancelOrder(ctx, order.TradeNo)
+	cErr := wechatpay.CancelOrder(ctx, order.OrderSn)
 	if cErr != nil {
 		return cErr
 	}
