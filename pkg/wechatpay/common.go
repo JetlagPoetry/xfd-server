@@ -81,7 +81,7 @@ func CreateOrder(ctx context.Context, orderSn, desc, openID string, price int64)
 
 	// 得到prepay_id，以及调起支付所需的参数和签名
 	req = jsapi.PrepayRequest{
-		Appid:       core.String(os.Getenv("APP_ID")),
+		Appid:       core.String(os.Getenv("WECHAT_APP_ID")),
 		Mchid:       core.String(os.Getenv("WC_ID")),
 		Description: core.String(desc),
 		OutTradeNo:  core.String(orderSn),
