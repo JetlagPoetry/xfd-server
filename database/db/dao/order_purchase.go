@@ -15,9 +15,9 @@ func NewOrderPurchaseDao() *OrderPurchaseDao {
 }
 
 func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, categoryA, categoryB, categoryC int, like string) (list []*model.OrderPurchase, count int64, err error) {
-	sql := db.Get().Model(&model.OrderPurchase{})
+	sql := db.Get().Model(&model.OrderPurchase{}).Where("status = ?", model.OrderPurchaseStatusSubmitted)
 	if len(like) > 0 {
-		sql = sql.Where("category_name LIKE ? AND status = 1", "%"+like+"%")
+		sql = sql.Where("category_name LIKE ?", "%"+like+"%")
 	} else if categoryA > 0 && categoryB > 0 {
 		sql = sql.Where("category_a = ? AND category_b = ? AND status = 1", categoryA, categoryB)
 
