@@ -91,25 +91,25 @@ func StartCron() {
 		log.Println("[Cron] SetCategoryCache failed, err=", err)
 	}
 
-	//_, err = c.AddFunc("*/5 * * * * ?", func() {
-	//	//log.Println("[Cron] BatchPaymentLookup start")
-	//
-	//	ok := redis.Lock("cron-set-payment-lookup", time.Minute*10)
-	//	if !ok {
-	//		return
-	//	}
-	//	defer redis.Unlock("cron-set-payment-lookup")
-	//
-	//	err := service.NewOrderService().BatchPaymentLookup(context.Background())
-	//	if err != nil {
-	//		log.Println("[Cron] BatchPaymentLookup failed, err=", err)
-	//		return
-	//	}
-	//	log.Println("[Cron] BatchPaymentLookup success")
-	//})
-	//if err != nil {
-	//	log.Println("[Cron] BatchPaymentLookup failed, err=", err)
-	//}
+	_, err = c.AddFunc("*/5 * * * * ?", func() {
+		//log.Println("[Cron] BatchPaymentLookup start")
+
+		ok := redis.Lock("cron-set-payment-lookup", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron-set-payment-lookup")
+
+		err := service.NewOrderService().BatchPaymentLookup(context.Background())
+		if err != nil {
+			log.Println("[Cron] BatchPaymentLookup failed, err=", err)
+			return
+		}
+		log.Println("[Cron] BatchPaymentLookup success")
+	})
+	if err != nil {
+		log.Println("[Cron] BatchPaymentLookup failed, err=", err)
+	}
 
 	_, err = c.AddFunc("*/30 * * * * ?", func() {
 		//log.Println("[Cron] BatchPointConfirm start")

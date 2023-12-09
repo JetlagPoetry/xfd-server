@@ -1326,9 +1326,13 @@ func (s *OrderService) paymentLookup(ctx context.Context, order *model.OrderInfo
 			return 0, cErr
 		}
 		return status, nil
-	}
-	if cancel || (order.Status == enum.OrderInfoPaidWaiting && order.CreatedAt.Add(time.Minute*consts.WECHAT_PAY_EXPIRE_MINUTE).Before(time.Now())) {
-		cErr = s.paymentCancel(ctx, order)
+	} else if *resp.TradeState == consts.WECHAT_PAY_TRADE_CLOSED {
+		cErr = s.paymentCancel(ctx, order, false)
+		if cErr != nil {
+			return 0, cErr
+		}
+	} else if cancel || (order.Status == enum.OrderInfoPaidWaiting && order.CreatedAt.Add(time.Minute*consts.WECHAT_PAY_EXPIRE_MINUTE).Before(time.Now())) {
+		cErr = s.paymentCancel(ctx, order, true)
 		if cErr != nil {
 			return 0, cErr
 		}
@@ -1361,14 +1365,15 @@ func (s *OrderService) paymentConfirm(ctx context.Context, req *payments.Transac
 	return enum.OderInfoPaidSuccess, nil
 }
 
-func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo) xerr.XErr {
+func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo, needCancel bool) xerr.XErr {
 	if order.Status != enum.OrderInfoPaidWaiting {
 		return xerr.WithCode(xerr.ErrorDatabase, errors.New("order has been processed"))
 	}
 
-	cErr := wechatpay.CancelOrder(ctx, order.OrderSn)
-	if cErr != nil {
-		return cErr
+	// update order status
+	err := s.orderDao.UpdateOrderInfoByID(ctx, order.ID, &model.OrderInfo{Status: enum.OderInfoClosed})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
 	// 恢复库存
@@ -1394,6 +1399,13 @@ func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo
 	err = s.revertPoint(ctx, user, order.PointPrice, int(order.ID))
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	if needCancel {
+		cErr := wechatpay.CancelOrder(ctx, order.OrderSn)
+		if cErr != nil {
+			return cErr
+		}
 	}
 
 	return nil
