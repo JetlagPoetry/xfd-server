@@ -25,13 +25,15 @@ func (d *OrderPurchaseDao) List(ctx context.Context, page types.PageRequest, cat
 			sql = sql.Where("category_c = ?", categoryC)
 		}
 	}
-	if err = sql.Order("id desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
 
 	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
+
+	if err = sql.Order("id desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
 	return list, count, nil
 }
 
