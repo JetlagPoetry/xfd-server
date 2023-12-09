@@ -136,6 +136,14 @@ type UserDeleteUserReq struct {
 type UserDeleteUserResp struct {
 }
 
+type UserImSigReq struct {
+}
+
+type UserImSigResp struct {
+	UserSig   string `json:"userSig"`
+	ExpiredAt int64  `json:"expiredAt"`
+}
+
 type UserGetAddressListReq struct {
 }
 

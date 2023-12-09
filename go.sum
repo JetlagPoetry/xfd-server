@@ -370,6 +370,8 @@ github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.793 h1:tcQvMPu
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.793/go.mod h1:4lLJuD4n9N8wWvYtIgFnkTlp08GMv5aY4z+ZiHTiQUU=
 github.com/tencentyun/cos-go-sdk-v5 v0.7.45 h1:5/ZGOv846tP6+2X7w//8QjLgH2KcUK+HciFbfjWquFU=
 github.com/tencentyun/cos-go-sdk-v5 v0.7.45/go.mod h1:DH9US8nB+AJXqwu/AMOrCFN1COv3dpytXuJWHgdg7kE=
+github.com/tencentyun/tls-sig-api-v2-golang v1.3.0 h1:mW4onVqOP6MqkJtTay74Tch6NvjwQRXeCuhUC/p6YYk=
+github.com/tencentyun/tls-sig-api-v2-golang v1.3.0/go.mod h1:0L1MSijyEq6a74xZ02h0qKfN8y6RcvDiNabIZWXereE=
 github.com/ugorji/go v1.1.7 h1:/68gy2h+1mWMrwZFeD1kQialdSzAb432dtpeJ42ovdo=
 github.com/ugorji/go v1.1.7/go.mod h1:kZn38zHttfInRq0xu/PH0az30d+z6vm202qpg1oXVMw=
 github.com/ugorji/go/codec v1.1.7 h1:2SvQaVZ1ouYrrKKwoSk2pzd4A9evlKJb9oTL+OaLUSs=

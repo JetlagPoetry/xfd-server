@@ -263,6 +263,23 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
+func (h *UserHandler) ImSig(c *gin.Context) {
+	var (
+		req  types.UserImSigReq
+		resp *types.UserImSigResp
+
+		xErr xerr.XErr
+	)
+
+	resp, xErr = h.userService.ImSig(c, req)
+	if xErr != nil {
+		log.Println("[UserHandler] ImSig failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
 func (h *UserHandler) GetAddressList(c *gin.Context) {
 	var (
 		req  types.UserGetAddressListReq

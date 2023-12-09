@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	goredis "github.com/go-redis/redis"
+	"github.com/tencentyun/tls-sig-api-v2-golang/tencentyun"
 	"gorm.io/gorm"
+	"os"
+	"strconv"
 	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/dao"
@@ -13,6 +16,7 @@ import (
 	"xfd-backend/database/redis"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/consts"
+	"xfd-backend/pkg/im"
 	"xfd-backend/pkg/jwt"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
@@ -148,6 +152,12 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 			Username: utils.GenUsername(phone),
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
+			return nil, err
+		}
+		// 注册时，在腾讯云im初始化
+
+		_, err = im.ImportAccount(user.UserID)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -469,6 +479,29 @@ func (s *UserService) DeleteUser(ctx context.Context, req types.UserDeleteUserRe
 	}
 
 	return &types.UserDeleteUserResp{}, nil
+}
+
+func (s *UserService) ImSig(ctx context.Context, req types.UserImSigReq) (*types.UserImSigResp, xerr.XErr) {
+	currentUserID := common.GetUserID(ctx)
+	currentUser, err := s.userDao.GetByUserID(ctx, currentUserID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	imAppID, err := strconv.Atoi(os.Getenv("IM_APP_ID"))
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+	}
+	imSecret := os.Getenv("IM_APP_SECRET")
+	userSig, err := tencentyun.GenUserSig(imAppID, imSecret, currentUser.UserID, 86400)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
+	}
+
+	return &types.UserImSigResp{
+		UserSig:   userSig,
+		ExpiredAt: time.Now().Add(time.Second * 86400).Unix(),
+	}, nil
 }
 
 func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddressListReq) (*types.UserGetAddressListResp, xerr.XErr) {
