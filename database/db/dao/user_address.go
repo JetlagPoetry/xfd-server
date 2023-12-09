@@ -17,13 +17,14 @@ func NewUserAddressDao() *UserAddressDao {
 func (r *UserAddressDao) Lists(ctx context.Context, limit, offset int) (list []*model.UserAddress, count int64, err error) {
 	sql := db.GetRepo().GetDB(ctx).Model(&model.UserAddress{}).Where("")
 
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
 	if err = sql.Limit(limit).Offset(offset).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
 	return list, count, nil
 }
 

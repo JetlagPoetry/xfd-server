@@ -23,13 +23,14 @@ func (d *OrganizationDao) Lists(ctx context.Context, page types.PageRequest, nam
 		where := "name LIKE '%" + name + "%'"
 		sql = sql.Where(where)
 	}
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
 	if err = sql.Offset(page.Offset()).Limit(page.Limit()).Order("id DESC").Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
 	return list, count, nil
 }
 

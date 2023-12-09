@@ -27,13 +27,14 @@ func (d *PointRecordDao) List(ctx context.Context, page types.PageRequest, categ
 			sql = sql.Where("category_c = ?", categoryC)
 		}
 	}
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
 	return list, count, nil
 }
 

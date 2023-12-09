@@ -25,14 +25,14 @@ func (d *UserVerifyDao) ListUserVerifyByUserID(ctx context.Context, userID strin
 
 func (d *UserVerifyDao) List(ctx context.Context, page types.PageRequest) (list []*model.UserVerify, count int64, err error) {
 	sql := db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Order("updated_at desc")
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
 	err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
 	return list, count, nil
 }
 

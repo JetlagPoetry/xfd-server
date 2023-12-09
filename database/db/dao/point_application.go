@@ -22,13 +22,14 @@ func (d *PointApplicationDao) Lists(ctx context.Context, page types.PageRequest,
 	if orgID > 0 {
 		sql = sql.Where("organization_id = ? ", orgID)
 	}
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
 	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
 	return list, count, nil
 }
 
