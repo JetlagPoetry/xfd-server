@@ -59,13 +59,15 @@ func (d *OrderPurchaseDao) ListByUser(ctx context.Context, page types.PageReques
 	if status != 0 {
 		sql = sql.Where("status = ?", status)
 	}
-	if err = sql.Order("id desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
-		return nil, 0, err
-	}
 
 	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
+
+	if err = sql.Order("id desc").Offset(page.Offset()).Limit(page.Limit()).Find(&list).Error; err != nil {
+		return nil, 0, err
+	}
+
 	return list, count, nil
 }
 
