@@ -41,7 +41,7 @@ func NewRouter() *gin.Engine {
 		userGroup.POST("/assignAdmin", handler.User.AssignAdmin)
 		userGroup.GET("/getAdmins", handler.User.GetAdmins)
 		userGroup.POST("/deleteUser", handler.User.DeleteUser)
-		userGroup.GET("/imSig", handler.User.)
+		userGroup.GET("/imSig", handler.User.ImSig)
 
 		userGroup.GET("/getAddressList", handler.User.GetAddressList)
 		userGroup.GET("/getDefaultAddress", handler.User.GetDefaultAddress)
