@@ -1005,6 +1005,7 @@ func (s *OrgService) GetAccountVerifyList(ctx context.Context, req types.GetAcco
 			Comment:          verify.Comment,
 			VerifyTime:       verify.VerifyTime.Unix(),
 			CreateTime:       verify.CreatedAt.Unix(),
+			VerifyUsername:   verify.VerifyUsername,
 		})
 	}
 

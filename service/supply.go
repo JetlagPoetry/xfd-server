@@ -199,8 +199,10 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.Supply
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	orderIDs := make([]int, 0)
+	quoteMap := make(map[int]*model.OrderQuote)
 	for _, quote := range quoteList {
 		orderIDs = append(orderIDs, quote.PurchaseOrderID)
+		quoteMap[quote.PurchaseOrderID] = quote
 	}
 
 	purchaseList, count, err := s.purchaseDao.ListByOrderIDs(ctx, req.PageRequest, orderIDs, req.Status)
@@ -210,16 +212,27 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.Supply
 
 	list := make([]*types.PurchaseOrder, 0)
 	for _, purchase := range purchaseList {
-		list = append(list, &types.PurchaseOrder{
-			OrderID:      int(purchase.ID),
-			CategoryName: purchase.CategoryName,
-			Period:       purchase.Period,
-			Quantity:     purchase.Quantity,
-			Unit:         purchase.Unit,
-			Requirement:  purchase.Requirement,
-			UserID:       purchase.UserID,
-			SubmitTime:   purchase.CreatedAt.Unix(),
-		})
+		quote := quoteMap[int(purchase.ID)]
+
+		newOrder := &types.PurchaseOrder{
+			OrderID:        int(purchase.ID),
+			CategoryName:   purchase.CategoryName,
+			Period:         purchase.Period,
+			Quantity:       purchase.Quantity,
+			Unit:           purchase.Unit,
+			Requirement:    purchase.Requirement,
+			UserID:         purchase.UserID,
+			SubmitTime:     purchase.CreatedAt.Unix(),
+			PurchaseUserID: purchase.UserID,
+			Status:         purchase.Status,
+			Price:          quote.Price,
+		}
+		purchaseUser, _ := s.userDao.GetByUserID(ctx, purchase.UserID)
+		if purchaseUser != nil {
+			newOrder.PurchaseUserAvatar = purchaseUser.AvatarURL
+			newOrder.PurchaseUsername = purchaseUser.Username
+		}
+		list = append(list, newOrder)
 	}
 	return &types.SupplyGetQuotedPurchasesResp{List: list, TotalNum: count}, nil
 }

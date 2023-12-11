@@ -131,6 +131,7 @@ type AccountVerifyRecord struct {
 	Comment          string                 `json:"comment"`
 	VerifyTime       int64                  `json:"verifyTime"`
 	CreateTime       int64                  `json:"createTime"`
+	VerifyUsername   string                 `json:"verifyUsername"`
 }
 
 type GetOrganizationsReq struct {
