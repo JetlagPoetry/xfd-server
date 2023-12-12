@@ -16,7 +16,7 @@ type PurchaseGetPurchasesResp struct {
 }
 
 type PurchaseOrder struct {
-	OrderID            int                       `json:"orderId"`
+	OrderID            int                       `json:"orderID"`
 	CategoryNameA      string                    `json:"categoryNameA"`
 	CategoryNameB      string                    `json:"categoryNameB"`
 	CategoryNameC      string                    `json:"categoryNameC"`

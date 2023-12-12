@@ -682,6 +682,7 @@ func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		list = append(list, &types.PointOrder{
+			ID:               int(apply.ID),
 			OrganizationName: org.Name,
 			OrganizationCode: org.Code,
 			Comment:          apply.Comment,

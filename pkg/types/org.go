@@ -65,6 +65,7 @@ type OrgClearPointResp struct {
 }
 
 type PointOrder struct {
+	ID               int                          `json:"id"`
 	OrganizationName string                       `json:"organizationName"`
 	OrganizationCode string                       `json:"organizationCode"`
 	Comment          string                       `json:"comment"`
