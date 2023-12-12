@@ -16,30 +16,27 @@ type PurchaseGetPurchasesResp struct {
 }
 
 type PurchaseOrder struct {
-	OrderID            int                       `json:"orderID"`
-	CategoryNameA      string                    `json:"categoryNameA"`
-	CategoryNameB      string                    `json:"categoryNameB"`
-	CategoryNameC      string                    `json:"categoryNameC"`
-	CategoryA          int                       `json:"categoryA"`
-	CategoryB          int                       `json:"categoryB"`
-	CategoryC          int                       `json:"categoryC"`
-	CategoryName       string                    `json:"categoryName"`
-	Period             model.PurchasePeriod      `json:"period"`
-	Quantity           int                       `json:"quantity"`
-	Unit               string                    `json:"unit"`
-	Requirement        string                    `json:"requirement"`
-	UserID             string                    `json:"userID"`
-	UserName           string                    `json:"userName"`
-	UserAvatar         string                    `json:"userAvatar"`
-	SubmitTime         int64                     `json:"submitTime"`
-	HasQuote           bool                      `json:"hasQuote"`
-	TotalQuote         int                       `json:"totalQuote"`
-	NewQuote           int                       `json:"newQuote"`
-	Status             model.OrderPurchaseStatus `json:"status"`
-	Price              decimal.Decimal           `json:"price"`
-	PurchaseUserID     string                    `json:"purchaseUserID"`
-	PurchaseUsername   string                    `json:"purchaseUsername"`
-	PurchaseUserAvatar string                    `json:"purchaseUserAvatar"`
+	OrderID       int                       `json:"orderID"`
+	CategoryNameA string                    `json:"categoryNameA"`
+	CategoryNameB string                    `json:"categoryNameB"`
+	CategoryNameC string                    `json:"categoryNameC"`
+	CategoryA     int                       `json:"categoryA"`
+	CategoryB     int                       `json:"categoryB"`
+	CategoryC     int                       `json:"categoryC"`
+	CategoryName  string                    `json:"categoryName"`
+	Period        model.PurchasePeriod      `json:"period"`
+	Quantity      int                       `json:"quantity"`
+	Unit          string                    `json:"unit"`
+	Requirement   string                    `json:"requirement"`
+	UserID        string                    `json:"userID"`
+	UserName      string                    `json:"userName"`
+	UserAvatar    string                    `json:"userAvatar"`
+	SubmitTime    int64                     `json:"submitTime"`
+	HasQuote      bool                      `json:"hasQuote"`
+	TotalQuote    int                       `json:"totalQuote"`
+	NewQuote      int                       `json:"newQuote"`
+	Status        model.OrderPurchaseStatus `json:"status"`
+	Price         decimal.Decimal           `json:"price"`
 }
 
 type PurchaseSubmitOrderReq struct {

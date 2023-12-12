@@ -215,22 +215,21 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.Supply
 		quote := quoteMap[int(purchase.ID)]
 
 		newOrder := &types.PurchaseOrder{
-			OrderID:        int(purchase.ID),
-			CategoryName:   purchase.CategoryName,
-			Period:         purchase.Period,
-			Quantity:       purchase.Quantity,
-			Unit:           purchase.Unit,
-			Requirement:    purchase.Requirement,
-			UserID:         purchase.UserID,
-			SubmitTime:     purchase.CreatedAt.Unix(),
-			PurchaseUserID: purchase.UserID,
-			Status:         purchase.Status,
-			Price:          quote.Price,
+			OrderID:      int(purchase.ID),
+			CategoryName: purchase.CategoryName,
+			Period:       purchase.Period,
+			Quantity:     purchase.Quantity,
+			Unit:         purchase.Unit,
+			Requirement:  purchase.Requirement,
+			UserID:       purchase.UserID,
+			SubmitTime:   purchase.CreatedAt.Unix(),
+			Status:       purchase.Status,
+			Price:        quote.Price,
 		}
 		purchaseUser, _ := s.userDao.GetByUserID(ctx, purchase.UserID)
 		if purchaseUser != nil {
-			newOrder.PurchaseUserAvatar = purchaseUser.AvatarURL
-			newOrder.PurchaseUsername = purchaseUser.Username
+			newOrder.UserAvatar = purchaseUser.AvatarURL
+			newOrder.UserName = purchaseUser.Username
 		}
 		list = append(list, newOrder)
 	}
