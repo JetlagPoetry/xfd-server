@@ -574,7 +574,6 @@ func (s *OrgService) processPointExpired(tx *gorm.DB, apply *model.PointApplicat
 			Status:             model.PointRecordStatusConfirmed,
 			Comment:            consts.PointCommentExpire,
 		})
-
 	}
 
 	// 修改该公司积分

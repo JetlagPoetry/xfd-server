@@ -7,6 +7,7 @@ import (
 	goredis "github.com/go-redis/redis"
 	"github.com/tencentyun/tls-sig-api-v2-golang/tencentyun"
 	"gorm.io/gorm"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -54,40 +55,22 @@ func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (
 	return &types.UserSendCodeResp{}, nil
 }
 
-func (s *UserService) test(tx *gorm.DB, req types.UserSendCodeReq) error {
-	s.userDao.CreateInTx(tx, &model.User{
-		UserID:   "testtesttesttransaction",
-		Phone:    "10000000000",
-		UserRole: 1,
-		Username: "123",
-	})
-
-	if req.Phone == "13204026660" {
-		return errors.New("123")
+func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
+	code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
+	if err == goredis.Nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
+	} else if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorRedis, err)
 	}
 
-	s.userDao.UpdateByUserIDInTx(tx, "testtesttesttransaction", &model.User{OrganizationID: 3})
-	return nil
-}
-
-func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
-	// todo recover
-	//code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
-	//if err == goredis.Nil {
-	//	return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
-	//} else if err != nil {
-	//	return nil, xerr.WithCode(xerr.ErrorRedis, err)
-	//}
-	//
-	//if req.Code != code {
-	//	log.Println("[UserService] Login failed, code=", code, ", req.Code=", req.Code)
-	//	return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
-	//}
+	if req.Code != code {
+		log.Println("[UserService] Login failed, code=", code, ", req.Code=", req.Code)
+		return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
+	}
 
 	resp := &types.UserLoginResp{}
 	var (
 		user *model.User
-		err  error
 	)
 	if req.Source == types.SourceMiniApp {
 		// 开始事务

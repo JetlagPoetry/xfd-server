@@ -368,93 +368,70 @@ func (s *OrderService) payForOrder(ctx context.Context, code string, user *model
 	}
 	defer redis.Unlock(fmt.Sprintf("user-point:user_id:%s", user.UserID))
 
-	//var (
-	//	org *model.Organization
-	//	err error
-	//)
-	//org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
-	//if err != nil {
-	//	return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
-	//}
-	//user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
-	//if err != nil {
-	//	return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
-	//}
-	//if user == nil {
-	//	return nil, false, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
-	//}
-	//if user.Point.Equals(decimal.Zero) {
-	//	return nil, false, xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
-	//}
-	//pointPrice, wxPrice := decimal.Zero, decimal.Zero
-	//totalPrice := order.TotalPrice
-	//payWx := false
-	//var payData *jsapi.PrepayWithRequestPaymentResponse
-	//payedAt := time.Now()
-	//if user.Point.GreaterThanOrEqual(totalPrice) {
-	//	// 只用积分支付
-	//	pointPrice = totalPrice
-	//	wxPrice = decimal.Zero
-	//	xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
-	//	if xErr != nil {
-	//		return nil, false, xErr
-	//	}
-	//	updateValue := &model.OrderInfo{
-	//		PointPrice: totalPrice,
-	//		PayedAt:    &payedAt,
-	//		Status:     enum.OderInfoPaidSuccess,
-	//	}
-	//	xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
-	//	if xrr != nil {
-	//		return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
-	//	}
-	//} else {
-	//	// 积分+微信支付
-	//	payWx = true
-	//	pointPrice = user.Point
-	//	wxPrice = totalPrice.Sub(user.Point)
-	//
-	//	xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
-	//	if xErr != nil {
-	//		return nil, false, xErr
-	//	}
-	//	payData, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
-	//	if xErr != nil {
-	//		return nil, false, xErr
-	//	}
-	//	updateValue := &model.OrderInfo{
-	//		PointPrice: pointPrice,
-	//		WxPrice:    wxPrice,
-	//		Status:     enum.OrderInfoPaidWaiting,
-	//		TradeNo:    *payData.PrepayId,
-	//	}
-	//	xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
-	//	if xrr != nil {
-	//		return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
-	//	}
-	//}
+	var (
+		org *model.Organization
+		err error
+	)
+	org, err = s.orgDao.GetByIDForUpdateCTX(ctx, user.OrganizationID)
+	if err != nil {
+		return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	user, err = s.userDao.GetByUserIDForUpdateCTX(ctx, user.UserID)
+	if err != nil {
+		return nil, false, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if user == nil {
+		return nil, false, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
+	}
+	if user.Point.Equals(decimal.Zero) {
+		return nil, false, xerr.WithCode(xerr.ErrorUserPointEmpty, errors.New("user do not have point"))
+	}
 	pointPrice, wxPrice := decimal.Zero, decimal.Zero
 	totalPrice := order.TotalPrice
 	payWx := false
 	var payData *jsapi.PrepayWithRequestPaymentResponse
-	// 积分+微信支付
-	payWx = true
-	pointPrice = user.Point
-	wxPrice = totalPrice.Sub(user.Point)
+	payedAt := time.Now()
+	if user.Point.GreaterThanOrEqual(totalPrice) {
+		// 只用积分支付
+		pointPrice = totalPrice
+		wxPrice = decimal.Zero
+		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
+		if xErr != nil {
+			return nil, false, xErr
+		}
+		updateValue := &model.OrderInfo{
+			PointPrice: totalPrice,
+			PayedAt:    &payedAt,
+			Status:     enum.OderInfoPaidSuccess,
+		}
+		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
+		if xrr != nil {
+			return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
+		}
+	} else {
+		// 积分+微信支付
+		payWx = true
+		pointPrice = user.Point
+		wxPrice = totalPrice.Sub(user.Point)
 
-	payData, xErr := s.payWithWx(ctx, code, order, user, wxPrice)
-	if xErr != nil {
-		return nil, false, xErr
-	}
-	updateValue := &model.OrderInfo{
-		PointPrice: pointPrice,
-		WxPrice:    wxPrice,
-		Status:     enum.OrderInfoPaidWaiting,
-		TradeNo:    *payData.PrepayId,
-	}
-	xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
-	if xrr != nil {
-		return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
+		xErr := s.payWithPoint(ctx, order, user, org, pointPrice, payWx)
+		if xErr != nil {
+			return nil, false, xErr
+		}
+		payData, xErr = s.payWithWx(ctx, code, order, user, wxPrice)
+		if xErr != nil {
+			return nil, false, xErr
+		}
+		updateValue := &model.OrderInfo{
+			PointPrice: pointPrice,
+			WxPrice:    wxPrice,
+			Status:     enum.OrderInfoPaidWaiting,
+			TradeNo:    *payData.PrepayId,
+		}
+		xrr := s.UpdateOrderStatus(ctx, order.ID, updateValue)
+		if xrr != nil {
+			return nil, false, xerr.WithCode(xerr.ErrorDatabase, xrr)
+		}
 	}
 	return payData, payWx, nil
 }
