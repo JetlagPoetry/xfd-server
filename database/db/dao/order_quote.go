@@ -14,17 +14,6 @@ func NewOrderQuoteDao() *OrderQuoteDao {
 	return &OrderQuoteDao{}
 }
 
-func (d *OrderQuoteDao) Lists(ctx context.Context, limit, offset int) (list []*model.OrderQuote, count int64, err error) {
-	if err = db.Get().Model(&model.OrderQuote{}).Find(&list).Limit(limit).Offset(offset).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if err = db.Get().Model(&model.OrderQuote{}).Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
-	return list, count, nil
-}
-
 func (d *OrderQuoteDao) ListByUserIDAndOrderID(ctx context.Context, userID string, orderID int) (list []*model.OrderQuote, err error) {
 	err = db.Get().Model(&model.OrderQuote{}).Where("quote_user_id = ? AND purchase_order_id = ?", userID, orderID).Find(&list).Error
 	if err != nil {
@@ -43,13 +32,14 @@ func (d *OrderQuoteDao) ListByQuoteUserIDAndOrderIDs(ctx context.Context, userID
 
 func (d *OrderQuoteDao) ListByOrderID(ctx context.Context, orderID int, page types.PageRequest) (list []*model.OrderQuote, count int64, err error) {
 	sql := db.Get().Model(&model.OrderQuote{}).Where("purchase_order_id = ?", orderID)
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
 	err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error
 	if err != nil {
 		return nil, 0, err
 	}
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
+
 	return list, count, nil
 }
 

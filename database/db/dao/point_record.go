@@ -79,13 +79,14 @@ func (d *PointRecordDao) ListByUserID(ctx context.Context, page types.PageReques
 
 func (d *PointRecordDao) ListByOrgID(ctx context.Context, page types.PageRequest, orgID int) (list []*model.PointRecord, count int64, err error) {
 	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("organization_id = ? AND status = ?", orgID, model.PointRecordStatusConfirmed)
+	if err = sql.Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
+
 	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Count(&count).Error; err != nil {
-		return nil, 0, err
-	}
 	return list, count, nil
 }
 
