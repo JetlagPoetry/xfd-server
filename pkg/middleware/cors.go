@@ -29,9 +29,9 @@ func Cors() gin.HandlerFunc {
 		log.Printf("ip:[%v],domain:[%v]\n", ip, domain)
 		//c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		// 允许访问所有域
-		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Origin", "http://localhost:8000")
 		// 服务器支持的所有跨域请求的方法,为了避免浏览次请求的多次'预检'请求
-		c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE,UPDATE")
+		c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE, HEAD")
 		// header的类型
 		c.Header("Access-Control-Allow-Headers", "Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, X-XSRF-TOKEN, XSRF-TOKEN, Referer, Content-Type, Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-ResourceType, Pragma, accessToken, X-AppId, X-Signature, X-Signature-Method")
 		// 允许跨域设置	 可以返回其他子段
