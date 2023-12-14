@@ -40,7 +40,7 @@ func Cors() gin.HandlerFunc {
 		// 缓存请求信息 单位为秒
 		c.Header("Access-Control-Max-Age", "172800")
 		//	跨域请求是否需要带cookie信息 默认设置为true
-		c.Header("Access-Control-Allow-Credentials", "false")
+		c.Header("Access-Control-Allow-Credentials", "true")
 		// 设置返回格式是json
 		c.Set("content-type", "application/json")
 
