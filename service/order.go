@@ -1276,7 +1276,8 @@ func (s *OrderService) BatchPaymentLookup(ctx context.Context) xerr.XErr {
 			}
 			return nil
 		}); xErr != nil {
-			return xErr
+			log2.Println("[OrderService] paymentLookup failed, orderID=", order.ID, ", err=", xErr)
+			continue
 		}
 	}
 	return nil
@@ -1425,7 +1426,8 @@ func (s *OrderService) BatchPointConfirm(ctx context.Context) xerr.XErr {
 			}
 			return nil
 		}); xErr != nil {
-			return xErr
+			log2.Println("[OrderService] pointConfirm failed, orderID=", order.ID, ", err=", xErr)
+			continue
 		}
 	}
 	return nil
