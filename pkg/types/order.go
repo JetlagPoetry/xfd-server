@@ -259,5 +259,5 @@ type GetCustomerServiceResp struct {
 }
 
 type ExportOrderReq struct {
-	QueryOrderIDs []int `json:"ids" form:"ids"`
+	QueryOrderIDs []int `json:"ids" form:"ids" binding:"required"`
 }
