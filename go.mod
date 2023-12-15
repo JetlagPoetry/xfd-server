@@ -16,7 +16,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.793
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.793
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.45
-	github.com/tencentyun/tls-sig-api-v2-golang v1.3.0 // indirect
+	github.com/tencentyun/tls-sig-api-v2-golang v1.3.0
 	github.com/wechatpay-apiv3/wechatpay-go v0.2.18
 	github.com/xuri/excelize/v2 v2.8.0
 	gorm.io/driver/mysql v1.1.2

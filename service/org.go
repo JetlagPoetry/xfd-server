@@ -173,9 +173,10 @@ func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[s
 	}
 	userMap := make(map[string]*model.User)
 	for _, user := range list {
-		if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
-			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("已认证过身份"))
-		}
+		// 认证过身份也可以发积分的吧
+		//if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
+		//	return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("已认证过身份"))
+		//}
 		userMap[user.Phone] = user
 	}
 
