@@ -1066,36 +1066,41 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	remainList, err := s.PointRemainDao.ListValidByUserIDCTX(ctx, userID)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	var firstExpireTime, lastExpireTime time.Time
-	if len(remainList) > 0 {
-		firstExpireTime = remainList[0].EndTime
-		lastExpireTime = remainList[0].EndTime
-	}
-	for _, remain := range remainList {
-		if remain.StartTime.Before(firstExpireTime) {
-			firstExpireTime = remain.StartTime
-		}
-		if remain.EndTime.After(lastExpireTime) {
-			lastExpireTime = remain.EndTime
-		}
-	}
 	list := make([]*types.OrgMember, 0)
 	for _, user := range userList {
-		list = append(list, &types.OrgMember{
+		item := &types.OrgMember{
 			UserID:           user.UserID,
 			Name:             user.Username,
 			Phone:            user.Phone,
 			OrganizationName: user.OrganizationName,
 			Point:            user.Point.Round(2).String(),
 			CreateTime:       user.CreatedAt.Unix(),
-			FirstExpireTime:  firstExpireTime.Unix(),
-			LastExpireTime:   lastExpireTime.Unix(),
-		})
+		}
+		remainList, err := s.PointRemainDao.ListValidByUserIDCTX(ctx, user.UserID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		var firstExpireTime, lastExpireTime time.Time
+		if len(remainList) > 0 {
+			firstExpireTime = remainList[0].EndTime
+			lastExpireTime = remainList[0].EndTime
+		}
+		for _, remain := range remainList {
+			if remain.StartTime.Before(firstExpireTime) {
+				firstExpireTime = remain.StartTime
+			}
+			if remain.EndTime.After(lastExpireTime) {
+				lastExpireTime = remain.EndTime
+			}
+		}
+		if firstExpireTime.Unix() >= 0 {
+			item.FirstExpireTime = firstExpireTime.Unix()
+		}
+		if lastExpireTime.Unix() >= 0 {
+			item.LastExpireTime = lastExpireTime.Unix()
+		}
+		list = append(list, item)
 	}
 
 	return &types.GetOrgMembersResp{
