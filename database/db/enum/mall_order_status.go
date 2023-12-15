@@ -10,7 +10,7 @@ const (
 	OderInfoReceived                                            //已收货，已签收，确认收货
 	OderInfoAfterSale                                           //售后/结束
 	OderInfoClosed                                              //交易关闭
-	OrderInfoPaidPointConfirmWaiting                            // 交易成功，待实际抵扣积分
+	OrderInfoPaidPointConfirmWaiting                            //交易成功，待实际抵扣积分
 )
 
 func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
@@ -20,17 +20,17 @@ func GetOrderInfoStatusEnumByStatus(status int) (OrderInfoStatus, string) {
 	case 2:
 		return OrderInfoPaidWaiting, "交易创建"
 	case 3:
-		return OderInfoPaidSuccess, "交易成功，待发货"
+		return OderInfoPaidSuccess, "待发货"
 	case 4:
-		return OderInfoShipped, "已发货"
+		return OderInfoShipped, "待收货"
 	case 5:
-		return OderInfoReceived, "已收货，已签收，确认收货"
+		return OderInfoReceived, "已签收"
 	case 6:
-		return OderInfoAfterSale, "售后/结束,换"
+		return OderInfoAfterSale, "售后/结束"
 	case 7:
 		return OderInfoClosed, "交易关闭"
 	case 8:
-		return OrderInfoPaidPointConfirmWaiting, "交易成功，待发货"
+		return OrderInfoPaidPointConfirmWaiting, "待发货"
 	default:
 		return OrderInfoCreated, "订单创建"
 	}

@@ -55,7 +55,7 @@ func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartL
 func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
 	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image,product_attr, shipment_company,shipment_sn,estimated_delivery_time,goods_supplier_user_id,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
-		Where("user_id = ? and status in (3,4,5,6)", req.UserID)
+		Where("user_id = ? and status in (3,4,5,6,8)", req.UserID)
 	if req.Status != 0 {
 		queryOrder = queryOrder.Where("status = ?", req.Status)
 	}
@@ -77,7 +77,7 @@ func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderLi
 func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
 	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image, product_attr, shipment_company,shipment_sn,estimated_delivery_time,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").
-		Where("goods_supplier_user_id= ? and status in (3,4,5,6)", req.UserID)
+		Where("goods_supplier_user_id= ? and status in (3,4,5,6,8)", req.UserID)
 	queryOrder = queryOrder.Where(&model.OrderInfo{
 		Status:  req.Status,
 		OrderSn: req.OrderSn,
@@ -100,7 +100,7 @@ func (d *OrderDao) SupplierGetQueryOrderList(ctx *gin.Context, req types.OrderLi
 func (d *OrderDao) AdminGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
 	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,goods_supplier_organization_name,total_price,user_phone,user_organization_name,payed_at").
-		Where("status in (3,4,5,6)")
+		Where("status in (3,4,5,6,8)")
 	queryOrder = queryOrder.Where(&model.OrderInfo{
 		Status:    req.Status,
 		OrderSn:   req.OrderSn,
@@ -351,4 +351,16 @@ func (d *OrderDao) CountWaitingForDeliveryOrderBySupplyUserID(ctx context.Contex
 		return 0, query.Error
 	}
 	return count, nil
+}
+
+func (d *OrderDao) AdminGetQueryOrderListByIDs(ctx *gin.Context, req types.ExportOrderReq) (queryOrderList []*types.QueryOrder, err error) {
+	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
+		Select("id,order_sn,status,name,goods_supplier_organization_name,total_price,user_phone,user_organization_name,payed_at").
+		Where("status in (3,4,5,6,8) and id in ?", req.QueryOrderIDs)
+
+	// 执行查询
+	if err = queryOrder.Find(&queryOrderList).Error; err != nil {
+		return nil, err
+	}
+	return queryOrderList, nil
 }
