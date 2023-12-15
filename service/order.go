@@ -1329,9 +1329,10 @@ func (s *OrderService) paymentConfirm(ctx context.Context, req *payments.Transac
 		return order.Status, nil
 	}
 
-	successTime, err := time.Parse("2006-01-02T15:04:05+MST", *req.SuccessTime)
+	successTime, err := time.Parse("2006-01-02T15:04:05Z07:00", *req.SuccessTime)
 	if err != nil {
-		return 0, xerr.WithCode(xerr.InvalidParams, err)
+		log2.Println("[OrderService] paymentConfirm successTime invalid, time=", *req.SuccessTime)
+		successTime = time.Now()
 	}
 	_, err = s.orderDao.UpdateOrderInfoByIDCTX(ctx, order.ID, &model.OrderInfo{
 		PayedAt: &successTime,
