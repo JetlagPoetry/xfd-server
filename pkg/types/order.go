@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/shopspring/decimal"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"time"
 	"xfd-backend/database/db/enum"
@@ -144,9 +145,9 @@ type QueryOrder struct {
 	Status                       enum.OrderInfoStatus `gorm:"column:status" json:"status"`
 	Name                         string               `gorm:"column:name" json:"name"`
 	Quantity                     int                  `gorm:"column:quantity" json:"quantity,omitempty"`
-	UnitPrice                    float64              `gorm:"column:unit_price" json:"price,omitempty"`
-	TotalPrice                   float64              `gorm:"column:total_price" json:"totalPrice"`
-	PostPrice                    float64              `gorm:"column:post_price" json:"postPrice,omitempty"`
+	UnitPrice                    decimal.Decimal      `gorm:"column:unit_price" json:"price,omitempty"`
+	TotalPrice                   decimal.Decimal      `gorm:"column:total_price" json:"totalPrice"`
+	PostPrice                    decimal.Decimal      `gorm:"column:post_price" json:"postPrice,omitempty"`
 	Image                        string               `gorm:"column:image" json:"image,omitempty"`
 	ProductAttr                  string               `gorm:"column:product_attr" json:"productAttr,omitempty"`
 	EstimatedDelivery            *time.Time           `gorm:"column:estimated_delivery_time" json:"estimatedDelivery,omitempty"`
@@ -255,4 +256,8 @@ type GetCustomerServiceReq struct {
 
 type GetCustomerServiceResp struct {
 	Phone string `json:"phone"`
+}
+
+type ExportOrderReq struct {
+	QueryOrderIDs []int `json:"ids" form:"ids"`
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
+	"github.com/xuri/excelize/v2"
 	log2 "log"
 	"sync"
 	"time"
@@ -1439,4 +1441,44 @@ func (s *OrderService) pointConfirm(ctx context.Context, order *model.OrderInfo)
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	return nil
+}
+
+func (s *OrderService) ExportOrder(ctx *gin.Context, req types.ExportOrderReq) (*bytes.Reader, xerr.XErr) {
+	_, rr := s.CheckUserRole(ctx, model.UserRoleAdmin)
+	if rr != nil {
+		return nil, rr
+	}
+
+	list, err := s.orderDao.AdminGetQueryOrderListByIDs(ctx, req)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	f := excelize.NewFile() // 设置单元格的值
+	f.SetCellValue("Sheet1", "A1", "订单状态")
+	f.SetCellValue("Sheet1", "B1", "订单编号")
+	f.SetCellValue("Sheet1", "C1", "商品名称")
+	f.SetCellValue("Sheet1", "D1", "商户名称")
+	f.SetCellValue("Sheet1", "E1", "支付金额")
+	f.SetCellValue("Sheet1", "F1", "员工电话")
+	f.SetCellValue("Sheet1", "G1", "员工组织")
+	f.SetCellValue("Sheet1", "H1", "支付时间")
+	line := 1
+	for _, order := range list {
+		line++
+		_, status := enum.GetOrderInfoStatusEnumByStatus(order.Status.Code())
+		f.SetCellValue("Sheet1", fmt.Sprintf("A%d", line), status)
+		f.SetCellValue("Sheet1", fmt.Sprintf("B%d", line), order.OrderSn)
+		f.SetCellValue("Sheet1", fmt.Sprintf("C%d", line), order.Name)
+		f.SetCellValue("Sheet1", fmt.Sprintf("D%d", line), order.SupplierOrganizationName)
+		f.SetCellValue("Sheet1", fmt.Sprintf("E%d", line), fmt.Sprintf("¥%s", order.TotalPrice.Round(2).String()))
+		f.SetCellValue("Sheet1", fmt.Sprintf("F%d", line), order.ConsumerUserPhone)
+		f.SetCellValue("Sheet1", fmt.Sprintf("G%d", line), order.ConsumerUserOrganizationName)
+		f.SetCellValue("Sheet1", fmt.Sprintf("H%d", line), order.PayedAt.Format("2006-01-02 15:04:05"))
+	}
+	var buffer bytes.Buffer
+	if e := f.Write(&buffer); e != nil {
+		return nil, nil
+	}
+	r := bytes.NewReader(buffer.Bytes())
+	return r, nil
 }

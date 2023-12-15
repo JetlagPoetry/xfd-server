@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"log"
 	"net/http"
+	"time"
 	"xfd-backend/pkg/response"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
@@ -338,4 +341,29 @@ func (h *OrderHandler) PaymentConfirm(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, nil))
 
+}
+
+func (h *OrderHandler) ExportOrder(ctx *gin.Context) {
+	var (
+		req  types.ExportOrderReq
+		resp *bytes.Reader
+		xrr  xerr.XErr
+	)
+	err := ctx.ShouldBindQuery(&req)
+	if err != nil {
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orderService.ExportOrder(ctx, req)
+	if xrr != nil {
+		log.Println("[OrderHandler] ExportOrder failed, err=", xrr)
+		ctx.JSON(http.StatusOK, response.RespError(ctx, xrr))
+		return
+	}
+	w := ctx.Writer
+	// 设置文件名
+	filename := fmt.Sprintf("KTJX%s.xlsx", time.Now().Format("20060102150405"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	http.ServeContent(w, ctx.Request, filename, time.Now(), resp)
 }
