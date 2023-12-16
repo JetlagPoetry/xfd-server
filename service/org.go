@@ -1128,6 +1128,7 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
+			Phone:           user.Phone,
 			PointTotal:      user.Point.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
@@ -1178,6 +1179,7 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
+			Phone:           user.Phone,
 			PointTotal:      user.Point.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
@@ -1217,6 +1219,7 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
+			Phone:           user.Phone,
 			PointTotal:      user.Point.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,

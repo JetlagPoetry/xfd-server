@@ -214,6 +214,7 @@ type GetPointRecordsResp struct {
 type PointRecord struct {
 	UserID          string                `json:"userID"`
 	Username        string                `json:"username"`
+	Phone           string                `json:"phone"`
 	PointTotal      string                `json:"pointTotal"`
 	PointChange     string                `json:"pointChange"`
 	Type            model.PointRecordType `json:"type"`
