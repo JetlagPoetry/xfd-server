@@ -659,14 +659,18 @@ func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
 	}
-	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin && user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user role incorrect"))
 	}
 
 	// 获取待审核数量
 	needVerify, err := s.PointApplicationDao.CountByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	if user.UserRole == model.UserRoleBuyer {
+		req.OrgID = user.OrganizationID
 	}
 
 	// 获取积分申请列表
