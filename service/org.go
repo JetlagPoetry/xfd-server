@@ -173,9 +173,10 @@ func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[s
 	}
 	userMap := make(map[string]*model.User)
 	for _, user := range list {
-		if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
-			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("已认证过身份"))
-		}
+		// 认证过身份也可以发积分的吧
+		//if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
+		//	return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("已认证过身份"))
+		//}
 		userMap[user.Phone] = user
 	}
 
@@ -658,14 +659,18 @@ func (s *OrgService) GetApplys(ctx context.Context, req types.OrgGetApplysReq) (
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
 	}
-	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin && user.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user role incorrect"))
 	}
 
 	// 获取待审核数量
 	needVerify, err := s.PointApplicationDao.CountByStatus(ctx, model.PointApplicationStatusUnknown)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	if user.UserRole == model.UserRoleBuyer {
+		req.OrgID = user.OrganizationID
 	}
 
 	// 获取积分申请列表
@@ -1065,36 +1070,41 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	remainList, err := s.PointRemainDao.ListValidByUserIDCTX(ctx, userID)
-	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-
-	var firstExpireTime, lastExpireTime time.Time
-	if len(remainList) > 0 {
-		firstExpireTime = remainList[0].EndTime
-		lastExpireTime = remainList[0].EndTime
-	}
-	for _, remain := range remainList {
-		if remain.StartTime.Before(firstExpireTime) {
-			firstExpireTime = remain.StartTime
-		}
-		if remain.EndTime.After(lastExpireTime) {
-			lastExpireTime = remain.EndTime
-		}
-	}
 	list := make([]*types.OrgMember, 0)
 	for _, user := range userList {
-		list = append(list, &types.OrgMember{
+		item := &types.OrgMember{
 			UserID:           user.UserID,
 			Name:             user.Username,
 			Phone:            user.Phone,
 			OrganizationName: user.OrganizationName,
 			Point:            user.Point.Round(2).String(),
 			CreateTime:       user.CreatedAt.Unix(),
-			FirstExpireTime:  firstExpireTime.Unix(),
-			LastExpireTime:   lastExpireTime.Unix(),
-		})
+		}
+		remainList, err := s.PointRemainDao.ListValidByUserIDCTX(ctx, user.UserID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		var firstExpireTime, lastExpireTime time.Time
+		if len(remainList) > 0 {
+			firstExpireTime = remainList[0].EndTime
+			lastExpireTime = remainList[0].EndTime
+		}
+		for _, remain := range remainList {
+			if remain.StartTime.Before(firstExpireTime) {
+				firstExpireTime = remain.StartTime
+			}
+			if remain.EndTime.After(lastExpireTime) {
+				lastExpireTime = remain.EndTime
+			}
+		}
+		if firstExpireTime.Unix() >= 0 {
+			item.FirstExpireTime = firstExpireTime.Unix()
+		}
+		if lastExpireTime.Unix() >= 0 {
+			item.LastExpireTime = lastExpireTime.Unix()
+		}
+		list = append(list, item)
 	}
 
 	return &types.GetOrgMembersResp{
@@ -1122,6 +1132,7 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
+			Phone:           user.Phone,
 			PointTotal:      user.Point.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
@@ -1172,6 +1183,7 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
+			Phone:           user.Phone,
 			PointTotal:      user.Point.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
@@ -1211,6 +1223,7 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
 			Username:        user.Username,
+			Phone:           user.Phone,
 			PointTotal:      user.Point.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
 			Type:            record.Type,
