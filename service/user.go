@@ -8,6 +8,7 @@ import (
 	"github.com/tencentyun/tls-sig-api-v2-golang/tencentyun"
 	"gorm.io/gorm"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 	"xfd-backend/database/db"
@@ -515,6 +516,15 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 			IsDefault: int(addr.ID) == defaultAddr,
 		})
 	}
+
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].IsDefault {
+			return true
+		} else if list[j].IsDefault {
+			return false
+		}
+		return list[i].ID > list[j].ID
+	})
 	return &types.UserGetAddressListResp{List: list}, nil
 }
 
