@@ -118,6 +118,15 @@ func (d *GoodsDao) GetMinPriceList(ctx context.Context, req types.GoodsListReq) 
 	if req.IsRetail == 1 {
 		dbQuery = dbQuery.Where("is_retail = 1")
 	}
+	if req.CategoryAID != 0 {
+		dbQuery = dbQuery.Where("g.category_a_id = ?", req.CategoryAID)
+	}
+	if req.CategoryBID != 0 {
+		dbQuery = dbQuery.Where("g.category_b_id = ?", req.CategoryBID)
+	}
+	if req.CategoryCID != 0 {
+		dbQuery = dbQuery.Where("g.category_c_id = ?", req.CategoryCID)
+	}
 	dbQuery = dbQuery.Group("pv.goods_id")
 	dbQuery = dbQuery.Count(&count)
 	dbQuery = dbQuery.Order("min_price asc,pv.goods_id desc").
