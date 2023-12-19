@@ -1245,16 +1245,19 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 }
 
 func (s *OrderService) GetCustomerService(ctx *gin.Context, req types.GetCustomerServiceReq) (*types.GetCustomerServiceResp, xerr.XErr) {
-	_, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
-	if xrr != nil {
-		return nil, xrr
-	}
+	//_, xrr := s.CheckUserRole(ctx, model.UserRoleCustomer)
+	//if xrr != nil {
+	//	return nil, xrr
+	//}
 	supplierUser, err := s.userDao.GetByUserID(ctx, req.SupplierUserID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 	if supplierUser == nil {
 		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("supplier user %s not found", req.SupplierUserID))
+	}
+	if supplierUser.UserRole != model.UserRoleSupplier && supplierUser.UserRole != model.UserRoleBuyer {
+		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("supplier user %s role forbidden", req.SupplierUserID))
 	}
 	return &types.GetCustomerServiceResp{Phone: supplierUser.Phone}, nil
 }
