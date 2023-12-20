@@ -368,6 +368,7 @@ func (s *GoodsService) ConvertMinPriceResultToGoodsList(minPriceResults []*types
 			Name:            result.Name,
 			GoodsFrontImage: result.GoodsFrontImage,
 			Images:          result.Images,
+			UserID:          result.UserID,
 		}
 	}
 	return goodsList

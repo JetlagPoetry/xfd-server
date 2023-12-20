@@ -131,6 +131,7 @@ type MinPriceResult struct {
 	Name            string  `gorm:"column:name"`
 	GoodsFrontImage string  `gorm:"column:goods_front_image"`
 	Images          string  `gorm:"column:images"`
+	UserID          string  `gorm:"column:user_id"`
 }
 
 type GoodsReq struct {
