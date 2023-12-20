@@ -477,7 +477,7 @@ func (s *UserService) ImSig(ctx context.Context, req types.UserImSigReq) (*types
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}
 	imSecret := os.Getenv("IM_APP_SECRET")
-	userSig, err := tencentyun.GenUserSig(imAppID, imSecret, currentUser.UserID, 86400)
+	userSig, err := tencentyun.GenUserSig(imAppID, imSecret, currentUser.UserID, 30*86400)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}

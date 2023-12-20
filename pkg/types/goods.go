@@ -104,6 +104,7 @@ type GoodsList struct {
 	Status            enum.QueryGoodsListStatus `json:"status,omitempty" gorm:"column:status"`
 	SoldNum           int                       `json:"soldNum,omitempty" gorm:"column:sold_num"`
 	SPUCode           string                    `json:"spuCode,omitempty" gorm:"column:spu_code"`
+	UserID            string                    `json:"userID,omitempty" gorm:"column:user_id"`
 }
 
 func (g *GoodsList) GetGoodsFrontImage() string {

@@ -226,6 +226,13 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.Supply
 			Status:       purchase.Status,
 			Price:        quote.Price,
 		}
+
+		goods, _ := s.goodsDao.GetGoodsByGoodsID(ctx, int32(quote.GoodsID))
+		if goods != nil {
+			newOrder.GoodsURL = goods.GoodsFrontImage
+			newOrder.GoodsName = goods.Name
+		}
+
 		purchaseUser, _ := s.userDao.GetByUserID(ctx, purchase.UserID)
 		if purchaseUser != nil {
 			newOrder.UserAvatar = purchaseUser.AvatarURL
