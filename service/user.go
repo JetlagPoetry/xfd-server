@@ -96,7 +96,7 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		if user == nil {
-			return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
+			return nil, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
 		}
 		resp = &types.UserLoginResp{UserRole: user.UserRole}
 	}
