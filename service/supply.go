@@ -78,7 +78,7 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPur
 
 	quoteMap := make(map[int]*model.OrderQuote)
 	for _, quote := range quoteList {
-		quoteMap[int(quote.ID)] = quote
+		quoteMap[quote.PurchaseOrderID] = quote
 	}
 
 	category := cache.GetCategory()
