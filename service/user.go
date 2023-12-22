@@ -131,9 +131,10 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	}
 	if user == nil {
 		user = &model.User{
-			UserID:   utils.GenUUID(),
-			Phone:    phone,
-			Username: utils.GenUsername(phone),
+			UserID:    utils.GenUUID(),
+			Phone:     phone,
+			Username:  utils.GenUsername(phone),
+			AvatarURL: "https://xfd-t-1313159791.cos.ap-beijing.myqcloud.com/resources/common/aagj/WechatIMG1463.jpeg",
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return nil, err
