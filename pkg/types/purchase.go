@@ -37,6 +37,8 @@ type PurchaseOrder struct {
 	NewQuote      int                       `json:"newQuote"`
 	Status        model.OrderPurchaseStatus `json:"status"`
 	Price         decimal.Decimal           `json:"price"`
+	GoodsName     string                    `json:"goodsName"`
+	GoodsURL      string                    `json:"goodsURL"`
 }
 
 type PurchaseSubmitOrderReq struct {

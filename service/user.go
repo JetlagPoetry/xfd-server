@@ -8,6 +8,7 @@ import (
 	"github.com/tencentyun/tls-sig-api-v2-golang/tencentyun"
 	"gorm.io/gorm"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 	"xfd-backend/database/db"
@@ -95,7 +96,7 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		if user == nil {
-			return nil, xerr.WithCode(xerr.ErrorUserNotFound, err)
+			return nil, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
 		}
 		resp = &types.UserLoginResp{UserRole: user.UserRole}
 	}
@@ -130,9 +131,10 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 	}
 	if user == nil {
 		user = &model.User{
-			UserID:   utils.GenUUID(),
-			Phone:    phone,
-			Username: utils.GenUsername(phone),
+			UserID:    utils.GenUUID(),
+			Phone:     phone,
+			Username:  utils.GenUsername(phone),
+			AvatarURL: "https://xfd-t-1313159791.cos.ap-beijing.myqcloud.com/resources/common/aagj/WechatIMG1463.jpeg",
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return nil, err
@@ -476,7 +478,7 @@ func (s *UserService) ImSig(ctx context.Context, req types.UserImSigReq) (*types
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}
 	imSecret := os.Getenv("IM_APP_SECRET")
-	userSig, err := tencentyun.GenUserSig(imAppID, imSecret, currentUser.UserID, 86400)
+	userSig, err := tencentyun.GenUserSig(imAppID, imSecret, currentUser.UserID, 30*86400)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, err)
 	}
@@ -515,6 +517,15 @@ func (s *UserService) GetAddressList(ctx context.Context, req types.UserGetAddre
 			IsDefault: int(addr.ID) == defaultAddr,
 		})
 	}
+
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].IsDefault {
+			return true
+		} else if list[j].IsDefault {
+			return false
+		}
+		return list[i].ID > list[j].ID
+	})
 	return &types.UserGetAddressListResp{List: list}, nil
 }
 

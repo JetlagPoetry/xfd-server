@@ -96,17 +96,17 @@ func (s *PurchaseService) SubmitOrder(ctx context.Context, req types.PurchaseSub
 	}
 
 	category := cache.GetCategory()
-	if category[int32(req.CategoryB)] == nil {
-		return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("category not found"))
-	}
-	orderName := category[int32(req.CategoryB)].Name
-	if req.CategoryC > 0 {
-		if category[int32(req.CategoryC)] == nil {
-			return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("category not found"))
-		}
-		orderName += " - " + category[int32(req.CategoryC)].Name
-	}
-
+	//if category[int32(req.CategoryB)] == nil {
+	//	return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("category not found"))
+	//}
+	//orderName := category[int32(req.CategoryB)].Name
+	//if req.CategoryC > 0 {
+	//	if category[int32(req.CategoryC)] == nil {
+	//		return nil, xerr.WithCode(xerr.ErrorNotExistRecord, errors.New("category not found"))
+	//	}
+	//	orderName += " - " + category[int32(req.CategoryC)].Name
+	//}
+	orderName := category[int32(req.CategoryC)].Name
 	newPurchase := &model.OrderPurchase{
 		UserID:       userID,
 		CategoryA:    req.CategoryA,

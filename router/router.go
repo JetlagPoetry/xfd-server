@@ -16,7 +16,7 @@ func NewRouter() *gin.Engine {
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
 	r.Use(middleware.Cors())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1", "/api/v1/user/login", "/api/v1/user/sendCode")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1", "/api/v1/user/login", "/api/v1/user/sendCode", "/api/v1/common/getConfig")) // 登录校验, 参数为跳过登录的路由
 
 	testGroup := r.Group("/api/v1/test")
 	{

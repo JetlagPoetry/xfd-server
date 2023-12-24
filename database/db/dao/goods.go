@@ -92,7 +92,7 @@ func (d *GoodsDao) GetGoodsList(ctx context.Context, req types.GoodsListReq) (go
 		CategoryBID: req.CategoryBID,
 		CategoryCID: req.CategoryCID,
 		UserID:      req.UserID}).
-		Select("id, name, goods_front_image, images")
+		Select("id, name, goods_front_image, images, user_id")
 	result = result.Count(&count)
 	if req.ListType == enum.GoodsListTypeSale {
 		result = result.Order("sold_num desc")
@@ -112,7 +112,7 @@ func (d *GoodsDao) GetGoodsList(ctx context.Context, req types.GoodsListReq) (go
 // GetMinPriceList 获取最低价商品列表
 func (d *GoodsDao) GetMinPriceList(ctx context.Context, req types.GoodsListReq) (minPriceResult []*types.MinPriceResult, count int64, err error) {
 	dbQuery := db.Get().Debug().Table("product_variant as pv").
-		Select("pv.goods_id, MIN(pv.price) AS min_price, g.id, g.name, g.goods_front_image, g.images").
+		Select("pv.goods_id, MIN(pv.price) AS min_price, g.id, g.name, g.goods_front_image, g.image, g.user_id AS user_id").
 		Joins("INNER JOIN goods g on pv.goods_id = g.id").
 		Where("g.status = 1 and g.retail_status = 1")
 	if req.IsRetail == 1 {

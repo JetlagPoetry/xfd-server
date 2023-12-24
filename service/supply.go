@@ -78,7 +78,7 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPur
 
 	quoteMap := make(map[int]*model.OrderQuote)
 	for _, quote := range quoteList {
-		quoteMap[int(quote.ID)] = quote
+		quoteMap[quote.PurchaseOrderID] = quote
 	}
 
 	category := cache.GetCategory()
@@ -226,6 +226,13 @@ func (s *SupplyService) GetQuotedPurchases(ctx context.Context, req types.Supply
 			Status:       purchase.Status,
 			Price:        quote.Price,
 		}
+
+		goods, _ := s.goodsDao.GetGoodsByGoodsID(ctx, int32(quote.GoodsID))
+		if goods != nil {
+			newOrder.GoodsURL = goods.GoodsFrontImage
+			newOrder.GoodsName = goods.Name
+		}
+
 		purchaseUser, _ := s.userDao.GetByUserID(ctx, purchase.UserID)
 		if purchaseUser != nil {
 			newOrder.UserAvatar = purchaseUser.AvatarURL
