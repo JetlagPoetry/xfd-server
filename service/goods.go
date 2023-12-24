@@ -457,7 +457,7 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) (*types.GoodsListResp, xerr.XErr) {
 	userID := common.GetUserID(c)
 	//获取用户角色
-	user, err := s.userDao.GetByUserID(c, req.UserID)
+	user, err := s.userDao.GetByUserID(c, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
