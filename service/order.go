@@ -266,10 +266,17 @@ func (s *OrderService) createOrderWithTX(ctx context.Context, req types.CreateOr
 	if user.Point.Equal(decimal.Zero) {
 		return nil, xerr.WithCode(xerr.ErrorOrderCreate, fmt.Errorf("user %s point is %s, please add point", user.UserID, user.Point.String()))
 	}
-
 	//扣除库存
+	ok := redis.Lock(fmt.Sprintf("productVariant-stock:productVariant_id:%d", productVariant.ID), time.Minute*5)
+	if !ok {
+		return nil, xerr.WithCode(xerr.ErrorRedisLock, errors.New("get good stock lock failed"))
+	}
+	defer redis.Unlock(fmt.Sprintf("productVariant-stock:productVariant_id:%d", productVariant.ID))
 	leftStock := *productVariant.Stock - shoppingCart.Quantity
-	rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, productVariant.ID, &model.ProductVariant{Stock: &leftStock})
+	if leftStock < 0 {
+		return nil, xerr.WithCode(xerr.ErrorStockNotEnough, fmt.Errorf("not enough stock"))
+	}
+	rowsAffected, err := s.goods.ReductionProductVariantStockByID(ctx, productVariant.ID, shoppingCart.Quantity)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -1358,13 +1365,13 @@ func (s *OrderService) paymentCancel(ctx context.Context, order *model.OrderInfo
 	}
 
 	// 恢复库存
-	variant, err := s.goods.GetProductVariantByProductVariantIDForUpdate(ctx, order.ProductVariantID)
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
+	ok := redis.Lock(fmt.Sprintf("productVariant-stock:productVariant_id:%d", order.ProductVariantID), time.Minute*5)
+	if !ok {
+		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("get good stock lock failed"))
 	}
+	defer redis.Unlock(fmt.Sprintf("productVariant-stock:productVariant_id:%d", order.ProductVariantID))
 
-	leftStock := *variant.Stock + order.Quantity
-	rowsAffected, err := s.goods.UpdateProductVariantByID(ctx, order.ProductVariantID, &model.ProductVariant{Stock: &leftStock})
+	rowsAffected, err := s.goods.IncreaseProductVariantStockByID(ctx, order.ProductVariantID, order.Quantity)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
