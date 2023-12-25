@@ -19,7 +19,7 @@ func GenUUID() string {
 	return strings.Replace(uuid.New().String(), "-", "", -1)
 }
 func GenUsername(phone string) string {
-	return "用户" + phone
+	return phone
 }
 func GenerateFileName() string {
 	currentTime := time.Now()

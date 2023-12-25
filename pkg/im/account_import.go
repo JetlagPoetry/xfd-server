@@ -16,7 +16,7 @@ import (
 	"xfd-backend/pkg/xerr"
 )
 
-func ImportAccount(userID string) (*Resp, error) {
+func ImportAccount(userID string, phone string) (*Resp, error) {
 	resp := &Resp{}
 	imAppID, err := strconv.Atoi(os.Getenv("IM_APP_ID"))
 	if err != nil {
@@ -32,7 +32,9 @@ func ImportAccount(userID string) (*Resp, error) {
 	fullURL := fmt.Sprintf("https://console.tim.qq.com/v4/im_open_login_svc/account_import?"+
 		"sdkappid=%d&identifier=%s&usersig=%s&random=%d&contenttype=json", imAppID, imAdmin, userSig, rand.Uint32())
 	body := map[string]string{
-		"UserID": userID,
+		"UserID":  userID,
+		"Nick":    utils.GenUsername(phone),
+		"FaceUrl": "https://xfd-t-1313159791.cos.ap-beijing.myqcloud.com/resources/common/aagj/WechatIMG1463.jpeg",
 	}
 
 	defer func() {

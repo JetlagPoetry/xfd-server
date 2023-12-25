@@ -20,6 +20,7 @@ import (
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/consts"
+	"xfd-backend/pkg/im"
 	"xfd-backend/pkg/types"
 	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
@@ -450,6 +451,12 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+
+		// 注册时，在腾讯云im初始化
+		_, err = im.ImportAccount(user.UserID, member.Phone)
+		if err != nil {
+			return xerr.WithCode(xerr.ErrorCallApi, err)
 		}
 	}
 

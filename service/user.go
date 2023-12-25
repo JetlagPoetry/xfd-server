@@ -82,6 +82,11 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 
+		_, err = im.ImportAccount(user.UserID, req.Phone)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorCallApi, err)
+		}
+
 		// 提交事务
 		if err = tx.Commit().Error; err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -140,8 +145,7 @@ func (s *UserService) loginOrRegister(tx *gorm.DB, phone string) (*model.User, e
 			return nil, err
 		}
 		// 注册时，在腾讯云im初始化
-
-		_, err = im.ImportAccount(user.UserID)
+		_, err = im.ImportAccount(user.UserID, phone)
 		if err != nil {
 			return nil, err
 		}
