@@ -23,7 +23,7 @@ func NewRouter() *gin.Engine {
 	fmt.Println("filePath=", s)
 	r.LoadHTMLGlob("./static/index.html")
 	r.Static("/static", "./static")
-	r.Handle("GET", "/manage", func(context *gin.Context) {
+	r.Handle("GET", "/", func(context *gin.Context) {
 		context.HTML(http.StatusOK, "index.html", nil)
 	})
 
