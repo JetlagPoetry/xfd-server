@@ -24,7 +24,7 @@ RUN apk add ca-certificates
 WORKDIR /app
 
 # 将构建产物/app/main拷贝到运行时的工作目录中
-COPY --from=builder static /app/static/
+COPY --from=builder /app/static /app/static
 COPY --from=builder /app/main /app/index.html /app/
 
 # 执行启动命令
