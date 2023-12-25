@@ -17,7 +17,6 @@ import (
 
 func main() {
 	Init()
-
 	go cron.StartCron()
 
 	r := router.NewRouter()

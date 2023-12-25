@@ -16,9 +16,14 @@ func NewRouter() *gin.Engine {
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
 	r.Use(middleware.Cors())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1", "/api/v1/user/login", "/api/v1/user/sendCode", "/api/v1/common/getConfig", "/manage")) // 登录校验, 参数为跳过登录的路由
 
-	testGroup := r.Group("/api/v1/test")
+	r.LoadHTMLGlob("./static/index.html")
+	r.Static("/static", "./static")
+	r.Handle("GET", "/manage", func(context *gin.Context) {
+		context.HTML(http.StatusOK, "index.html", nil)
+	})
+
+	testGroup := r.Group("/api/v1/test", middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1"))
 	{
 		testGroup.GET("/hello1", func(c *gin.Context) {
 			c.JSON(http.StatusOK, response.RespSuccess(c, "{\"text\":\"test\"}"))
@@ -30,15 +35,8 @@ func NewRouter() *gin.Engine {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
 		})
 	}
-	//r.LoadHTMLGlob("./web/index.html")
-	//r.Static("/", "/web")
-	//r.Handle("GET", "/manage", func(context *gin.Context) {
-	//	context.HTML(http.StatusOK, "index.html", nil)
-	//})
-	//r.Handle("GET", "/user/", func(context *gin.Context) {
-	//	context.HTML(http.StatusOK, "user/index.html", nil)
-	//})
-	userGroup := r.Group("/api/v1/user")
+
+	userGroup := r.Group("/api/v1/user", middleware.UserAuthMiddleware("/api/v1/user/login", "/api/v1/user/sendCode"))
 	{
 		userGroup.POST("/sendCode", handler.User.SendCode)     // 发送验证码
 		userGroup.POST("/login", handler.User.Login)           // 登录
@@ -58,7 +56,7 @@ func NewRouter() *gin.Engine {
 		userGroup.POST("/modifyAddress", handler.User.ModifyAddress)
 		userGroup.POST("/deleteAddress", handler.User.DeleteAddress)
 	}
-	purchaseGroup := r.Group("/api/v1/purchase")
+	purchaseGroup := r.Group("/api/v1/purchase", middleware.UserAuthMiddleware())
 	{
 		purchaseGroup.GET("/getPurchases", handler.Purchase.GetPurchases)            // 查看本人采购单
 		purchaseGroup.POST("/submitOrder", handler.Purchase.SubmitOrder)             // 提交采购单
@@ -68,7 +66,7 @@ func NewRouter() *gin.Engine {
 		purchaseGroup.POST("/notifySupply", handler.Purchase.NotifySupply)           // 采购商回复报价
 		//purchaseGroup.POST("/answerQuote", handler.Purchase.AnswerQuote)             // 采购商回复报价
 	}
-	supplyGroup := r.Group("/api/v1/supply")
+	supplyGroup := r.Group("/api/v1/supply", middleware.UserAuthMiddleware())
 	{
 		supplyGroup.GET("/getPurchases", handler.Supply.GetPurchases)             // 查看所有采购单
 		supplyGroup.GET("/getQuotes", handler.Supply.GetQuotes)                   // 查看采购单对应报价
@@ -77,7 +75,7 @@ func NewRouter() *gin.Engine {
 		supplyGroup.GET("/getStatistics", handler.Supply.GetStatistics)           // 查看采购商统计数据
 		supplyGroup.POST("/answerQuote", handler.Supply.AnswerQuote)              // 供货商回复报价
 	}
-	orgGroup := r.Group("/api/v1/org")
+	orgGroup := r.Group("/api/v1/org", middleware.UserAuthMiddleware())
 	{
 		orgGroup.POST("/applyPoint", handler.Org.ApplyPoint)            // 申请积分
 		orgGroup.POST("/verifyPoint", handler.Org.VerifyPoint)          // 提交积分审核
@@ -96,14 +94,14 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getPointRecords", handler.Org.GetPointRecords)               // 查看公司/本公司积分明细
 		orgGroup.GET("/exportPointRecords", handler.Org.ExportPointRecords)         // 导出积分明细
 	}
-	mallGroup := r.Group("/api/v1/mall")
+	mallGroup := r.Group("/api/v1/mall", middleware.UserAuthMiddleware())
 	{
 		mallGroup.GET("/categories", handler.Mall.GetCategories)         //获取商城分类信息
 		mallGroup.POST("/addCategory", handler.Mall.AddCategory)         //添加商城分类信息
 		mallGroup.POST("/modifyCategory", handler.Mall.ModifyCategory)   //修改商城分类信息
 		mallGroup.DELETE("/deleteCategory", handler.Mall.DeleteCategory) //删除商城分类信息
 	}
-	goodsGroup := r.Group("/api/v1/goods")
+	goodsGroup := r.Group("/api/v1/goods", middleware.UserAuthMiddleware())
 	{
 		goodsGroup.POST("/addGoods", handler.Goods.AddGoods)                       //添加商品
 		goodsGroup.GET("/getGoodsList", handler.Goods.GetGoodsList)                //获取商品列表
@@ -114,7 +112,7 @@ func NewRouter() *gin.Engine {
 		goodsGroup.GET("/getMyGoodsDetail", handler.Goods.GetMyGoodsDetail)        //获取商品详情
 		goodsGroup.POST("/modifyMyGoodsStatus", handler.Goods.ModifyMyGoodsStatus) //修改商品状态
 	}
-	orderGroup := r.Group("/api/v1/order")
+	orderGroup := r.Group("/api/v1/order", middleware.UserAuthMiddleware())
 	{
 		orderGroup.POST("/addShoppingCart", handler.Order.AddShoppingCart)         //加入购物车
 		orderGroup.GET("/getShoppingCart", handler.Order.GetShoppingCartList)      //获取购物车列表
@@ -135,7 +133,7 @@ func NewRouter() *gin.Engine {
 		orderGroup.GET("/exportOrder", handler.Order.ExportOrder) //导出订单为excel表格
 	}
 
-	commonGroup := r.Group("/api/v1/common")
+	commonGroup := r.Group("/api/v1/common", middleware.UserAuthMiddleware("/api/v1/common/getConfig"))
 	{
 		commonGroup.GET("/getConfig", handler.Common.GetConfig)            //获取区域地址代码
 		commonGroup.GET("/area", handler.Common.GetArea)                   //获取区域地址代码
