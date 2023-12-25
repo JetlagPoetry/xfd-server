@@ -93,16 +93,16 @@ type GoodsList struct {
 	GoodsFrontImage   string                    `json:"goodsFrontImage" gorm:"column:goods_front_image"`
 	Images            string                    `json:"-" gorm:"column:images"`
 	RetailStatus      enum.GoodsRetailStatus    `json:"-" gorm:"column:retail_status"`
-	RetailPriceMax    string                    `json:"retailPriceMax,omitempty"`
-	RetailPriceMin    string                    `json:"retailPriceMin,omitempty"`
+	RetailPriceMax    string                    `json:"retailPriceMax"`
+	RetailPriceMin    string                    `json:"retailPriceMin"`
 	WholesalePriceMax string                    `json:"wholesalePriceMax,omitempty"`
 	WholesalePriceMin string                    `json:"wholesalePriceMin,omitempty"`
 	WholeSaleUnit     string                    `json:"wholeSaleUnit,omitempty"`
 	RetailUnit        string                    `json:"retailUnit,omitempty"`
 	CreatedAt         string                    `json:"createdAt,omitempty" gorm:"column:created_at"`
 	UpdatedAt         string                    `json:"updatedAt,omitempty" gorm:"column:updated_at"`
-	Status            enum.QueryGoodsListStatus `json:"status,omitempty" gorm:"column:status"`
-	SoldNum           int                       `json:"soldNum,omitempty" gorm:"column:sold_num"`
+	Status            enum.QueryGoodsListStatus `json:"status" gorm:"column:status"`
+	SoldNum           int                       `json:"soldNum" gorm:"column:sold_num"`
 	SPUCode           string                    `json:"spuCode,omitempty" gorm:"column:spu_code"`
 	UserID            string                    `json:"userID,omitempty" gorm:"column:user_id"`
 }

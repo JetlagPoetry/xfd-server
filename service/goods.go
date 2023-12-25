@@ -473,7 +473,7 @@ func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) 
 	}
 	result := types.GoodsListResp{PageResult: types.PageResult{PageNum: req.PageNum, PageSize: req.PageSize, TotalNum: total}}
 	for i, v := range goods {
-		if v.RetailStatus == enum.GoodsRetailNormal {
+		if v.RetailStatus == enum.GoodsRetailSoldOut {
 			goods[i].Status = enum.QueryGoodsListStatusSoldOut
 		}
 		productVariants, rr := s.goods.GetProductVariantListByGoodsID(c, v.ID, 0, 0)
@@ -759,15 +759,7 @@ func (s *GoodsService) ModifyGoodsWithTransaction(c context.Context, req types.G
 	if totalStock > 0 {
 		updateValue.RetailStatus = enum.GoodsRetailNormal
 	}
-	if hasRetail && totalStock > 0 {
-		rowsAffected, err := s.goods.UpdateGoodsByID(c, req.Id, updateValue)
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if rowsAffected == 0 {
-			return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.Id))
-		}
-	} else {
+	if !hasRetail || totalStock <= 0 {
 		stock := 0
 		zero := 0
 		time.Sleep(50 * time.Millisecond)
@@ -785,12 +777,20 @@ func (s *GoodsService) ModifyGoodsWithTransaction(c context.Context, req types.G
 			}
 			if stock <= 0 {
 				updateValue.RetailStatus = enum.GoodsRetailSoldOut
+				updateValue.IsRetail = &zero
 			}
 		} else {
 			updateValue.IsRetail = &zero
+			updateValue.RetailStatus = enum.GoodsRetailSoldOut
 		}
 	}
-
+	rowsAffected, err := s.goods.UpdateGoodsByID(c, req.Id, updateValue)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("update goods status failed,goodsID:%d", req.Id))
+	}
 	return nil
 }
 
@@ -809,7 +809,7 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 	totalStock := 0
 	var hasRetail bool
 	for i := range products {
-		if productType == enum.ProductRetail && products[i].Status == enum.ProductVariantEnabled {
+		if productType == enum.ProductRetail && products[i].Status != enum.ProductVariantDisabled {
 			totalStock += *products[i].Stock
 			hasRetail = true
 		}
@@ -877,8 +877,9 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 						return 0, false, xerr.WithCode(xerr.ErrorDatabase, err)
 					}
 				}
+			} else {
+				return 0, false, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,id is empty,productAttr must all hasValue ", products))
 			}
-			return 0, false, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("productAttr is invalid,params:%+v,id is empty,productAttr must all hasValue ", products))
 		}
 	}
 	return totalStock, hasRetail, nil
