@@ -30,9 +30,8 @@ func NewRouter() *gin.Engine {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
 		})
 	}
-	r.LoadHTMLGlob("./html/*")
+	r.LoadHTMLGlob("./index.html")
 	r.Handle("GET", "/manage", func(context *gin.Context) {
-		// 返回HTML文件，响应状态码200，html文件名为index.html，模板参数为nil
 		context.HTML(http.StatusOK, "index.html", nil)
 	})
 	userGroup := r.Group("/api/v1/user")
