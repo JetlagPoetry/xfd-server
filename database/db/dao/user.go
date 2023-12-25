@@ -173,16 +173,8 @@ func (d *UserDao) CreateInTx(tx *gorm.DB, User *model.User) (err error) {
 	return nil
 }
 
-func (d *UserDao) SaveInTx(tx *gorm.DB, User *model.User) (err error) {
-	err = tx.Model(&model.User{}).Save(User).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d *UserDao) Upsert(ctx context.Context, User *model.User) (err error) {
-	err = db.GetRepo().GetDB(ctx).Save(User).Error
+func (d *UserDao) SaveInTx(tx *gorm.DB, user *model.User) (err error) {
+	err = tx.Save(user).Error
 	if err != nil {
 		return err
 	}

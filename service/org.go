@@ -1245,3 +1245,7 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		TotalNum: int(count),
 	}, nil
 }
+
+func (s *OrgService) ExportPointRecords(ctx context.Context, req types.ExportPointRecordsReq) (*bytes.Reader, xerr.XErr) {
+	return nil, nil
+}

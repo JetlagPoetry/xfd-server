@@ -521,7 +521,7 @@ func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.
 	}
 
 	// 请求wx预付单，保存
-	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, "艺图小程序商城", openResp.OpenID,
+	orderResp, xErr := wechatpay.CreateOrder(ctx, order.OrderSn, order.Name, openResp.OpenID,
 		wxPrice.Mul(decimal.NewFromInt(100)).Floor().IntPart())
 	if xErr != nil {
 		return nil, xErr

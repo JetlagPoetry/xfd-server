@@ -223,3 +223,12 @@ type PointRecord struct {
 	OperateUserID   string                `json:"operateUserID"`
 	OperateUsername string                `json:"operateUsername"`
 }
+
+type ExportPointRecordsReq struct {
+	ApplyID int `form:"applyID"`
+}
+
+type ExportPointRecordsResp struct {
+	List     []*PointRecord `json:"list"`
+	TotalNum int            `json:"totalNum"`
+}

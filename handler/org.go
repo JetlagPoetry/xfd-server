@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -379,4 +381,29 @@ func (h *OrgHandler) GetPointRecords(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
+func (h *OrgHandler) ExportPointRecords(c *gin.Context) {
+	var (
+		req  types.ExportPointRecordsReq
+		resp *bytes.Reader
+		xrr  xerr.XErr
+	)
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	resp, xrr = h.orgService.ExportPointRecords(c, req)
+	if xrr != nil {
+		log.Println("[OrgHandler] ExportPointRecords failed, err=", xrr)
+		c.JSON(http.StatusOK, response.RespError(c, xrr))
+		return
+	}
+	w := c.Writer
+	// 设置文件名
+	filename := fmt.Sprintf("KTJX%s.xlsx", time.Now().Format("20060102150405"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
+	http.ServeContent(w, c.Request, filename, time.Now(), resp)
 }

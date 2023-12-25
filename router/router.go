@@ -30,10 +30,14 @@ func NewRouter() *gin.Engine {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
 		})
 	}
-	r.LoadHTMLGlob("./index.html")
-	r.Handle("GET", "/manage", func(context *gin.Context) {
-		context.HTML(http.StatusOK, "index.html", nil)
-	})
+	//r.LoadHTMLGlob("./web/index.html")
+	//r.Static("/", "/web")
+	//r.Handle("GET", "/manage", func(context *gin.Context) {
+	//	context.HTML(http.StatusOK, "index.html", nil)
+	//})
+	//r.Handle("GET", "/user/", func(context *gin.Context) {
+	//	context.HTML(http.StatusOK, "user/index.html", nil)
+	//})
 	userGroup := r.Group("/api/v1/user")
 	{
 		userGroup.POST("/sendCode", handler.User.SendCode)     // 发送验证码
@@ -90,6 +94,7 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getPointRecordsByApply", handler.Org.GetPointRecordsByApply) // 查看本批积分明细
 		orgGroup.GET("/getPointRecordsByUser", handler.Org.GetPointRecordsByUser)   // 查看员工积分明细
 		orgGroup.GET("/getPointRecords", handler.Org.GetPointRecords)               // 查看公司/本公司积分明细
+		orgGroup.GET("/exportPointRecords", handler.Org.ExportPointRecords)         // 导出积分明细
 	}
 	mallGroup := r.Group("/api/v1/mall")
 	{
@@ -127,7 +132,6 @@ func NewRouter() *gin.Engine {
 		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退货退款
 		orderGroup.GET("/getCustomerService", handler.Order.GetCustomerService)    //获取客服电话
 		orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
-		//导出订单为excel表格
 		orderGroup.GET("/exportOrder", handler.Order.ExportOrder) //导出订单为excel表格
 	}
 
