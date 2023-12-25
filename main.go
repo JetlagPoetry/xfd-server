@@ -23,7 +23,6 @@ func main() {
 	r := router.NewRouter()
 	log.Println("==================Server Start===================")
 	log.Fatal(http.ListenAndServe(":80", r))
-
 }
 
 func Init() {

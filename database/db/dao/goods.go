@@ -235,7 +235,7 @@ func (d *GoodsDao) GetMyGoodsList(ctx context.Context, req types.MyGoodsListReq)
 
 	result = result.Where(&model.Goods{
 		UserID: req.UserID}).
-		Select("id, name, goods_front_image, images, status, retail_status,sold_num,spu_code,created_at, updated_at")
+		Select("id, name, goods_front_image, images, status, retail_status,sold_num,spu_code,created_at, updated_at, sold_num")
 	switch req.QueryGoodsListStatus {
 	case enum.QueryGoodsListStatusOnSale:
 		result = result.Where("status = 1")
