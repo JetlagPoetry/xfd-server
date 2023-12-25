@@ -14,6 +14,7 @@ import (
 	"xfd-backend/database/db/dao"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
+	"xfd-backend/database/redis"
 	"xfd-backend/database/repo"
 	"xfd-backend/pkg/common"
 	"xfd-backend/pkg/types"
@@ -456,7 +457,7 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) (*types.GoodsListResp, xerr.XErr) {
 	userID := common.GetUserID(c)
 	//获取用户角色
-	user, err := s.userDao.GetByUserID(c, req.UserID)
+	user, err := s.userDao.GetByUserID(c, userID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -738,6 +739,11 @@ func (s *GoodsService) checkGoodsValid(c context.Context, goodsID int32, userID 
 }
 
 func (s *GoodsService) ModifyGoodsWithTransaction(c context.Context, req types.GoodsModifyReq, updateValue *model.Goods) xerr.XErr {
+	ok := redis.Lock(fmt.Sprintf("goods:good_id:%d", req.Id), time.Minute*5)
+	if !ok {
+		return xerr.WithCode(xerr.ErrorRedisLock, errors.New("get modify good lock failed"))
+	}
+	defer redis.Unlock(fmt.Sprintf("goods:good_id:%d", req.Id))
 	_, _, xrr := s.processModifyProducts(c, req.WholesaleProducts, req.Id, enum.ProductWholesale)
 	if xrr != nil {
 		return xrr
@@ -819,6 +825,7 @@ func (s *GoodsService) processModifyProducts(ctx context.Context, products []*ty
 		if products[i].CheckParams(productType) != nil {
 			return 0, false, xerr.WithCode(xerr.InvalidParams, products[i].CheckParams(productType))
 		}
+
 		if hasValue {
 			for j, attr := range products[i].ProductAttr {
 				products[i].ProductAttr[j].KeyID = keyIDMap[attr.Key]

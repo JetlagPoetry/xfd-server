@@ -367,6 +367,24 @@ func (d *GoodsDao) UpdateProductVariantByID(ctx context.Context, id int32, updat
 	return updateResult.RowsAffected, updateResult.Error
 }
 
+func (d *GoodsDao) ReductionProductVariantStockByID(ctx context.Context, id int32, Quantity int) (int64, error) {
+	updateResult := db.GetRepo().GetDB(ctx).Debug().Model(&model.ProductVariant{}).Where("id = ?", id).
+		UpdateColumn("stock", gorm.Expr("stock - ?", Quantity))
+	if updateResult.Error != nil {
+		return 0, updateResult.Error
+	}
+	return updateResult.RowsAffected, updateResult.Error
+}
+
+func (d *GoodsDao) IncreaseProductVariantStockByID(ctx context.Context, id int32, Quantity int) (int64, error) {
+	updateResult := db.GetRepo().GetDB(ctx).Debug().Model(&model.ProductVariant{}).Where("id = ?", id).
+		UpdateColumn("stock", gorm.Expr("stock + ?", Quantity))
+	if updateResult.Error != nil {
+		return 0, updateResult.Error
+	}
+	return updateResult.RowsAffected, updateResult.Error
+}
+
 // UpdateInventoryByID 增加锁定库存
 func (d *GoodsDao) UpdateInventoryByID(ctx context.Context, id int32, updateValue *model.Inventory) (int64, error) {
 	updateResult := db.GetRepo().GetDB(ctx).

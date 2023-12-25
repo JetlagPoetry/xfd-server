@@ -26,11 +26,11 @@ type UserRole int
 
 const (
 	UserRoleUnknown  UserRole = 0
-	UserRoleCustomer UserRole = 1
-	UserRoleSupplier UserRole = 2
-	UserRoleBuyer    UserRole = 3
-	UserRoleAdmin    UserRole = 4
-	UserRoleRoot     UserRole = 5
+	UserRoleCustomer UserRole = 1 //消费者
+	UserRoleSupplier UserRole = 2 //供应商
+	UserRoleBuyer    UserRole = 3 //采购商
+	UserRoleAdmin    UserRole = 4 //后台官方
+	UserRoleRoot     UserRole = 5 //超管
 )
 
 type UserPointStatus int

@@ -25,11 +25,11 @@ type ProductWholesale struct {
 }
 type AddProduct struct {
 	ProductAttr      []*model.ProductAttr      `json:"productAttr" binding:"required"`
-	Unit             string                    `json:"unit" binding:"required,gte=1,lte=10"`
+	Unit             string                    `json:"unit"`
 	Price            *string                   `json:"price" binding:"required"`
 	Status           enum.ProductVariantStatus `json:"status" binding:"required,gte=1,lte=2"`
-	MinOrderQuantity int                       `json:"minOrderQuantity" binding:"required"`
-	Stock            int                       `json:"stock" binding:"required,gte=1,lte=9999999"`
+	MinOrderQuantity int                       `json:"minOrderQuantity"`
+	Stock            int                       `json:"stock"`
 }
 
 type GoodsDetail struct {
