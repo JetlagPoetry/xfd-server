@@ -12,11 +12,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 )
 
-func ImportAccount(userID string, phone string) (*Resp, error) {
+func ImportAccount(user *model.User) (*Resp, error) {
 	resp := &Resp{}
 	imAppID, err := strconv.Atoi(os.Getenv("IM_APP_ID"))
 	if err != nil {
@@ -32,13 +33,13 @@ func ImportAccount(userID string, phone string) (*Resp, error) {
 	fullURL := fmt.Sprintf("https://console.tim.qq.com/v4/im_open_login_svc/account_import?"+
 		"sdkappid=%d&identifier=%s&usersig=%s&random=%d&contenttype=json", imAppID, imAdmin, userSig, rand.Uint32())
 	body := map[string]string{
-		"UserID":  userID,
-		"Nick":    utils.GenUsername(phone),
-		"FaceUrl": "https://xfd-t-1313159791.cos.ap-beijing.myqcloud.com/resources/common/aagj/WechatIMG1463.jpeg",
+		"UserID":  user.UserID,
+		"Nick":    user.Username,
+		"FaceUrl": user.AvatarURL,
 	}
 
 	defer func() {
-		log.Printf("[WxService] ImportAccount called, url=%s, resp=%v, err=%v\n", fullURL, utils.ToJson(resp), err)
+		log.Printf("[WxService] ImportAccount called, url=%s, req=%v, resp=%v, err=%v\n", fullURL, utils.ToJson(body), utils.ToJson(resp), err)
 	}()
 
 	jsonBody, err := json.Marshal(body)

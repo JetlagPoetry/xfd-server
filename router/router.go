@@ -16,7 +16,7 @@ func NewRouter() *gin.Engine {
 	r.Use(gin.Logger())
 	r.Use(middleware.Logger())
 	r.Use(middleware.Cors())
-	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1", "/api/v1/user/login", "/api/v1/user/sendCode", "/api/v1/common/getConfig")) // 登录校验, 参数为跳过登录的路由
+	r.Use(middleware.UserAuthMiddleware("/api/v1/test/hello", "/api/v1/test/hello1", "/api/v1/user/login", "/api/v1/user/sendCode", "/api/v1/common/getConfig", "/manage")) // 登录校验, 参数为跳过登录的路由
 
 	testGroup := r.Group("/api/v1/test")
 	{
@@ -30,6 +30,11 @@ func NewRouter() *gin.Engine {
 			c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("encounter error"))))
 		})
 	}
+	r.LoadHTMLGlob("./html/*")
+	r.Handle("GET", "/manage", func(context *gin.Context) {
+		// 返回HTML文件，响应状态码200，html文件名为index.html，模板参数为nil
+		context.HTML(http.StatusOK, "index.html", nil)
+	})
 	userGroup := r.Group("/api/v1/user")
 	{
 		userGroup.POST("/sendCode", handler.User.SendCode)     // 发送验证码
