@@ -398,9 +398,13 @@ func (h *OrgHandler) ExportPointRecords(c *gin.Context) {
 		resp *bytes.Reader
 		xrr  xerr.XErr
 	)
-	err := c.ShouldBindQuery(&req)
+	err := c.BindQuery(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if req.ApplyID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
 		return
 	}
 	resp, xrr = h.orgService.ExportPointRecords(c, req)
@@ -411,7 +415,7 @@ func (h *OrgHandler) ExportPointRecords(c *gin.Context) {
 	}
 	w := c.Writer
 	// 设置文件名
-	filename := fmt.Sprintf("KTJX%s.xlsx", time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("积分明细KTJX%s.xlsx", time.Now().Format("20060102150405"))
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
 	http.ServeContent(w, c.Request, filename, time.Now(), resp)

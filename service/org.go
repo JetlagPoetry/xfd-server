@@ -1143,7 +1143,7 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
-	recordList, count, err := s.PointRecordDao.ListByApplyID(ctx, req.PageRequest, req.ApplyID)
+	recordList, count, err := s.PointRecordDao.ListByApplyIDPage(ctx, req.PageRequest, req.ApplyID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -1265,5 +1265,51 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 }
 
 func (s *OrgService) ExportPointRecords(ctx context.Context, req types.ExportPointRecordsReq) (*bytes.Reader, xerr.XErr) {
-	return nil, nil
+	recordList, err := s.PointRecordDao.ListByApplyID(ctx, req.ApplyID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	list := make([]*types.PointRecord, 0)
+	for _, record := range recordList {
+		user, err := s.userDao.GetByUserID(ctx, record.UserID)
+		if err != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		list = append(list, &types.PointRecord{
+			UserID:          record.UserID,
+			Username:        user.Username,
+			Phone:           user.Phone,
+			PointTotal:      record.TotalPoint.Round(2).String(),
+			PointChange:     record.ChangePoint.Round(2).String(),
+			Type:            record.Type,
+			Comment:         record.Comment,
+			UpdateTime:      record.CreatedAt.Unix(),
+			OperateUserID:   record.OperateUserID,
+			OperateUsername: record.OperateUsername,
+		})
+	}
+
+	f := excelize.NewFile() // 设置单元格的值
+	f.SetCellValue("Sheet1", "A1", "员工姓名")
+	f.SetCellValue("Sheet1", "B1", "员工电话")
+	f.SetCellValue("Sheet1", "C1", "积分余额")
+	f.SetCellValue("Sheet1", "D1", "积分变化")
+	f.SetCellValue("Sheet1", "E1", "变动原因")
+	f.SetCellValue("Sheet1", "F1", "积分变动时间")
+	line := 1
+	for _, record := range list {
+		line++
+		f.SetCellValue("Sheet1", fmt.Sprintf("A%d", line), record.Username)
+		f.SetCellValue("Sheet1", fmt.Sprintf("B%d", line), record.Phone)
+		f.SetCellValue("Sheet1", fmt.Sprintf("C%d", line), record.PointTotal)
+		f.SetCellValue("Sheet1", fmt.Sprintf("D%d", line), record.PointChange)
+		f.SetCellValue("Sheet1", fmt.Sprintf("E%d", line), record.Comment)
+		f.SetCellValue("Sheet1", fmt.Sprintf("F%d", line), time.Unix(record.UpdateTime, 0).Format("2006-01-02 15:04:05"))
+	}
+	var buffer bytes.Buffer
+	if e := f.Write(&buffer); e != nil {
+		return nil, nil
+	}
+	r := bytes.NewReader(buffer.Bytes())
+	return r, nil
 }

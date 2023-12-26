@@ -54,7 +54,7 @@ func (d *PointRecordDao) ListByOrderIDs(ctx context.Context, page types.PageRequ
 	return list, count, nil
 }
 
-func (d *PointRecordDao) ListByApplyID(ctx context.Context, page types.PageRequest, applyID int) (list []*model.PointRecord, count int64, err error) {
+func (d *PointRecordDao) ListByApplyIDPage(ctx context.Context, page types.PageRequest, applyID int) (list []*model.PointRecord, count int64, err error) {
 	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("point_application_id = ? AND status = ?", applyID, model.PointRecordStatusConfirmed)
 	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
@@ -65,6 +65,15 @@ func (d *PointRecordDao) ListByApplyID(ctx context.Context, page types.PageReque
 	}
 
 	return list, count, nil
+}
+
+func (d *PointRecordDao) ListByApplyID(ctx context.Context, applyID int) (list []*model.PointRecord, err error) {
+	sql := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("point_application_id = ? AND status = ?", applyID, model.PointRecordStatusConfirmed)
+	if err = sql.Order("id desc").Find(&list).Error; err != nil {
+		return list, err
+	}
+
+	return list, nil
 }
 
 func (d *PointRecordDao) ListByUserID(ctx context.Context, page types.PageRequest, userID string) (list []*model.PointRecord, count int64, err error) {
