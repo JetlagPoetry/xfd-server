@@ -11,3 +11,4 @@
 *.out
 .idea
 xfd-backend
+.DS_Store

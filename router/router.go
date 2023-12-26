@@ -2,10 +2,8 @@ package router
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"path/filepath"
 	"xfd-backend/handler"
 	"xfd-backend/pkg/middleware"
 	"xfd-backend/pkg/response"
@@ -19,8 +17,6 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.Logger())
 	r.Use(middleware.Cors())
 
-	s, _ := filepath.Abs("./")
-	fmt.Println("filePath=", s)
 	r.LoadHTMLGlob("./static/index.html")
 	r.Static("/static", "./static")
 	r.Handle("GET", "/", func(context *gin.Context) {
