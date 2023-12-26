@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"strings"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
@@ -356,7 +357,7 @@ func (d *OrderDao) CountWaitingForDeliveryOrderBySupplyUserID(ctx context.Contex
 func (d *OrderDao) AdminGetQueryOrderListByIDs(ctx *gin.Context, req types.ExportOrderReq) (queryOrderList []*types.QueryOrder, err error) {
 	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,goods_supplier_organization_name,total_price,user_phone,user_organization_name,payed_at").
-		Where("status in (3,4,5,6,8) and id in ?", req.QueryOrderIDs)
+		Where("status in (3,4,5,6,8) and id in ?", strings.Split(req.QueryOrderIDs, ","))
 
 	// 执行查询
 	if err = queryOrder.Find(&queryOrderList).Error; err != nil {
