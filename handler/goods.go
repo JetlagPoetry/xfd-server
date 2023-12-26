@@ -28,6 +28,10 @@ func (h *GoodsHandler) AddGoods(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if err = req.CheckParams(); err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
 	xErr = h.goodsService.AddGoods(c, req)
 	if xErr != nil {
 		log.Println("[GoodsHandler] AddGoods failed, err=", xErr)

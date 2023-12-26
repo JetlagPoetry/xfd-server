@@ -15,6 +15,18 @@ type GoodsAddReq struct {
 	RetailProducts    []*AddProduct `json:"retailProducts"`
 }
 
+func (g *GoodsAddReq) CheckParams() error {
+	if len(g.WholesaleProducts) == 0 {
+		return fmt.Errorf("wholesaleProducts must be filled")
+	}
+	for i := range g.WholesaleProducts {
+		if g.WholesaleProducts[i].Unit == "" {
+			return fmt.Errorf("unit of wholesaleProducts must be filled")
+		}
+	}
+	return nil
+}
+
 type ProductWholesale struct {
 	ProductAttr      []*model.ProductAttr      `json:"productAttr" binding:"required"`
 	Unit             string                    `json:"unit" binding:"required,gte=1,lte=10"`
