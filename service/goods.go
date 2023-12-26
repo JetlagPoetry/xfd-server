@@ -217,6 +217,9 @@ func (s *GoodsService) processProducts(ctx context.Context, products []*types.Ad
 			Status:           products[i].Status,
 			ProductAttr:      string(productAttrBytes),
 		}
+		if productType == enum.ProductRetail {
+			productVariant.Unit = "元"
+		}
 		_, err := s.goods.CreateProductVariant(ctx, productVariant)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
