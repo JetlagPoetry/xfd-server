@@ -415,7 +415,7 @@ func (h *OrgHandler) ExportPointRecords(c *gin.Context) {
 	}
 	w := c.Writer
 	// 设置文件名
-	filename := fmt.Sprintf("积分明细KTJX%s.xlsx", time.Now().Format("20060102150405"))
+	filename := fmt.Sprintf("PointDetails%s.xlsx", time.Now().Format("20060102150405"))
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
 	http.ServeContent(w, c.Request, filename, time.Now(), resp)
