@@ -60,7 +60,7 @@ func (d *PointRecordDao) ListByApplyID(ctx context.Context, page types.PageReque
 		return nil, 0, err
 	}
 
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -73,7 +73,7 @@ func (d *PointRecordDao) ListByUserID(ctx context.Context, page types.PageReques
 		return nil, 0, err
 	}
 
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -86,7 +86,7 @@ func (d *PointRecordDao) ListByOrgID(ctx context.Context, page types.PageRequest
 		return nil, 0, err
 	}
 
-	if err = sql.Order("created_at desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -126,30 +126,6 @@ func (d *PointRecordDao) GetByUserID(ctx context.Context, userID string) (record
 	return record, nil
 }
 
-func (d *PointRecordDao) Create(ctx context.Context, record *model.PointRecord) (err error) {
-	err = db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Create(record).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d *PointRecordDao) CreateInTx(tx *gorm.DB, record *model.PointRecord) (err error) {
-	err = tx.Model(&model.PointRecord{}).Create(record).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (d *PointRecordDao) BatchCreateInTx(tx *gorm.DB, list []*model.PointRecord) (err error) {
-	err = tx.Model(&model.PointRecord{}).CreateInBatches(list, 100).Error
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (d *PointRecordDao) UpdateByID(ctx context.Context, id int, updateValue *model.PointRecord) (err error) {
 	updateResult := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Where("id =?", id).Updates(updateValue)
 	if err = updateResult.Error; err != nil {
@@ -176,6 +152,30 @@ func (d *PointRecordDao) SumByAppIDInTx(ctx context.Context, applyID int, ty mod
 
 func (d *PointRecordDao) CreateInTxCTX(ctx context.Context, record *model.PointRecord) error {
 	err := db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Create(record).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointRecordDao) Create(ctx context.Context, record *model.PointRecord) (err error) {
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointRecord{}).Create(record).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointRecordDao) CreateInTx(tx *gorm.DB, record *model.PointRecord) (err error) {
+	err = tx.Model(&model.PointRecord{}).Create(record).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *PointRecordDao) BatchCreateInTx(tx *gorm.DB, list []*model.PointRecord) (err error) {
+	err = tx.Model(&model.PointRecord{}).CreateInBatches(list, 100).Error
 	if err != nil {
 		return err
 	}

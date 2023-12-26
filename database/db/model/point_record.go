@@ -9,6 +9,7 @@ type PointRecord struct {
 	gorm.Model
 	UserID             string            `gorm:"column:user_id;not null" json:"user_id"`
 	OrganizationID     int               `gorm:"column:organization_id;not null" json:"organization_id"`
+	TotalPoint         decimal.Decimal   `gorm:"column:total_point;not null" json:"total_point"`
 	ChangePoint        decimal.Decimal   `gorm:"column:change_point;not null" json:"change_point"`
 	PointApplicationID int               `gorm:"column:point_application_id;not null" json:"point_application_id"`
 	PointID            int               `gorm:"column:point_id;not null" json:"point_id"`

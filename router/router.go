@@ -116,7 +116,7 @@ func NewRouter() *gin.Engine {
 		goodsGroup.GET("/getMyGoodsDetail", handler.Goods.GetMyGoodsDetail)        //获取商品详情
 		goodsGroup.POST("/modifyMyGoodsStatus", handler.Goods.ModifyMyGoodsStatus) //修改商品状态
 	}
-	orderGroup := r.Group("/api/v1/order", middleware.UserAuthMiddleware())
+	orderGroup := r.Group("/api/v1/order", middleware.UserAuthMiddleware("/api/v1/order/paymentConfirm"))
 	{
 		orderGroup.POST("/addShoppingCart", handler.Order.AddShoppingCart)         //加入购物车
 		orderGroup.GET("/getShoppingCart", handler.Order.GetShoppingCartList)      //获取购物车列表

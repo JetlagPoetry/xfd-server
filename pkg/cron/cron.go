@@ -91,7 +91,7 @@ func StartCron() {
 		log.Println("[Cron] SetCategoryCache failed, err=", err)
 	}
 
-	_, err = c.AddFunc("0 * * * * ?", func() {
+	_, err = c.AddFunc("*/5 * * * * ?", func() {
 		//log.Println("[Cron] BatchPaymentLookup start")
 
 		ok := redis.Lock("cron-set-payment-lookup", time.Minute*10)
@@ -105,7 +105,7 @@ func StartCron() {
 			log.Println("[Cron] BatchPaymentLookup failed, err=", err)
 			return
 		}
-		log.Println("[Cron] BatchPaymentLookup success")
+		//log.Println("[Cron] BatchPaymentLookup success")
 	})
 	if err != nil {
 		log.Println("[Cron] BatchPaymentLookup failed, err=", err)

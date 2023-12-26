@@ -11,6 +11,7 @@ import (
 	"xfd-backend/database/db/model"
 	"xfd-backend/pkg/response"
 	"xfd-backend/pkg/types"
+	"xfd-backend/pkg/utils"
 	"xfd-backend/pkg/xerr"
 	"xfd-backend/service"
 )
@@ -42,6 +43,14 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 		return
 	}
 	if !startTime.Before(endTime) {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("生效时间异常"))))
+		return
+	}
+	if endTime.Before(utils.NextDay(time.Now())) {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("生效时间异常"))))
+		return
+	}
+	if startTime.Before(utils.CurrentDay(time.Now())) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("生效时间异常"))))
 		return
 	}

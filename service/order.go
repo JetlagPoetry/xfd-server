@@ -464,6 +464,7 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	userPoint := user.Point
 	pointNeed := point.Copy()
 	remainIDs := make([]int, 0)
 	for _, remain := range remainList {
@@ -481,9 +482,11 @@ func (s *OrderService) payWithPoint(ctx context.Context, order *model.OrderInfo,
 			spend = pointNeed
 			pointNeed = pointNeed.Sub(pointNeed)
 		}
+		userPoint = userPoint.Sub(spend)
 		record := &model.PointRecord{
 			UserID:             user.UserID,
 			OrganizationID:     user.OrganizationID,
+			TotalPoint:         userPoint,
 			ChangePoint:        spend.Mul(decimal.NewFromInt(-1)),
 			PointApplicationID: remain.PointApplicationID,
 			PointID:            int(remain.ID),
@@ -596,6 +599,8 @@ func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.Us
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	userPoint := user.Point
+
 	err = s.userDao.UpdateByUserIDInTxCTX(ctx, user.UserID, &model.User{Point: user.Point.Add(point)})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -607,6 +612,7 @@ func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.Us
 	}
 
 	for _, record := range records {
+		userPoint = userPoint.Sub(record.ChangePoint)
 		remain, err := s.pointRemainDao.GetByIDForUpdateCTX(ctx, record.PointID)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -619,6 +625,7 @@ func (s *OrderService) refundPoint(ctx context.Context, user, operator *model.Us
 		newRecord := &model.PointRecord{
 			UserID:             user.UserID,
 			OrganizationID:     user.OrganizationID,
+			TotalPoint:         userPoint,
 			ChangePoint:        record.ChangePoint.Mul(decimal.NewFromInt(-1)),
 			PointApplicationID: record.PointApplicationID,
 			PointID:            record.PointID,

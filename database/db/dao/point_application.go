@@ -26,7 +26,7 @@ func (d *PointApplicationDao) Lists(ctx context.Context, page types.PageRequest,
 		return nil, 0, err
 	}
 
-	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Order("id desc").Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -65,8 +65,8 @@ func (d *PointApplicationDao) ListExpired(ctx context.Context) (apply []*model.P
 	return apply, nil
 }
 
-func (d *PointApplicationDao) ListByStatusInTx(tx *gorm.DB, status model.PointApplicationStatus) (apply []*model.PointApplication, err error) {
-	err = tx.Model(&model.PointApplication{}).Where("status = ?", status).Find(&apply).Error
+func (d *PointApplicationDao) ListByOrgIDStatusInTx(tx *gorm.DB, orgID int, status model.PointApplicationStatus) (apply []*model.PointApplication, err error) {
+	err = tx.Model(&model.PointApplication{}).Where("organization_id = ? AND status = ?", orgID, status).Find(&apply).Error
 	if err != nil {
 		return nil, err
 	}
