@@ -41,7 +41,7 @@ func (d *OrderDao) CreateOrderRefund(ctx context.Context, orderRefund *model.Ord
 func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartListReq) (shoppingCartList []*model.ShoppingCart, count int64, err error) {
 	result := db.Get().Debug().Model(&model.ShoppingCart{}).Where("user_id = ?", req.UserID)
 	result = result.Count(&count)
-	result = result.Order("updated_at,goods_id,created_at desc, id desc").
+	result = result.Order("updated_at desc,goods_id,created_at desc, id desc").
 		Offset(req.Offset()).
 		Limit(req.Limit()).
 		Find(&shoppingCartList)
