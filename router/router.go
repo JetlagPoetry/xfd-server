@@ -83,6 +83,7 @@ func NewRouter() *gin.Engine {
 		orgGroup.GET("/getApplys", handler.Org.GetApplys)               // 获取积分申请记录
 		orgGroup.POST("/clearPoint", handler.Org.ClearPoint)            // 积分清零
 
+		orgGroup.GET("/getAccountVerify", handler.Org.GetAccountVerify)         // 查看用户申请
 		orgGroup.POST("/verifyAccount", handler.Org.VerifyAccount)              // 提交用户审核
 		orgGroup.GET("/getAccountToVerify", handler.Org.GetAccountToVerify)     // 获取待审核用户申请
 		orgGroup.GET("/getAccountVerifyList", handler.Org.GetAccountVerifyList) // 获取用户申请记录

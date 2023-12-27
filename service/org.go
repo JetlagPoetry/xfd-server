@@ -825,6 +825,40 @@ func (s *OrgService) clearPoint(tx *gorm.DB, req types.OrgClearPointReq, operato
 	}
 	return nil
 }
+func (s *OrgService) GetAccountVerify(ctx context.Context, req types.GetAccountVerifyReq) (*types.GetAccountVerifyResp, xerr.XErr) {
+	userVerify, err := s.userVerifyDao.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	count, err := s.userVerifyDao.CountByStatus(ctx, model.UserVerifyStatusSubmitted)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+
+	hasNext := false
+	if userVerify.Status == model.UserVerifyStatusSubmitted && count > 1 {
+		hasNext = true
+	} else if userVerify.Status == model.UserVerifyStatusSuccess && count > 0 {
+		hasNext = true
+	}
+
+	return &types.GetAccountVerifyResp{
+		ID:               int(userVerify.ID),
+		Role:             userVerify.UserRole,
+		Organization:     userVerify.Organization,
+		OrganizationCode: userVerify.OrganizationCode,
+		OrganizationURL:  userVerify.OrganizationURL,
+		IdentityURLA:     userVerify.IdentityURLA,
+		IdentityURLB:     userVerify.IdentityURLB,
+		RealName:         userVerify.RealName,
+		CertificateNo:    userVerify.CertificateNo,
+		Position:         userVerify.Position,
+		Phone:            userVerify.Phone,
+		Status:           userVerify.Status,
+		HasNext:          hasNext,
+	}, nil
+}
 
 func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountReq) (*types.VerifyAccountResp, xerr.XErr) {
 	userID := common.GetUserID(ctx)

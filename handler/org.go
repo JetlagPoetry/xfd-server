@@ -180,6 +180,31 @@ func (h *OrgHandler) ClearPoint(c *gin.Context) {
 	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
 }
 
+func (h *OrgHandler) GetAccountVerify(c *gin.Context) {
+	var (
+		req  types.GetAccountVerifyReq
+		resp *types.GetAccountVerifyResp
+		xErr xerr.XErr
+	)
+
+	err := c.BindQuery(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
+	if req.ID == 0 {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, errors.New("invalid param"))))
+		return
+	}
+	resp, xErr = h.orgService.GetAccountVerify(c, req)
+	if xErr != nil {
+		log.Println("[OrgHandler] GetAccountVerify failed, err=", xErr)
+		c.JSON(http.StatusOK, response.RespError(c, xErr))
+		return
+	}
+	c.JSON(http.StatusOK, response.RespSuccess(c, resp))
+}
+
 func (h *OrgHandler) VerifyAccount(c *gin.Context) {
 	var (
 		req  types.VerifyAccountReq

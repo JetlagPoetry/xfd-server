@@ -79,6 +79,26 @@ type PointOrder struct {
 	ApplyURL         string                       `json:"applyURL"`
 }
 
+type GetAccountVerifyReq struct {
+	ID int `json:"id"`
+}
+
+type GetAccountVerifyResp struct {
+	ID               int                    `json:"id"`
+	Role             model.UserRole         `json:"role"`
+	Organization     string                 `json:"organization"`
+	OrganizationCode string                 `json:"organizationCode"`
+	OrganizationURL  string                 `json:"organizationUrl"`
+	IdentityURLA     string                 `json:"identityUrlA"`
+	IdentityURLB     string                 `json:"identityUrlB"`
+	RealName         string                 `json:"realName"`
+	CertificateNo    string                 `json:"certificateNo"`
+	Position         string                 `json:"position"`
+	Phone            string                 `json:"phone"`
+	Status           model.UserVerifyStatus `json:"status"`
+	HasNext          bool                   `json:"hasNext"`
+}
+
 type VerifyAccountReq struct {
 	ID      int                    `json:"id"`
 	Status  model.UserVerifyStatus `json:"status"`
