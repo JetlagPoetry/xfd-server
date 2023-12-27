@@ -461,6 +461,8 @@ func (s *UserService) GetAdmins(ctx context.Context, req types.UserGetAdminsReq)
 		})
 	}
 
+	list = list[req.Offset() : req.Offset()+req.Limit()]
+
 	return &types.UserGetAdminsResp{List: list, TotalNum: int(count), RootNum: int(rootCount)}, nil
 }
 

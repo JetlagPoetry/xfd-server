@@ -800,7 +800,7 @@ func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*
 	if rr != nil {
 		return nil, rr
 	}
-	if user.UserRole != model.UserRoleAdmin {
+	if user.UserRole != model.UserRoleAdmin && user.UserRole != model.UserRoleRoot {
 		if req.CheckMiniAppParams() != nil {
 			return nil, xerr.WithCode(xerr.InvalidParams, req.CheckMiniAppParams())
 		}
@@ -820,7 +820,7 @@ func (s *OrderService) GetOrderList(ctx *gin.Context, req types.OrderListReq) (*
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
 		return &types.OrderListResp{PageResult: types.PageResult{TotalNum: total, PageNum: req.PageNum, PageSize: req.PageSize}, List: orderList}, nil
-	case model.UserRoleAdmin:
+	case model.UserRoleAdmin, model.UserRoleRoot:
 		orderList, total, err := s.orderDao.AdminGetQueryOrderList(ctx, req)
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
