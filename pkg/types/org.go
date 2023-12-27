@@ -123,6 +123,7 @@ type GetAccountToVerifyResp struct {
 	CertificateNo    string         `json:"certificateNo"`
 	Position         string         `json:"position"`
 	Phone            string         `json:"phone"`
+	Comment          string         `json:"comment"`
 	HasNext          bool           `json:"hasNext"`
 }
 
