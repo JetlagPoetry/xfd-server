@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -145,6 +146,10 @@ func (s *OrgService) parseCSV(ctx context.Context, file io.Reader, header *multi
 		phone := row[0]
 		if !utils.Mobile(phone) {
 			return nil, nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
+		}
+		if phone == "16666666666" || phone == "18888888888" {
+			log.Println("[OrgService] parseCSV example phone number=", phone)
+			continue
 		}
 		list = append(list, &OrgMember{
 			Phone: row[0],
