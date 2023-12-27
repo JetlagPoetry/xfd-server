@@ -826,6 +826,15 @@ func (s *OrgService) clearPoint(tx *gorm.DB, req types.OrgClearPointReq, operato
 	return nil
 }
 func (s *OrgService) GetAccountVerify(ctx context.Context, req types.GetAccountVerifyReq) (*types.GetAccountVerifyResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	}
+
 	userVerify, err := s.userVerifyDao.GetByID(ctx, req.ID)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -864,7 +873,10 @@ func (s *OrgService) VerifyAccount(ctx context.Context, req types.VerifyAccountR
 	userID := common.GetUserID(ctx)
 	user, err := s.userDao.GetByUserID(ctx, userID)
 	if err != nil {
-		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
 	}
 
 	userVerify, err := s.userVerifyDao.GetByID(ctx, req.ID)
@@ -1012,6 +1024,15 @@ func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr
 }
 
 func (s *OrgService) GetAccountToVerify(ctx context.Context, req types.GetAccountToVerifyReq) (*types.GetAccountToVerifyResp, xerr.XErr) {
+	userID := common.GetUserID(ctx)
+	user, err := s.userDao.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorUploadFile, err)
+	}
+	if user.UserRole != model.UserRoleRoot && user.UserRole != model.UserRoleAdmin {
+		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("user is not admin"))
+	}
+
 	// 获取下一个未审核的用户认证申请
 	userVerify, err := s.userVerifyDao.GetByStatus(ctx, model.UserVerifyStatusSubmitted)
 	if err != nil {

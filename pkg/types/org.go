@@ -80,7 +80,7 @@ type PointOrder struct {
 }
 
 type GetAccountVerifyReq struct {
-	ID int `json:"id"`
+	ID int `form:"id"`
 }
 
 type GetAccountVerifyResp struct {
