@@ -386,7 +386,8 @@ func (s *UserService) assignOrRegisterAdmin(tx *gorm.DB, req types.UserAssignAdm
 	if err != nil {
 		return nil, err
 	}
-	if user != nil && user.UserRole != model.UserRoleUnknown {
+	if user != nil && user.UserRole != model.UserRoleUnknown && user.UserRole != model.UserRoleAdmin &&
+		user.UserRole != model.UserRoleRoot {
 		return nil, errors.New("user exists")
 	}
 	if user == nil {
@@ -424,6 +425,16 @@ func (s *UserService) GetAdmins(ctx context.Context, req types.UserGetAdminsReq)
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
 
+	sort.Slice(userList, func(i, j int) bool {
+		if userList[i].UserRole == model.UserRoleRoot && userList[j].UserRole != model.UserRoleRoot {
+			return true
+		} else if userList[i].UserRole != model.UserRoleRoot && userList[j].UserRole == model.UserRoleRoot {
+			return false
+		} else {
+			return userList[i].CreatedAt.After(userList[j].CreatedAt)
+		}
+	})
+
 	list := make([]*types.UserAdmin, 0)
 	for _, user := range userList {
 		list = append(list, &types.UserAdmin{
@@ -449,6 +460,7 @@ func (s *UserService) GetAdmins(ctx context.Context, req types.UserGetAdminsReq)
 			}(),
 		})
 	}
+
 	return &types.UserGetAdminsResp{List: list, TotalNum: int(count), RootNum: int(rootCount)}, nil
 }
 

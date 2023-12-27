@@ -40,12 +40,12 @@ func (d *UserDao) ListByOrgID(ctx context.Context, page types.PageRequest, orgID
 }
 
 func (d *UserDao) ListByStatus(ctx context.Context, page types.PageRequest, roles []model.UserRole) (list []*model.User, count int64, err error) {
-	sql := db.GetRepo().GetDB(ctx).Model(&model.User{}).Where("user_role IN (?)", roles)
+	sql := db.GetRepo().GetDB(ctx).Model(&model.User{}).Where("user_role IN (?) AND deleted_at is null", roles)
 	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err = sql.Offset((page.PageNum - 1) * page.PageSize).Limit(page.PageSize).Find(&list).Error; err != nil {
+	if err = sql.Find(&list).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -235,6 +235,10 @@ func (s *OrgService) downloadXLS(ctx context.Context, url string) ([]*OrgMember,
 		if !utils.Mobile(phone) {
 			return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("包含错误的手机号"))
 		}
+		if phone == "16666666666" || phone == "18888888888" {
+			log.Println("[OrgService] downloadXLS example phone number=", phone)
+			continue
+		}
 		list = append(list, &OrgMember{
 			Phone: row[0],
 			Name:  row[1],
