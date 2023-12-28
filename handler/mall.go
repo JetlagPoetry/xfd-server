@@ -31,6 +31,10 @@ func (h *MallHandler) GetCategories(c *gin.Context) {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
+	if err = req.CheckParams(); err != nil {
+		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
+		return
+	}
 	resp, xErr = h.mallService.GetCategories(c, req)
 	if xErr != nil {
 		log.Println("[MallHandler] GetCategories failed, err=", xErr)
