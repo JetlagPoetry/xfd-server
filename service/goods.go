@@ -423,7 +423,7 @@ func (s *GoodsService) ModifyMyGoodsStatus(c *gin.Context, req types.GoodsReq) x
 	//获取用户ID
 	userID := common.GetUserID(c)
 	//获取用户角色
-	user, err := s.userDao.GetByUserID(c, req.UserID)
+	user, err := s.userDao.GetByUserID(c, userID)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}

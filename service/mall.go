@@ -23,7 +23,9 @@ func NewMallService() *MallService {
 }
 
 func (s *MallService) GetCategories(c context.Context, req types.CategoryListReq) ([]*model.Category, xerr.XErr) {
-	//todo:增加缓存
+	if req.ParentID == 0 {
+		req.ParentID = req.ParentId
+	}
 	categoriesList, err := s.category.GetCategoriesList(c, req.Level, req.ParentID)
 	if err != nil {
 		return nil, nil

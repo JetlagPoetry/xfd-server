@@ -8,7 +8,18 @@ import (
 type CategoryListReq struct {
 	Level    int32 `form:"level" binding:"required,gte=1,lte=3"`
 	ParentID int32 `form:"parentID" binding:"numeric"`
+	ParentId int32 `form:"parentId" binding:"numeric"`
 }
+
+func (c CategoryListReq) CheckParams() error {
+	if c.Level != 1 {
+		if c.ParentId == 0 && c.ParentID == 0 {
+			return fmt.Errorf("parentId should be filled")
+		}
+	}
+	return nil
+}
+
 type CategoryListResp struct {
 	List []*CategoryDetail `json:"category,omitempty"`
 }
