@@ -869,6 +869,7 @@ func (s *OrgService) GetAccountVerify(ctx context.Context, req types.GetAccountV
 		Position:         userVerify.Position,
 		Phone:            userVerify.Phone,
 		Status:           userVerify.Status,
+		Comment:          userVerify.Comment,
 		HasNext:          hasNext,
 	}, nil
 }

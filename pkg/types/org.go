@@ -96,6 +96,7 @@ type GetAccountVerifyResp struct {
 	Position         string                 `json:"position"`
 	Phone            string                 `json:"phone"`
 	Status           model.UserVerifyStatus `json:"status"`
+	Comment          string                 `json:"comment"`
 	HasNext          bool                   `json:"hasNext"`
 }
 

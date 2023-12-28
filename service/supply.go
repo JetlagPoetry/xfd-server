@@ -86,7 +86,7 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPur
 	list := make([]*types.PurchaseOrder, 0)
 	for _, purchase := range purchaseList {
 		user := userMap[purchase.UserID]
-		list = append(list, &types.PurchaseOrder{
+		order := &types.PurchaseOrder{
 			OrderID:       int(purchase.ID),
 			CategoryNameA: category[int32(purchase.CategoryA)].Name,
 			CategoryNameB: category[int32(purchase.CategoryB)].Name,
@@ -104,7 +104,13 @@ func (s *SupplyService) GetPurchases(ctx context.Context, req types.SupplyGetPur
 			UserAvatar:    user.AvatarURL,
 			SubmitTime:    purchase.CreatedAt.Unix(),
 			HasQuote:      quoteMap[int(purchase.ID)] != nil,
-		})
+		}
+
+		if order.HasQuote {
+			quote := quoteMap[int(purchase.ID)]
+			order.Price = quote.Price
+		}
+		list = append(list, order)
 	}
 	return &types.SupplyGetPurchasesResp{List: list, TotalNum: count}, nil
 }
@@ -132,10 +138,9 @@ func (s *SupplyService) GetQuotes(ctx context.Context, req types.SupplyGetQuotes
 	for _, quote := range quoteList {
 
 		newQuote := &types.PurchaseQuote{
-			QuoteID: int(quote.ID),
-			OrderID: int(purchaseOrder.ID),
-			GoodsID: quote.GoodsID,
-
+			QuoteID:    int(quote.ID),
+			OrderID:    int(purchaseOrder.ID),
+			GoodsID:    quote.GoodsID,
 			Price:      quote.Price.Round(2).String(),
 			Unit:       purchaseOrder.Unit,
 			Time:       quote.CreatedAt.Unix(),
