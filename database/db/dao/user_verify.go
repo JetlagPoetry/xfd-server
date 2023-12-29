@@ -24,7 +24,7 @@ func (d *UserVerifyDao) ListUserVerifyByUserID(ctx context.Context, userID strin
 }
 
 func (d *UserVerifyDao) List(ctx context.Context, page types.PageRequest) (list []*model.UserVerify, count int64, err error) {
-	sql := db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Order("updated_at desc")
+	sql := db.GetRepo().GetDB(ctx).Model(&model.UserVerify{}).Order("created_at desc")
 	if err = sql.Count(&count).Error; err != nil {
 		return nil, 0, err
 	}
