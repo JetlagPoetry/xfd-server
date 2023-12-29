@@ -184,8 +184,8 @@ type ProductVariantInfo struct {
 	ID               int32                     `json:"id"`
 	Unit             string                    `json:"unit"`
 	Price            string                    `json:"price"`
-	MinOrderQuantity int                       `json:"minOrderQuantity,omitempty"`
-	Stock            int                       `json:"stock,omitempty"`
+	MinOrderQuantity int                       `json:"minOrderQuantity"`
+	Stock            int                       `json:"stock"`
 	SKUCode          string                    `json:"skuCode"`
 	Status           enum.ProductVariantStatus `json:"status"`
 	ProductAttr      []*model.ProductAttr      `json:"productAttr,omitempty"`
