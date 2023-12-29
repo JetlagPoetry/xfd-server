@@ -483,6 +483,7 @@ func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) 
 		if rr != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
 		}
+		goods[i].Stock = *productVariants[i].Stock
 		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
 		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
 	}

@@ -117,6 +117,7 @@ type GoodsList struct {
 	SoldNum           int                       `json:"soldNum" gorm:"column:sold_num"`
 	SPUCode           string                    `json:"spuCode,omitempty" gorm:"column:spu_code"`
 	UserID            string                    `json:"userID,omitempty" gorm:"column:user_id"`
+	Stock             int                       `json:"stock"`
 }
 
 func (g *GoodsList) GetGoodsFrontImage() string {
