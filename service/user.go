@@ -164,7 +164,7 @@ func (s *UserService) SubmitRole(ctx context.Context, req types.UserSubmitRoleRe
 	}
 	// 允许初次提交&重复提交认证
 	if (user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer) && user.UserRole != req.Role {
-		return nil, xerr.WithCode(xerr.ErrorOperationForbidden, errors.New("重复认证"))
+		return nil, xerr.WithCode(xerr.ErrorUserDuplicateVerify, errors.New("重复认证"))
 	}
 
 	// 开始事务

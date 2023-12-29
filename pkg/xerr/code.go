@@ -10,20 +10,21 @@ const (
 	InvalidParams         XCode = 400
 
 	//成员错误
-	ErrorUserAuthFailed     XCode = 10001
-	ErrorExistUser          XCode = 10002
-	ErrorNotExistUser       XCode = 10003
-	ErrorNotCompare         XCode = 10004
-	ErrorNotComparePassword XCode = 10005
-	ErrorFailEncryption     XCode = 10006
-	ErrorNotExistProduct    XCode = 10007
-	ErrorNotExistAddress    XCode = 10008
-	ErrorExistFavorite      XCode = 10009
-	ErrorUserNotFound       XCode = 10010
-	ErrorTokenExpired       XCode = 10011
-	ErrorOperationForbidden XCode = 10012
-	ErrorUserOrgNotFound    XCode = 10013
-	ErrorUserPointEmpty     XCode = 10014
+	ErrorUserAuthFailed      XCode = 10001
+	ErrorExistUser           XCode = 10002
+	ErrorNotExistUser        XCode = 10003
+	ErrorNotCompare          XCode = 10004
+	ErrorNotComparePassword  XCode = 10005
+	ErrorFailEncryption      XCode = 10006
+	ErrorNotExistProduct     XCode = 10007
+	ErrorNotExistAddress     XCode = 10008
+	ErrorExistFavorite       XCode = 10009
+	ErrorUserNotFound        XCode = 10010
+	ErrorTokenExpired        XCode = 10011
+	ErrorOperationForbidden  XCode = 10012
+	ErrorUserOrgNotFound     XCode = 10013
+	ErrorUserPointEmpty      XCode = 10014
+	ErrorUserDuplicateVerify XCode = 10015
 
 	//店家错误
 	ErrorBossCheckTokenFail        XCode = 20001
