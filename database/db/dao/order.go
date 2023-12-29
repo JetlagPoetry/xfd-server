@@ -53,6 +53,15 @@ func (d *OrderDao) GetMyShoppingCartList(c *gin.Context, req types.ShoppingCartL
 	return shoppingCartList, count, nil
 }
 
+func (d *OrderDao) GetAllMyShoppingCart(c *gin.Context, req types.ShoppingCartListReq) (shoppingCartList []*model.ShoppingCart, err error) {
+	result := db.Get().Debug().Model(&model.ShoppingCart{}).Where("user_id = ?", req.UserID).Find(&shoppingCartList)
+	// 错误处理
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return shoppingCartList, nil
+}
+
 func (d *OrderDao) CustomerGetQueryOrderList(ctx *gin.Context, req types.OrderListReq) (queryOrderList []*types.QueryOrder, count int64, err error) {
 	queryOrder := db.Get().Debug().Model(&model.OrderInfo{}).
 		Select("id,order_sn,status,name,quantity,unit_price,post_price,total_price,image,product_attr, shipment_company,shipment_sn,estimated_delivery_time,goods_supplier_user_id,created_at,payed_at,delivery_time,signer_name,singer_mobile,signer_address").

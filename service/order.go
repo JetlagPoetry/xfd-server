@@ -194,7 +194,43 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 		return nil, xrr
 	}
 	req.UserID = user.UserID
-	//todo: 优化不用删除，不满足条件的不查询出来，比如SKU下架，Goods库存不足
+	//2.删除所有购物车的失效数据
+	allShoppingCart, err := s.orderDao.GetAllMyShoppingCart(ctx, req)
+	if err != nil {
+		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	deletedProductVariantIDs := make(map[int32]bool)
+	deletedGoodsIDs := make(map[int32]bool)
+	for _, shoppingCart := range allShoppingCart {
+		productVariant, rr := s.goods.GetProductVariantByProductVariantID(ctx, shoppingCart.ProductVariantID)
+		if rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
+		}
+		if productVariant == nil || *productVariant.Stock == 0 || productVariant.Status == enum.ProductVariantDisabled {
+			if !deletedProductVariantIDs[shoppingCart.ProductVariantID] {
+				deletedProductVariantIDs[shoppingCart.ProductVariantID] = true
+				err = s.orderDao.DeleteShoppingCartByProductVariantID(ctx, shoppingCart.ProductVariantID)
+				if err != nil {
+					log.Errorf(" delete invalid product shopping cart %d failed, err=%v", shoppingCart.ID, err)
+				}
+			}
+		}
+		goods, _rr := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
+		if _rr != nil {
+			return nil, xerr.WithCode(xerr.ErrorDatabase, _rr)
+		}
+		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
+			if !deletedGoodsIDs[shoppingCart.GoodsID] {
+				deletedGoodsIDs[shoppingCart.GoodsID] = true
+				err = s.orderDao.DeleteShoppingCartByGoodsID(ctx, shoppingCart.GoodsID)
+				if err != nil {
+					log.Errorf(" delete invalid product shopping cart %d failed, err=%v", shoppingCart.ID, err)
+				}
+			}
+		}
+	}
+
+	//分页查询数据
 	shoppingCartList, total, err := s.orderDao.GetMyShoppingCartList(ctx, req)
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
@@ -210,26 +246,11 @@ func (s *OrderService) GetShoppingCartList(ctx *gin.Context, req types.ShoppingC
 		if rr != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
 		}
-		if productVariant == nil || *productVariant.Stock == 0 {
-			err = s.orderDao.DeleteShoppingCartByProductVariantID(ctx, shoppingCart.ProductVariantID)
-			if err != nil {
-				log.Errorf(" delete invalid product shopping cart %d failed, err=%v", shoppingCart.ID, err)
-				continue
-			}
-		}
 		goods, _rr := s.goods.GetGoodsByGoodsID(ctx, shoppingCart.GoodsID)
 		if _rr != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, _rr)
 		}
-		if goods == nil || goods.Status == enum.GoodsStatusOffSale || goods.RetailStatus == enum.GoodsRetailSoldOut {
-			log.Errorf("goods %d not found", productVariant.GoodsID)
-			err = s.orderDao.DeleteShoppingCartByGoodsID(ctx, shoppingCart.GoodsID)
-			if err != nil {
-				log.Errorf(" delete invalid product shopping cart %d failed, err=%v", shoppingCart.ID, err)
-				continue
-			}
-		}
-		if productVariant != nil {
+		if productVariant != nil && goods != nil {
 			shoppingCartDetail.Stock = productVariant.Stock
 			shoppingCartDetail.Price = productVariant.Price.Round(2).String()
 			shoppingCartDetail.Name = goods.Name
