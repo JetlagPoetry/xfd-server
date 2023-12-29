@@ -14,7 +14,7 @@ type CategoryListReq struct {
 func (c CategoryListReq) CheckParams() error {
 	if c.Level != 1 {
 		if c.ParentId == 0 && c.ParentID == 0 {
-			return fmt.Errorf("parentId should be filled")
+			return fmt.Errorf("parentId must be filled")
 		}
 	}
 	return nil
