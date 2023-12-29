@@ -309,15 +309,16 @@ func (s *GoodsService) normalGetGoodsList(ctx *gin.Context, req types.GoodsListR
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
 		}
 		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
-		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
+		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit, goods[i].Stock = s.findPriceBounds(productVariants)
 	}
 	result.GoodsList = goods
 	return &result, nil
 }
 
-func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) (string, string, string, string, string, string) {
+func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) (string, string, string, string, string, string, int) {
 	var wholesalePriceMax, wholesalePriceMin, retailPriceMax, retailPriceMin decimal.Decimal
 	var wholesaleUnit, retailUnit string
+	var stock int
 	initW := false
 	initR := false
 	for k := range productVariants {
@@ -331,6 +332,9 @@ func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) 
 			}
 			initW = true
 		} else if productVariants[k].Type == enum.ProductRetail {
+			if productVariants[k].Status == enum.ProductVariantEnabled {
+				stock = stock + *productVariants[k].Stock
+			}
 			retailUnit = productVariants[k].Unit
 			if !initR || productVariants[k].Price.GreaterThan(retailPriceMax) {
 				retailPriceMax = productVariants[k].Price
@@ -342,7 +346,7 @@ func (s *GoodsService) findPriceBounds(productVariants []*model.ProductVariant) 
 		}
 	}
 	return wholesalePriceMax.Round(2).String(), wholesalePriceMin.Round(2).String(),
-		retailPriceMax.Round(2).String(), retailPriceMin.Round(2).String(), wholesaleUnit, retailUnit
+		retailPriceMax.Round(2).String(), retailPriceMin.Round(2).String(), wholesaleUnit, retailUnit, stock
 }
 
 func (s *GoodsService) getGoodsListByPrice(ctx *gin.Context, req types.GoodsListReq) (*types.GoodsListResp, xerr.XErr) {
@@ -358,7 +362,7 @@ func (s *GoodsService) getGoodsListByPrice(ctx *gin.Context, req types.GoodsList
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
 		}
 		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
-		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
+		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit, _ = s.findPriceBounds(productVariants)
 	}
 	result.GoodsList = goods
 	return &result, nil
@@ -483,9 +487,8 @@ func (s *GoodsService) GetMyGoodsList(c *gin.Context, req types.MyGoodsListReq) 
 		if rr != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, rr)
 		}
-		goods[i].Stock = *productVariants[i].Stock
 		goods[i].GoodsFrontImage = goods[i].GetGoodsFrontImage()
-		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit = s.findPriceBounds(productVariants)
+		goods[i].WholesalePriceMax, goods[i].WholesalePriceMin, goods[i].RetailPriceMax, goods[i].RetailPriceMin, goods[i].WholeSaleUnit, goods[i].RetailUnit, goods[i].Stock = s.findPriceBounds(productVariants)
 	}
 	result.GoodsList = goods
 	return &result, nil
