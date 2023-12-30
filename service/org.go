@@ -179,9 +179,9 @@ func (s *OrgService) verifyCsv(ctx context.Context, members []*OrgMember) (map[s
 	userMap := make(map[string]*model.User)
 	for _, user := range list {
 		// 认证过身份也可以发积分的吧
-		//if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
-		//	return nil, xerr.WithCode(xerr.ErrorInvalidCsvFormat, errors.New("已认证过身份"))
-		//}
+		if user.UserRole == model.UserRoleBuyer || user.UserRole == model.UserRoleSupplier {
+			return nil, xerr.WithCode(xerr.ErrorExistVerifiedUser, errors.New("已认证过身份"))
+		}
 		userMap[user.Phone] = user
 	}
 
@@ -452,10 +452,11 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 			UserID:           utils.GenUUID(),
 			Phone:            member.Phone,
 			UserRole:         model.UserRoleCustomer,
-			Username:         member.Username,
+			Username:         utils.GenUsername(member.Phone),
 			OrganizationID:   int(org.ID),
 			OrganizationName: org.Name,
 			Point:            decimal.Zero,
+			RealName:         member.Username,
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -1162,9 +1163,13 @@ func (s *OrgService) GetOrgMembers(ctx context.Context, req types.GetOrgMembersR
 
 	list := make([]*types.OrgMember, 0)
 	for _, user := range userList {
+		username, xErr := s.GetOrgUsername(ctx, user)
+		if xErr != nil {
+			return nil, xErr
+		}
 		item := &types.OrgMember{
 			UserID:           user.UserID,
-			Name:             user.Username,
+			Name:             username,
 			Phone:            user.Phone,
 			OrganizationName: user.OrganizationName,
 			Point:            user.Point.Round(2).String(),
@@ -1219,9 +1224,15 @@ func (s *OrgService) GetPointRecordsByApply(ctx context.Context, req types.GetPo
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
+
+		username, xErr := s.GetOrgUsername(ctx, user)
+		if xErr != nil {
+			return nil, xErr
+		}
+
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
-			Username:        user.Username,
+			Username:        username,
 			Phone:           user.Phone,
 			PointTotal:      record.TotalPoint.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
@@ -1267,12 +1278,16 @@ func (s *OrgService) GetPointRecordsByUser(ctx context.Context, req types.GetPoi
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
+	username, xErr := s.GetOrgUsername(ctx, user)
+	if xErr != nil {
+		return nil, xErr
+	}
 	list := make([]*types.PointRecord, 0)
 	for _, record := range recordList {
 
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
-			Username:        user.Username,
+			Username:        username,
 			Phone:           user.Phone,
 			PointTotal:      record.TotalPoint.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
@@ -1310,9 +1325,14 @@ func (s *OrgService) GetPointRecords(ctx context.Context, req types.GetPointReco
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}
+		username, xErr := s.GetOrgUsername(ctx, user)
+		if xErr != nil {
+			return nil, xErr
+		}
+
 		list = append(list, &types.PointRecord{
 			UserID:          record.UserID,
-			Username:        user.Username,
+			Username:        username,
 			Phone:           user.Phone,
 			PointTotal:      record.TotalPoint.Round(2).String(),
 			PointChange:     record.ChangePoint.Round(2).String(),
@@ -1378,4 +1398,20 @@ func (s *OrgService) ExportPointRecords(ctx context.Context, req types.ExportPoi
 	}
 	r := bytes.NewReader(buffer.Bytes())
 	return r, nil
+}
+
+func (s *OrgService) GetOrgUsername(ctx context.Context, user *model.User) (string, xerr.XErr) {
+	// 如果用户为消费者，返回user中真实姓名
+	if user.UserRole == model.UserRoleCustomer {
+		return user.RealName, nil
+	} else if user.UserRole == model.UserRoleSupplier || user.UserRole == model.UserRoleBuyer {
+		// 如果为商家，返回认证时提交的真实姓名
+		verify, err := s.userVerifyDao.GetByUserID(ctx, user.UserID)
+		if err != nil {
+			return "", xerr.WithCode(xerr.ErrorDatabase, err)
+		}
+		return verify.RealName, nil
+	} else {
+		return user.Username, nil
+	}
 }

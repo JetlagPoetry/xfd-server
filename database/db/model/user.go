@@ -11,6 +11,7 @@ type User struct {
 	Phone            string          `gorm:"column:phone;not null" json:"phone"`
 	UserRole         UserRole        `gorm:"column:user_role;not null" json:"user_role"`
 	Username         string          `gorm:"column:username;not null" json:"username"`
+	RealName         string          `gorm:"column:real_name;not null" json:"real_name"`
 	AvatarURL        string          `gorm:"column:avatar_url;not null" json:"avatar_url"`
 	OrganizationID   int             `gorm:"column:organization_id;not null" json:"organization_id"`
 	OrganizationName string          `gorm:"column:organization_name;not null" json:"organization_name"`
