@@ -456,7 +456,6 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 			OrganizationID:   int(org.ID),
 			OrganizationName: org.Name,
 			Point:            decimal.Zero,
-			RealName:         member.Username,
 		}
 		if err = s.userDao.CreateInTx(tx, user); err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -484,6 +483,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 		Point:            user.Point.Add(member.Point),
 		PointStatus:      model.UserPointStatusOwn,
 	}
+	update.RealName = member.Username
 	if err = s.userDao.UpdateByUserIDInTx(tx, user.UserID, update); err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
