@@ -131,5 +131,22 @@ func StartCron() {
 		log.Println("[Cron] BatchPointConfirm failed, err=", err)
 	}
 
+	_, err = c.AddFunc("0 */1 * * * ?", func() {
+		ok := redis.Lock("cron--auto-order-confirm-receipt1", time.Minute*10)
+		if !ok {
+			return
+		}
+		defer redis.Unlock("cron--auto-order-confirm-receipt1")
+
+		err := service.NewOrderService().AutoOrderConfirmReceipt(context.Background())
+		if err != nil {
+			log.Println("[Cron] AutoOrderConfirmReceipt failed, err=", err)
+			return
+		}
+		log.Println("[Cron] AutoOrderConfirmReceipt success")
+	})
+	if err != nil {
+		log.Println("[Cron] AutoOrderConfirmReceipt failed, err=", err)
+	}
 	c.Start()
 }

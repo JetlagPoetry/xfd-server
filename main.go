@@ -7,15 +7,17 @@ import (
 	"net/http"
 	"xfd-backend/database/db"
 	"xfd-backend/database/redis"
+	"xfd-backend/pkg/cron"
 	"xfd-backend/pkg/jwt"
 	"xfd-backend/pkg/utils"
+	"xfd-backend/pkg/wechatpay"
 	"xfd-backend/router"
 	"xfd-backend/service"
 )
 
 func main() {
 	Init()
-	//go cron.StartCron()
+	go cron.StartCron()
 
 	r := router.NewRouter()
 	log.Println("==================Server Start===================")
@@ -29,12 +31,12 @@ func Init() {
 	utils.InitSms()
 	jwt.Init()
 	redis.Init()
-	//if err := wechatpay.Init(); err != nil {
-	//	panic(fmt.Sprintf("wechat pay init failed with %+v", err))
-	//}
-	//if err := initCache(); err != nil {
-	//	panic(fmt.Sprintf("Local cache init failed with %+v", err))
-	//}
+	if err := wechatpay.Init(); err != nil {
+		panic(fmt.Sprintf("wechat pay init failed with %+v", err))
+	}
+	if err := initCache(); err != nil {
+		panic(fmt.Sprintf("Local cache init failed with %+v", err))
+	}
 }
 
 func initCache() error {

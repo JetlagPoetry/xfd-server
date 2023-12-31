@@ -1523,3 +1523,11 @@ func (s *OrderService) ExportOrder(ctx *gin.Context, req types.ExportOrderReq) (
 	r := bytes.NewReader(buffer.Bytes())
 	return r, nil
 }
+
+func (s *OrderService) AutoOrderConfirmReceipt(ctx context.Context) xerr.XErr {
+	err := s.orderDao.AutoConfirmReceipt(ctx)
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	return nil
+}
