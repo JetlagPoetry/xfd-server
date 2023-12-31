@@ -132,11 +132,11 @@ func StartCron() {
 	}
 
 	_, err = c.AddFunc("0 */1 * * * ?", func() {
-		ok := redis.Lock("cron--auto-order-confirm-receipt1", time.Minute*10)
+		ok := redis.Lock("cron--auto-order-confirm-receipt", time.Minute*10)
 		if !ok {
 			return
 		}
-		defer redis.Unlock("cron--auto-order-confirm-receipt1")
+		defer redis.Unlock("cron--auto-order-confirm-receipt")
 
 		err := service.NewOrderService().AutoOrderConfirmReceipt(context.Background())
 		if err != nil {
