@@ -131,7 +131,7 @@ func StartCron() {
 		log.Println("[Cron] BatchPointConfirm failed, err=", err)
 	}
 
-	_, err = c.AddFunc("0 */1 * * * ?", func() {
+	_, err = c.AddFunc("0 */5 * * * ?", func() {
 		ok := redis.Lock("cron--auto-order-confirm-receipt", time.Minute*10)
 		if !ok {
 			return
