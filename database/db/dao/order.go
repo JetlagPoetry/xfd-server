@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"strings"
+	"time"
 	"xfd-backend/database/db"
 	"xfd-backend/database/db/enum"
 	"xfd-backend/database/db/model"
@@ -373,4 +374,16 @@ func (d *OrderDao) AdminGetQueryOrderListByIDs(ctx *gin.Context, req types.Expor
 		return nil, err
 	}
 	return queryOrderList, nil
+}
+
+func (d *OrderDao) AutoConfirmReceipt(ctx context.Context) error {
+	deadline := time.Now().AddDate(0, 0, -15)
+	updateResult := db.GetRepo().GetDB(ctx).Debug().
+		Model(&model.OrderInfo{}).Where("status = 4 and delivery_time <= ?", deadline).
+		Updates(map[string]interface{}{
+			"status":       5,
+			"confirm_time": time.Now(),
+			"message":      gorm.Expr("CONCAT(message, '确认收货信息:系统自动确认收货')"),
+		})
+	return updateResult.Error
 }
