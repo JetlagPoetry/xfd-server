@@ -11,7 +11,7 @@ import (
 
 func StartCron() {
 	c := cron.New(cron.WithSeconds())
-	_, err := c.AddFunc("0 */5 * * * ?", func() {
+	_, err := c.AddFunc("0 * * * * ?", func() {
 		//log.Println("[Cron] ProcessPointVerify start")
 
 		ok := redis.Lock("cron-process-point-verify", time.Minute*10)
@@ -31,7 +31,7 @@ func StartCron() {
 		log.Println("[Cron] ProcessPointVerify failed, err=", err)
 	}
 
-	_, err = c.AddFunc("30 */3 * * * ?", func() {
+	_, err = c.AddFunc("30 * * * * ?", func() {
 		//log.Println("[Cron] ProcessPointDistribute start")
 
 		ok := redis.Lock("cron-process-point-distribute", time.Minute*10)
