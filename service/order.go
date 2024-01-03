@@ -133,7 +133,7 @@ func (s *OrderService) CheckUserRole(ctx *gin.Context, role model.UserRole) (*mo
 		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("user %s not found", userID))
 	}
 	userRole := user.UserRole
-	if role != 0 && userRole != role {
+	if role != 0 && role != userRole && !(role == model.UserRoleAdmin && user.UserRole == model.UserRoleRoot) {
 		return nil, xerr.WithCode(xerr.ErrorAuthInsufficientAuthority, fmt.Errorf("user %s user role is %d, can not support", userID, userRole))
 	}
 	return user, nil
