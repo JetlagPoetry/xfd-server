@@ -60,6 +60,7 @@ const (
 	ErrorInvalidCsvFormat  XCode = 40005
 	ErrorRedisLock         XCode = 40006
 	ErrorExistVerifiedUser XCode = 40007
+	ErrorInvalidUserRole   XCode = 40008
 
 	//对象存储错误
 	ErrorOss        XCode = 50001
