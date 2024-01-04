@@ -177,12 +177,12 @@ type ConfirmReceiptReq struct {
 }
 
 type OrderDetailResp struct {
-	IsOrderClosed bool `json:"isOrderClosed"`
-	OrderInfo     `json:"order"`
-	GoodsInfo     `json:"goods"`
-	BuyerInfo     `json:"buyer"`
-	SellerInfo    `json:"seller"`
-	OrderRecord   `json:"orderRecord"`
+	IsOrderClosed    bool `json:"isOrderClosed"`
+	OrderInfo        `json:"order"`
+	GoodsInfo        `json:"goods"`
+	BuyerInfo        `json:"buyer"`
+	SellerInfo       `json:"seller"`
+	AfterSaleRecords []*RecordOrderDetail `json:"orderRecord"`
 }
 
 type OrderInfo struct {
@@ -224,12 +224,25 @@ type SellerInfo struct {
 }
 
 type OrderRecord struct {
-	CreatedAt          time.Time           `json:"createdAt,omitempty"`
-	PayedAt            *time.Time          `json:"payedAt,omitempty"`
-	DeliveryTime       *time.Time          `json:"deliveryTime,omitempty"`
-	ConfirmTime        *time.Time          `json:"confirmTime,omitempty"`
-	ManuallyCloseOrder *ManuallyCloseOrder `json:"manuallyCloseOrder,omitempty"`
-	AfterSaleRecords   []*AfterSaleRecord  `json:"afterSaleRecords,omitempty"`
+	CreatedAt          time.Time            `json:"createdAt,omitempty"`
+	PayedAt            *time.Time           `json:"payedAt,omitempty"`
+	DeliveryTime       *time.Time           `json:"deliveryTime,omitempty"`
+	ConfirmTime        *time.Time           `json:"confirmTime,omitempty"`
+	ManuallyCloseOrder *ManuallyCloseOrder  `json:"manuallyCloseOrder,omitempty"`
+	AfterSaleRecords   []*RecordOrderDetail `json:"afterSaleRecords,omitempty"`
+}
+
+type RecordOrderDetail struct {
+	RecordName string           `json:"recordName"`
+	RecordTime time.Time        `json:"recordTime"`
+	Records    *AfterSaleDetail `json:"records,omitempty"`
+}
+
+type AfterSaleDetail struct {
+	Reason       string `json:"reason,omitempty"`
+	AfterSale    string `json:"afterSale,omitempty"`
+	ReturnPoint  string `json:"returnPoint,omitempty"`
+	DeliveryInfo string `json:"deliveryInfo"`
 }
 
 type AfterSaleRecord struct {

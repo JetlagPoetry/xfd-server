@@ -176,12 +176,34 @@ func (g AfterSaleType) Code() int {
 	}
 }
 
+func (g AfterSaleType) String() string {
+	switch g {
+	case 1:
+		return "换货"
+	case 2:
+		return "退货退款"
+	default:
+		return "换货"
+	}
+}
+
 type ReturnPointType int
 
 const (
 	ReturnPointNo ReturnPointType = iota + 1
 	ReturnPointYes
 )
+
+func (g ReturnPointType) String() string {
+	switch g {
+	case 1:
+		return "不返还积分"
+	case 2:
+		return "返还积分"
+	default:
+		return "换货"
+	}
+}
 
 type ReturnPointStatus int
 
