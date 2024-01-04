@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"github.com/xuri/excelize/v2"
 	log2 "log"
+	"strings"
 	"sync"
 	"time"
 	"xfd-backend/database/db"
@@ -987,6 +989,12 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 	if orderInfo == nil {
 		return nil, xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
 	}
+	productAttr := make([]*model.ProductAttr, 0)
+	_ = json.Unmarshal([]byte(orderInfo.ProductAttr), &productAttr)
+	productAttrValues := make([]string, 0)
+	for _, attr := range productAttr {
+		productAttrValues = append(productAttrValues, attr.Value)
+	}
 	orderDetailInfo := types.OrderInfo{
 		OrderID:    orderInfo.ID,
 		OrderSn:    orderInfo.OrderSn,
@@ -1002,7 +1010,7 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 		GoodsID:     orderInfo.GoodsID,
 		SKUCode:     orderInfo.SKUCode,
 		Image:       orderInfo.Image,
-		ProductAttr: orderInfo.ProductAttr,
+		ProductAttr: strings.Join(productAttrValues, " "),
 		Quantity:    orderInfo.Quantity,
 		UintPrice:   orderInfo.UnitPrice.Round(2).String(),
 		PostPrice:   orderInfo.PostPrice.Round(2).String(),
