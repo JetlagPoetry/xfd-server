@@ -56,6 +56,7 @@ func (s *UserService) SendCode(ctx context.Context, req types.UserSendCodeReq) (
 }
 
 func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types.UserLoginResp, xerr.XErr) {
+	// todo
 	//code, err := redis.RedisClient.Get(fmt.Sprintf("user-login-code:phone:%s", req.Phone)).Result()
 	//if err == goredis.Nil {
 	//	return nil, xerr.WithCode(xerr.ErrorRedis, errors.New("code invalid"))
@@ -105,6 +106,13 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 		}
 		resp = &types.UserLoginResp{UserRole: user.UserRole}
 	}
+
+	if req.Source == types.SourceMiniApp && (user.UserRole == model.UserRoleAdmin || user.UserRole == model.UserRoleRoot) {
+		return nil, xerr.WithCode(xerr.ErrorInvalidUserRole, errors.New("invalid user role"))
+	}
+	//if req.Source == types.SourceCMS && (user.UserRole == model.UserRoleCustomer) {
+	//	return nil, xerr.WithCode(xerr.ErrorInvalidUserRole, errors.New("invalid user role"))
+	//}
 
 	// 使用userID+phone+role生成token
 	info := &jwt.SubjectInfo{
