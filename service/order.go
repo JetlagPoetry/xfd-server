@@ -1067,6 +1067,7 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 		deliveryAtDetail := &types.RecordOrderDetail{
 			RecordName: "商家发货",
 			RecordTime: *orderInfo.DeliveryTime,
+			Records:    &types.AfterSaleDetail{DeliveryInfo: fmt.Sprintf("物流单号：%s %s", orderInfo.ShipmentCompany, orderInfo.ShipmentSn)},
 		}
 		afterSaleRecords = append(afterSaleRecords, deliveryAtDetail)
 	}
@@ -1088,7 +1089,7 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 				ReturnPoint: refund.ReturnPointType.String(),
 			}
 			afterSaleRecord := &types.RecordOrderDetail{
-				RecordName: "售后记录" + strconv.Itoa(i),
+				RecordName: "售后记录" + strconv.Itoa(i+1),
 				RecordTime: refund.CreatedAt,
 				Records:    afterSaleDetail,
 			}
