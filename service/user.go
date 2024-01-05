@@ -110,9 +110,9 @@ func (s *UserService) Login(ctx context.Context, req types.UserLoginReq) (*types
 	if req.Source == types.SourceMiniApp && (user.UserRole == model.UserRoleAdmin || user.UserRole == model.UserRoleRoot) {
 		return nil, xerr.WithCode(xerr.ErrorInvalidUserRole, errors.New("invalid user role"))
 	}
-	//if req.Source == types.SourceCMS && (user.UserRole == model.UserRoleCustomer) {
-	//	return nil, xerr.WithCode(xerr.ErrorInvalidUserRole, errors.New("invalid user role"))
-	//}
+	if req.Source == types.SourceCMS && (user.UserRole == model.UserRoleCustomer) {
+		return nil, xerr.WithCode(xerr.ErrorUserNotFound, errors.New("user not found"))
+	}
 
 	// 使用userID+phone+role生成token
 	info := &jwt.SubjectInfo{
