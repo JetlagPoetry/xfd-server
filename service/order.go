@@ -13,6 +13,7 @@ import (
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/jsapi"
 	"github.com/xuri/excelize/v2"
 	log2 "log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -562,6 +563,7 @@ func (s *OrderService) payWithWx(ctx context.Context, code string, order *model.
 }
 
 func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeReq) xerr.XErr {
+	//换货不改变订单状态
 	_, xrr := s.CheckUserRole(ctx, model.UserRoleAdmin)
 	if xrr != nil {
 		return xrr
@@ -1047,46 +1049,61 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 	if err != nil {
 		return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 	}
-	afterSaleRecords := make([]*types.AfterSaleRecord, 0)
-	var manuallyCloseOrder *types.ManuallyCloseOrder
+
+	afterSaleRecords := make([]*types.RecordOrderDetail, 0)
+	createdAtDetail := &types.RecordOrderDetail{
+		RecordName: "创建订单",
+		RecordTime: orderInfo.CreatedAt,
+	}
+	afterSaleRecords = append(afterSaleRecords, createdAtDetail)
+	if orderInfo.PayedAt != nil {
+		payedAtDetail := &types.RecordOrderDetail{
+			RecordName: "支付订单",
+			RecordTime: *orderInfo.PayedAt,
+		}
+		afterSaleRecords = append(afterSaleRecords, payedAtDetail)
+	}
+	if orderInfo.DeliveryTime != nil {
+		deliveryAtDetail := &types.RecordOrderDetail{
+			RecordName: "商家发货",
+			RecordTime: *orderInfo.DeliveryTime,
+			Records:    &types.AfterSaleDetail{DeliveryInfo: fmt.Sprintf("物流单号：%s %s", orderInfo.ShipmentCompany, orderInfo.ShipmentSn)},
+		}
+		afterSaleRecords = append(afterSaleRecords, deliveryAtDetail)
+	}
+	if orderInfo.ConfirmTime != nil {
+		confirmAtDetail := &types.RecordOrderDetail{
+			RecordName: "已签收",
+			RecordTime: *orderInfo.DeliveryTime,
+		}
+		afterSaleRecords = append(afterSaleRecords, confirmAtDetail)
+	}
 	if len(refundList) != 0 {
-		for _, refund := range refundList {
-			if refund.ManuallyClosed == enum.ManuallyClosedYes {
-				manuallyCloseOrder = &types.ManuallyCloseOrder{
-					CreatedAt:       &refund.CreatedAt,
-					Reason:          refund.Reason,
-					ReturnPointType: refund.ReturnPointType,
-				}
+		for i, refund := range refundList {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
 				isOrderClosed = true
-				break
 			}
-			afterSaleRecord := &types.AfterSaleRecord{
-				CreatedAt:       &refund.CreatedAt,
-				Reason:          refund.Reason,
-				AfterSaleType:   refund.AfterSaleType,
-				ReturnPointType: refund.ReturnPointType,
+			afterSaleDetail := &types.AfterSaleDetail{
+				Reason:      refund.Reason,
+				AfterSale:   refund.AfterSaleType.String(),
+				ReturnPoint: refund.ReturnPointType.String(),
 			}
-			if refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
-				isOrderClosed = true
+			afterSaleRecord := &types.RecordOrderDetail{
+				RecordName: "售后记录" + strconv.Itoa(i+1),
+				RecordTime: refund.CreatedAt,
+				Records:    afterSaleDetail,
 			}
 			afterSaleRecords = append(afterSaleRecords, afterSaleRecord)
 		}
 	}
-	orderRecord := types.OrderRecord{
-		CreatedAt:          orderInfo.CreatedAt,
-		PayedAt:            orderInfo.PayedAt,
-		DeliveryTime:       orderInfo.DeliveryTime,
-		ConfirmTime:        orderInfo.ConfirmTime,
-		ManuallyCloseOrder: manuallyCloseOrder,
-		AfterSaleRecords:   afterSaleRecords,
-	}
+
 	result := &types.OrderDetailResp{
-		IsOrderClosed: isOrderClosed,
-		OrderInfo:     orderDetailInfo,
-		GoodsInfo:     goodsInfo,
-		BuyerInfo:     buyerInfo,
-		SellerInfo:    sellerInfo,
-		OrderRecord:   orderRecord,
+		IsOrderClosed:    isOrderClosed,
+		OrderInfo:        orderDetailInfo,
+		GoodsInfo:        goodsInfo,
+		BuyerInfo:        buyerInfo,
+		SellerInfo:       sellerInfo,
+		AfterSaleRecords: afterSaleRecords,
 	}
 	return result, nil
 }
@@ -1188,16 +1205,6 @@ func (s *OrderService) applyRefundRecord(ctx context.Context, orderInfo *model.O
 	_, err := s.orderDao.CreateOrderRefund(ctx, createNewRefund)
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	//更新订单状态
-	if orderInfo.Status != enum.OderInfoAfterSale {
-		rowsAffected, err := s.orderDao.UpdateOrderInfoByIDCTX(ctx, createNewRefund.OrderID, &model.OrderInfo{Status: enum.OderInfoAfterSale})
-		if err != nil {
-			return xerr.WithCode(xerr.ErrorDatabase, err)
-		}
-		if rowsAffected == 0 {
-			return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("exchange order status failed,order id is %d", createNewRefund.OrderID))
-		}
 	}
 	return nil
 }
