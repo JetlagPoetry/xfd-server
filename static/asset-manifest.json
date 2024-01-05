@@ -1,6 +1,6 @@
 {
   "/umi.css": "/static/umi.14ba200a.css",
-  "/umi.js": "/static/umi.9c8e972e.js",
+  "/umi.js": "/static/umi.861d2b06.js",
   "/t__plugin-layout__Layout.css": "/static/t__plugin-layout__Layout.9bd046c8.chunk.css",
   "/t__plugin-layout__Layout.js": "/static/t__plugin-layout__Layout.a6f203e1.async.js",
   "/p__user__Login.css": "/static/p__user__Login.e9d58501.chunk.css",
@@ -25,8 +25,8 @@
   "/p__product__ProductDetail.js": "/static/p__product__ProductDetail.9961e4bb.async.js",
   "/p__product__ProductList.css": "/static/p__product__ProductList.133473fa.chunk.css",
   "/p__product__ProductList.js": "/static/p__product__ProductList.26c784d2.async.js",
-  "/p__order__OrderDetail.css": "/static/p__order__OrderDetail.16c77561.chunk.css",
-  "/p__order__OrderDetail.js": "/static/p__order__OrderDetail.5fa22c3d.async.js",
+  "/p__order__OrderDetail.css": "/static/p__order__OrderDetail.c26e503d.chunk.css",
+  "/p__order__OrderDetail.js": "/static/p__order__OrderDetail.0c7a5b88.async.js",
   "/p__order__OrderList.css": "/static/p__order__OrderList.484d61dd.chunk.css",
   "/p__order__OrderList.js": "/static/p__order__OrderList.35853a45.async.js",
   "/p__supplier__SupplierAudit.css": "/static/p__supplier__SupplierAudit.5365d1b3.chunk.css",
