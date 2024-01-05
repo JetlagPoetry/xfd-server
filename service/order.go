@@ -584,7 +584,7 @@ func (s *OrderService) ApplyExchange(ctx *gin.Context, req types.ApplyExchangeRe
 	}
 	if len(refundList) > 0 {
 		for _, refund := range refundList {
-			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund || refund.AfterSaleType == enum.AfterSaleTypeOther {
 				return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d has refund or closed id%d, can not apply exchange", req.QueryOrderID, refund.ID))
 			}
 		}
@@ -1081,7 +1081,7 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 	}
 	if len(refundList) != 0 {
 		for i, refund := range refundList {
-			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund || refund.AfterSaleType == enum.AfterSaleTypeOther {
 				isOrderClosed = true
 			}
 			records := make([]string, 0)
@@ -1226,7 +1226,7 @@ func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) x
 	if orderInfo == nil {
 		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d not found", req.QueryOrderID))
 	}
-	if orderInfo.Status != enum.OderInfoAfterSale && orderInfo.Status != enum.OderInfoReceived && orderInfo.Status != enum.OderInfoShipped {
+	if orderInfo.Status != enum.OderInfoReceived && orderInfo.Status != enum.OderInfoShipped {
 		return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d status is %d, can not apply refund", req.QueryOrderID, orderInfo.Status))
 	}
 	user, err := s.userDao.GetByUserID(ctx, orderInfo.UserID)
@@ -1242,7 +1242,7 @@ func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) x
 	}
 	if len(refundList) > 0 {
 		for _, refund := range refundList {
-			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
+			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund || refund.AfterSaleType == enum.AfterSaleTypeOther {
 				return xerr.WithCode(xerr.InvalidParams, fmt.Errorf("query order id%d has refund or closed id%d, can not apply refund", req.QueryOrderID, refund.ID))
 			}
 		}
@@ -1261,6 +1261,13 @@ func (s *OrderService) ApplyRefund(ctx *gin.Context, req types.ApplyRefundReq) x
 }
 
 func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundReq, orderInfo *model.OrderInfo, operator *model.User, user *model.User) xerr.XErr {
+	rowsAffected, err := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoAfterSale})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("refund order status failed,order id is %d", req.QueryOrderID))
+	}
 	createNewRefund := &model.OrderRefund{
 		OrderID:         req.QueryOrderID,
 		OderSn:          orderInfo.OrderSn,
@@ -1273,7 +1280,6 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 		if xrr != nil {
 			return xrr
 		}
-		return nil
 	}
 	if req.ReturnPointType == enum.ReturnPointYes {
 		createNewRefund.NeedRefundPoint = orderInfo.PointPrice
@@ -1295,13 +1301,7 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 			}
 		}
 	}
-	rowsAffected, err := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoAfterSale})
-	if err != nil {
-		return xerr.WithCode(xerr.ErrorDatabase, err)
-	}
-	if rowsAffected == 0 {
-		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("refund order status failed,order id is %d", req.QueryOrderID))
-	}
+
 	return nil
 }
 
