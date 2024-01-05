@@ -152,6 +152,7 @@ type AfterSaleType int
 const (
 	AfterSaleTypeExchange AfterSaleType = iota + 1
 	AfterSaleTypeReturnAndRefund
+	AfterSaleTypeOther
 )
 
 func GetAfterSaleType(status int) (AfterSaleType, string) {
@@ -182,6 +183,8 @@ func (g AfterSaleType) String() string {
 		return "换货"
 	case 2:
 		return "退货退款"
+	case 3:
+		return "其他"
 	default:
 		return "换货"
 	}
@@ -201,7 +204,7 @@ func (g ReturnPointType) String() string {
 	case 2:
 		return "返还积分"
 	default:
-		return "换货"
+		return "默认"
 	}
 }
 

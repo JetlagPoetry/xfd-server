@@ -1064,10 +1064,11 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 		afterSaleRecords = append(afterSaleRecords, payedAtDetail)
 	}
 	if orderInfo.DeliveryTime != nil {
+		records := []string{fmt.Sprintf("物流单号：%s %s", orderInfo.ShipmentCompany, orderInfo.ShipmentSn)}
 		deliveryAtDetail := &types.RecordOrderDetail{
 			RecordName: "商家发货",
 			RecordTime: *orderInfo.DeliveryTime,
-			Records:    &types.AfterSaleDetail{DeliveryInfo: fmt.Sprintf("物流单号：%s %s", orderInfo.ShipmentCompany, orderInfo.ShipmentSn)},
+			Records:    records,
 		}
 		afterSaleRecords = append(afterSaleRecords, deliveryAtDetail)
 	}
@@ -1083,16 +1084,20 @@ func (s *OrderService) GetOrderDetail(ctx *gin.Context, req types.ConfirmReceipt
 			if refund.ManuallyClosed == enum.ManuallyClosedYes || refund.AfterSaleType == enum.AfterSaleTypeReturnAndRefund {
 				isOrderClosed = true
 			}
-			afterSaleDetail := &types.AfterSaleDetail{
-				Reason:      refund.Reason,
-				AfterSale:   refund.AfterSaleType.String(),
-				ReturnPoint: refund.ReturnPointType.String(),
+			records := make([]string, 0)
+			records = append(records, fmt.Sprintf("售后类型：%s", refund.AfterSaleType.String()))
+			if refund.AfterSaleType != enum.AfterSaleTypeExchange {
+				records = append(records, fmt.Sprintf("处理方式：%s", refund.ReturnPointType.String()))
+			}
+			if refund.Reason != "" {
+				records = append(records, fmt.Sprintf("售后记录：%s", refund.Reason))
 			}
 			afterSaleRecord := &types.RecordOrderDetail{
 				RecordName: "售后记录" + strconv.Itoa(i+1),
 				RecordTime: refund.CreatedAt,
-				Records:    afterSaleDetail,
+				Records:    records,
 			}
+
 			afterSaleRecords = append(afterSaleRecords, afterSaleRecord)
 		}
 	}
@@ -1259,7 +1264,7 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 	createNewRefund := &model.OrderRefund{
 		OrderID:         req.QueryOrderID,
 		OderSn:          orderInfo.OrderSn,
-		AfterSaleType:   enum.AfterSaleTypeReturnAndRefund,
+		AfterSaleType:   req.AfterSaleType,
 		ReturnPointType: req.ReturnPointType,
 		Reason:          req.Reason,
 	}
@@ -1289,7 +1294,13 @@ func (s *OrderService) applyRefundTX(ctx context.Context, req types.ApplyRefundR
 				return xerr.WithCode(xerr.ErrorDatabase, err)
 			}
 		}
-
+	}
+	rowsAffected, err := s.orderDao.UpdateOrderInfoByIDCTX(ctx, req.QueryOrderID, &model.OrderInfo{Status: enum.OderInfoAfterSale})
+	if err != nil {
+		return xerr.WithCode(xerr.ErrorDatabase, err)
+	}
+	if rowsAffected == 0 {
+		return xerr.WithCode(xerr.ErrorDatabase, fmt.Errorf("refund order status failed,order id is %d", req.QueryOrderID))
 	}
 	return nil
 }

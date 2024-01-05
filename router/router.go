@@ -128,7 +128,7 @@ func NewRouter() *gin.Engine {
 		orderGroup.GET("/getOrderDetail", handler.Order.GetOrderDetail)            //后台获取订单详情
 		orderGroup.POST("/closeOrder", handler.Order.CloseOrder)                   //结束订单
 		orderGroup.POST("/applyExchange", handler.Order.ApplyExchange)             //申请换货
-		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退货退款
+		orderGroup.POST("/applyRefund", handler.Order.ApplyRefund)                 //申请退货退款/其他
 		orderGroup.GET("/getCustomerService", handler.Order.GetCustomerService)    //获取客服电话
 		orderGroup.POST("/paymentConfirm", handler.Order.PaymentConfirm)
 		orderGroup.GET("/exportOrder", handler.Order.ExportOrder) //导出订单为excel表格
