@@ -469,7 +469,7 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 	}
 
 	// 已注册但公司对不上的，触发员工离职，并重新绑定
-	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) && user.Point.GreaterThan(decimal.Zero) {
+	if user.OrganizationID != 0 && user.OrganizationID != int(org.ID) {
 		err = s.processUserQuit(tx, user.UserID, user.OrganizationID)
 		if err != nil {
 			return xerr.WithCode(xerr.ErrorDatabase, err)
@@ -477,7 +477,6 @@ func (s *OrgService) processPointDistribute(tx *gorm.DB, apply *model.PointAppli
 	}
 
 	update := &model.User{
-		Username:         member.Username,
 		OrganizationID:   int(org.ID),
 		OrganizationName: org.Name,
 		Point:            user.Point.Add(member.Point),
