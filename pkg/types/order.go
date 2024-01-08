@@ -61,6 +61,7 @@ type CreateOrderResp struct {
 type ApplyRefundReq struct {
 	QueryOrderID    int32                `json:"queryOrderID" binding:"required"`
 	ReturnPointType enum.ReturnPointType `json:"returnPointType" binding:"required,oneof=1 2"`
+	AfterSaleType   enum.AfterSaleType   `json:"afterSaleType"  binding:"required,oneof=2 3"`
 	Reason          string               `json:"reason" binding:"required"`
 }
 
@@ -233,9 +234,9 @@ type OrderRecord struct {
 }
 
 type RecordOrderDetail struct {
-	RecordName string           `json:"recordName"`
-	RecordTime time.Time        `json:"recordTime"`
-	Records    *AfterSaleDetail `json:"records,omitempty"`
+	RecordName string    `json:"recordName"`
+	RecordTime time.Time `json:"recordTime"`
+	Records    []string  `json:"records,omitempty"`
 }
 
 type AfterSaleDetail struct {
