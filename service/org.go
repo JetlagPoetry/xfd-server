@@ -992,7 +992,7 @@ func (s *OrgService) processUserQuit(tx *gorm.DB, userID string, orgID int) xerr
 	}
 	userPoint := user.Point
 
-	err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{Point: decimal.Zero})
+	err = s.userDao.UpdateByUserIDInTx(tx, userID, &model.User{Point: decimal.Zero, PointStatus: model.UserPointStatusUnknown})
 	if err != nil {
 		return xerr.WithCode(xerr.ErrorDatabase, err)
 	}
@@ -1120,7 +1120,7 @@ func (s *OrgService) GetOrganizations(ctx context.Context, req types.GetOrganiza
 
 	list := make([]*types.Organization, 0)
 	for _, org := range orgList {
-		totalMember, err := s.userDao.CountByOrganization(ctx, int(org.ID))
+		totalMember, err := s.userDao.CountByOrganizationAndUserRole(ctx, int(org.ID), model.UserRoleBuyer)
 		if err != nil {
 			return nil, xerr.WithCode(xerr.ErrorDatabase, err)
 		}

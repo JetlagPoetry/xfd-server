@@ -213,8 +213,8 @@ func (d *UserDao) UpdateByOrgIDInTx(tx *gorm.DB, orgID int, updateValue *model.U
 	return nil
 }
 
-func (d *UserDao) CountByOrganization(ctx context.Context, orgID int) (count int64, err error) {
-	sql := db.GetRepo().GetDB(ctx).Model(&model.User{}).Where("organization_id = ?", orgID)
+func (d *UserDao) CountByOrganizationAndUserRole(ctx context.Context, orgID int, role model.UserRole) (count int64, err error) {
+	sql := db.GetRepo().GetDB(ctx).Model(&model.User{}).Where("organization_id = ? AND user_role = ?", orgID, role)
 	if err = sql.Count(&count).Error; err != nil {
 		return 0, err
 	}
