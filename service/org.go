@@ -326,6 +326,11 @@ func (s *OrgService) ProcessPointVerify(ctx context.Context) xerr.XErr {
 	}
 
 	for _, apply := range list {
+		log.Println("[ProcessPointVerify] startTime=", apply.StartTime, ", now=", time.Now())
+		if apply.StartTime.After(time.Now()) {
+			continue
+		}
+
 		members, err := s.downloadXLS(ctx, apply.FileURL)
 		if err != nil {
 			continue

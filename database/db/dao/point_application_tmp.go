@@ -23,7 +23,7 @@ func (d *PointApplicationTmpDao) GetByID(ctx context.Context, id int) (order *mo
 }
 
 func (d *PointApplicationTmpDao) ListByStatus(ctx context.Context, status model.PointApplicationTmpStatus) (apply []*model.PointApplicationTmp, err error) {
-	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("status = ?", status).Limit(500).Find(&apply).Error
+	err = db.GetRepo().GetDB(ctx).Model(&model.PointApplicationTmp{}).Where("status = ?", status).Limit(2000).Find(&apply).Error
 	if err != nil {
 		return nil, err
 	}
