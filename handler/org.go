@@ -32,12 +32,12 @@ func (h *OrgHandler) ApplyPoint(c *gin.Context) {
 	)
 
 	comment := c.PostForm("comment")
-	startTime, err := time.Parse("2006-01-02 15:04:05", c.PostForm("startTime"))
+	startTime, err := time.ParseInLocation("2006-01-02 15:04:05", c.PostForm("startTime"), time.Local)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
 	}
-	endTime, err := time.Parse("2006-01-02 15:04:05", c.PostForm("endTime"))
+	endTime, err := time.ParseInLocation("2006-01-02 15:04:05", c.PostForm("endTime"), time.Local)
 	if err != nil {
 		c.JSON(http.StatusOK, response.RespError(c, xerr.WithCode(xerr.InvalidParams, err)))
 		return
